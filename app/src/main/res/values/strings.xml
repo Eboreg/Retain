@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">Retain</string>
+    <string name="note">Note</string>
+    <string name="add_text_note">Add text note</string>
+    <string name="add_checklist">Add checklist</string>
+    <string name="title">Title</string>
+    <string name="add_item">Add item</string>
+    <string name="delete_notes">Delete notes</string>
+    <string name="delete">Delete</string>
+    <string name="cancel">Cancel</string>
+    <plurals name="plus_x_items">
+        <item quantity="one">+ 1 item</item>
+        <item quantity="other">+ %1$d items</item>
+    </plurals>
+    <plurals name="x_checked_items">
+        <item quantity="one">1 checked item</item>
+        <item quantity="other">%1$d checked items</item>
+    </plurals>
+    <plurals name="delete_x_notes">
+        <item quantity="one">Delete 1 note?</item>
+        <item quantity="other">Delete %1$d notes?</item>
+    </plurals>
+</resources>
