@@ -1,15 +1,15 @@
 buildscript {
     repositories {
-        gradlePluginPortal()
+        // gradlePluginPortal()
         google()
         mavenCentral()
+        maven(url = "https://jitpack.io")
     }
 
     dependencies {
-        classpath("com.android.tools.build:gradle:8.0.1")
+        classpath("com.android.tools.build:gradle:8.0.0")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.10")
         classpath("com.google.dagger:hilt-android-gradle-plugin:2.46")
-        // classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
-        // classpath("com.google.dagger:hilt-android-gradle-plugin")
     }
 }
 

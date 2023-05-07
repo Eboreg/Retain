@@ -2,14 +2,20 @@
 
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
+    id("kotlin-android")
+    // id("org.jetbrains.kotlin.android")
     // id("org.jetbrains.kotlin.kapt")
-    id("kotlin-kapt")
+    // id("kotlin-kapt")
+    kotlin("kapt")
     id("com.google.dagger.hilt.android")
 }
 
 kotlin {
     jvmToolchain(17)
+}
+
+kapt {
+    correctErrorTypes = true
 }
 
 android {
@@ -18,7 +24,7 @@ android {
 
     defaultConfig {
         applicationId = "us.huseli.retain"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 33
         versionCode = 1
         versionName = "1.0"
@@ -28,7 +34,7 @@ android {
     }
 
     buildTypes {
-        getByName("release") {
+        release {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -63,35 +69,47 @@ android {
 }
 
 dependencies {
+    implementation("androidx.core:core-ktx:1.10.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.1")
     implementation("androidx.core:core-splashscreen:1.0.1")
+    implementation("org.burnoutcrew.composereorderable:reorderable:0.9.6")
+    implementation("androidx.recyclerview:recyclerview:1.3.0")
+    implementation("androidx.preference:preference-ktx:1.2.0")
+
+    // Nextcloud:
+    // implementation("commons-httpclient:commons-httpclient:20020423@jar")
+    implementation("commons-httpclient:commons-httpclient:20020423")
+    implementation("com.github.nextcloud:android-library:2.14.0")
 
     // Compose:
+    implementation("androidx.compose.runtime:runtime:1.4.3")
+    implementation("androidx.compose.ui:ui:1.4.3")
+    implementation("androidx.compose.foundation:foundation:1.4.3")
     implementation("androidx.activity:activity-compose:1.7.1")
     implementation("androidx.compose.ui:ui-tooling-preview:1.4.3")
     implementation("androidx.compose.material3:material3:1.0.1")
     implementation("androidx.navigation:navigation-compose:2.5.3")
     implementation("androidx.compose.material:material-icons-extended:1.4.3")
-    implementation("androidx.compose.runtime:runtime:1.4.3")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.1")
 
     // Room:
-    kapt("androidx.room:room-compiler:2.5.1")
-    // annotationProcessor("androidx.room:room-compiler:2.5.1")
     implementation("androidx.room:room-runtime:2.5.1")
     implementation("androidx.room:room-ktx:2.5.1")
+    kapt("androidx.room:room-compiler:2.5.1")
+    // annotationProcessor("androidx.room:room-compiler:2.5.1")
 
     // Hilt:
-    // kapt("com.google.dagger:hilt-compiler:2.46")
-    annotationProcessor("com.google.dagger:hilt-compiler:2.46")
     implementation("com.google.dagger:hilt-android:2.46")
     implementation("androidx.hilt:hilt-navigation-compose:1.0.0")
+    // kapt("com.google.dagger:hilt-compiler:2.46")
+    annotationProcessor("com.google.dagger:hilt-compiler:2.46")
 
-    testImplementation("junit:junit:4.13.2")
-    androidTestImplementation("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    androidTestImplementation(platform("androidx.compose:compose-bom:2023.05.00"))
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.4.3")
-    debugImplementation("androidx.compose.ui:ui-tooling:1.4.3")
-    debugImplementation("androidx.compose.ui:ui-test-manifest:1.4.3")
+    // testImplementation("junit:junit:4.13.2")
+    // androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    // androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+    // androidTestImplementation(platform("androidx.compose:compose-bom:2023.05.00"))
+    // androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.4.3")
+    // debugImplementation("androidx.compose.ui:ui-tooling:1.4.3")
+    // debugImplementation("androidx.compose.ui:ui-test-manifest:1.4.3")
 }
