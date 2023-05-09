@@ -1,17 +1,17 @@
 package us.huseli.retain.data
 
 import androidx.room.TypeConverter
-import java.util.Date
+import java.time.Instant
 import java.util.UUID
 
 object Converters {
     @TypeConverter
     @JvmStatic
-    fun dateToLong(value: Date): Long = value.time
+    fun instantToLong(value: Instant): Long = value.epochSecond
 
     @TypeConverter
     @JvmStatic
-    fun longToDate(value: Long): Date = Date(value)
+    fun longToInstant(value: Long): Instant = Instant.ofEpochSecond(value)
 
     @TypeConverter
     @JvmStatic

@@ -1,27 +1,31 @@
 package us.huseli.retain.compose
 
 import android.content.res.Configuration.UI_MODE_NIGHT_YES
-import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -30,7 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -42,6 +46,8 @@ import us.huseli.retain.data.entities.ChecklistItem
 import us.huseli.retain.data.entities.Note
 import us.huseli.retain.ui.theme.RetainTheme
 import us.huseli.retain.viewmodels.NoteViewModel
+import us.huseli.retain.viewmodels.SettingsViewModel
+import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,18 +58,57 @@ fun SelectionTopAppBar(
     onTrashClick: () -> Unit,
 ) {
     TopAppBar(
-        title = {
-            Text(selectedCount.toString())
-        },
+        title = { Text(selectedCount.toString()) },
         modifier = modifier,
         navigationIcon = {
             IconButton(onClick = onCloseClick) {
-                Icon(imageVector = Icons.Filled.Close, contentDescription = null)
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = stringResource(R.string.exit_selection_mode)
+                )
             }
         },
         actions = {
             IconButton(onClick = onTrashClick) {
-                Icon(imageVector = Icons.Filled.Delete, contentDescription = null)
+                Icon(
+                    imageVector = Icons.Filled.Delete,
+                    contentDescription = stringResource(R.string.delete_selected_notes)
+                )
+            }
+        }
+    )
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RegularTopAppBar(
+    modifier: Modifier = Modifier,
+    onSettingsClick: () -> Unit = {},
+    onDebugClick: () -> Unit = {},
+) {
+    TopAppBar(
+        modifier = modifier,
+        title = {},
+        navigationIcon = {
+            Image(
+                painter = painterResource(id = R.drawable.ic_launcher_round),
+                modifier = Modifier.height(50.dp),
+                contentDescription = null
+            )
+        },
+        actions = {
+            IconButton(onClick = onDebugClick) {
+                Icon(
+                    imageVector = Icons.Filled.BugReport,
+                    contentDescription = stringResource(R.string.debug),
+                )
+            }
+            IconButton(onClick = onSettingsClick) {
+                Icon(
+                    imageVector = Icons.Filled.Settings,
+                    contentDescription = stringResource(R.string.app_settings),
+                )
             }
         }
     )
@@ -74,63 +119,59 @@ fun SelectionTopAppBar(
 @Composable
 fun HomeScreenImpl(
     modifier: Modifier = Modifier,
+    snackbarHostState: SnackbarHostState,
+    settingsViewModel: SettingsViewModel = hiltViewModel(),
     notes: List<Note>,
     checklistItems: List<ChecklistItem>,
-    selectedNotes: Collection<Note>,
+    selectedNoteIds: Collection<UUID>,
     onAddTextNoteClick: () -> Unit = {},
     onAddChecklistClick: () -> Unit = {},
     onCardClick: (Note) -> Unit = {},
     onEndSelectModeClick: () -> Unit = {},
-    onDeleteNotesClick: (Collection<Note>) -> Unit = {},
+    onDeleteNotesClick: (Collection<UUID>) -> Unit = {},
     onSelectNote: (Note) -> Unit = {},
     onDeselectNote: (Note) -> Unit = {},
+    onSettingsClick: () -> Unit = {},
+    onDebugClick: () -> Unit = {},
 ) {
-    val isSelectEnabled = selectedNotes.isNotEmpty()
+    val isSelectEnabled = selectedNoteIds.isNotEmpty()
     var isFABExpanded by rememberSaveable { mutableStateOf(false) }
     var deleteDialogOpen by rememberSaveable { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
+    val minColumnWidth by settingsViewModel.minColumnWidth.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
             if (isSelectEnabled) SelectionTopAppBar(
-                selectedCount = selectedNotes.size,
+                selectedCount = selectedNoteIds.size,
                 onCloseClick = onEndSelectModeClick,
                 onTrashClick = { deleteDialogOpen = true },
+            ) else RegularTopAppBar(
+                onSettingsClick = onSettingsClick,
+                onDebugClick = onDebugClick,
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     ) { innerPadding ->
         FAB(
             expanded = isFABExpanded,
             onAddTextNoteClick = onAddTextNoteClick,
             onAddChecklistClick = onAddChecklistClick,
             onExpandedChange = { isFABExpanded = it },
+            onClose = { isFABExpanded = false },
         )
 
         if (deleteDialogOpen) {
-            AlertDialog(
-                title = { Text(stringResource(R.string.delete_notes)) },
-                text = { Text(pluralStringResource(R.plurals.delete_x_notes, selectedNotes.size, selectedNotes.size)) },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            onDeleteNotesClick(selectedNotes)
-                            deleteDialogOpen = false
-                        }
-                    ) {
-                        Text(stringResource(R.string.delete).uppercase())
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { deleteDialogOpen = false }) {
-                        Text(stringResource(R.string.cancel).uppercase())
-                    }
-                },
-                onDismissRequest = { deleteDialogOpen = false },
+            DeleteNotesDialog(
+                selectedNoteIds = selectedNoteIds,
+                onDelete = onDeleteNotesClick,
+                onClose = { deleteDialogOpen = false },
             )
         }
 
         LazyVerticalStaggeredGrid(
-            columns = StaggeredGridCells.Adaptive(minSize = 180.dp),
+            // columns = StaggeredGridCells.Adaptive(minSize = 180.dp),
+            columns = StaggeredGridCells.Adaptive(minSize = minColumnWidth.dp),
             contentPadding = PaddingValues(8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalItemSpacing = 8.dp,
@@ -139,13 +180,14 @@ fun HomeScreenImpl(
                 .fillMaxHeight()
                 .padding(innerPadding)
         ) {
-            items(notes) { note ->
+            items(notes, key = { it.id }) { note ->
                 NoteCard(
+                    modifier = Modifier.fillMaxWidth(),
                     note = note,
                     checklistItems = checklistItems.filter { it.noteId == note.id },
                     onClick = {
                         if (isSelectEnabled) {
-                            if (selectedNotes.contains(note)) onDeselectNote(note)
+                            if (selectedNoteIds.contains(note.id)) onDeselectNote(note)
                             else onSelectNote(note)
                         } else onCardClick(note)
                     },
@@ -153,7 +195,7 @@ fun HomeScreenImpl(
                         if (!isSelectEnabled) onSelectNote(note)
                         else onDeselectNote(note)
                     },
-                    isSelected = selectedNotes.contains(note),
+                    isSelected = selectedNoteIds.contains(note.id),
                 )
             }
         }
@@ -165,29 +207,35 @@ fun HomeScreenImpl(
 fun HomeScreen(
     modifier: Modifier = Modifier,
     viewModel: NoteViewModel = hiltViewModel(),
+    snackbarHostState: SnackbarHostState,
     onAddTextNoteClick: () -> Unit,
     onAddChecklistClick: () -> Unit,
     onCardClick: (Note) -> Unit,
+    onSettingsClick: () -> Unit,
+    onDebugClick: () -> Unit,
 ) {
-    Log.i("HomeScreen", "getting notes")
     val notes by viewModel.notes.collectAsStateWithLifecycle(emptyList())
-    val selectedNotes by viewModel.selectedNotes.collectAsStateWithLifecycle(emptySet())
+    val selectedNoteIds by viewModel.selectedNoteIds.collectAsStateWithLifecycle(emptyList())
     val checklistItems by viewModel.checklistItems.collectAsStateWithLifecycle(emptyList())
 
     HomeScreenImpl(
         modifier = modifier,
         notes = notes,
+        snackbarHostState = snackbarHostState,
         checklistItems = checklistItems,
-        selectedNotes = selectedNotes,
+        selectedNoteIds = selectedNoteIds,
         onAddTextNoteClick = onAddTextNoteClick,
         onAddChecklistClick = onAddChecklistClick,
         onCardClick = onCardClick,
         onEndSelectModeClick = viewModel.deselectAllNotes,
-        onDeleteNotesClick = { viewModel.deleteNotes(selectedNotes) },
+        onDeleteNotesClick = { viewModel.deleteNotes(it) },
         onSelectNote = viewModel.selectNote,
         onDeselectNote = viewModel.deselectNote,
+        onSettingsClick = onSettingsClick,
+        onDebugClick = onDebugClick,
     )
 }
+
 
 fun getPreviewNotes(): List<Note> {
     return listOf(
@@ -223,12 +271,14 @@ fun getPreviewChecklistItems(notes: List<Note>): List<ChecklistItem> {
 fun HomeScreenPreview() {
     val notes = getPreviewNotes()
     val checklistItems = getPreviewChecklistItems(notes)
+    val snackbarHostState = remember { SnackbarHostState() }
 
     RetainTheme {
         HomeScreenImpl(
             notes = notes,
             checklistItems = checklistItems,
-            selectedNotes = emptyList(),
+            selectedNoteIds = emptyList(),
+            snackbarHostState = snackbarHostState,
         )
     }
 }
@@ -238,12 +288,14 @@ fun HomeScreenPreview() {
 fun HomeScreenPreviewDark() {
     val notes = getPreviewNotes()
     val checklistItems = getPreviewChecklistItems(notes)
+    val snackbarHostState = remember { SnackbarHostState() }
 
     RetainTheme {
         HomeScreenImpl(
             notes = notes,
             checklistItems = checklistItems,
-            selectedNotes = emptyList(),
+            selectedNoteIds = emptyList(),
+            snackbarHostState = snackbarHostState,
         )
     }
 }

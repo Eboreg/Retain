@@ -1,10 +1,11 @@
 package us.huseli.retain.viewmodels
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.launch
+import us.huseli.retain.Logger
+import us.huseli.retain.LoggingObject
 import us.huseli.retain.data.NoteRepository
 import us.huseli.retain.data.entities.Note
 import javax.inject.Inject
@@ -13,16 +14,17 @@ import javax.inject.Inject
 class EditTextNoteViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     repository: NoteRepository,
-) : BaseEditNoteViewModel(savedStateHandle, repository) {
+    override var logger: Logger?
+) : BaseEditNoteViewModel(savedStateHandle, repository), LoggingObject {
     val title = MutableStateFlow("")
     val text = MutableStateFlow("")
 
-    fun save() = viewModelScope.launch {
-        repository.upsertTextNote(noteId, title.value, text.value)
-    }
-
     override fun receiveNote(note: Note) {
-        title.value = note.title
-        text.value = note.text
+        try {
+            title.value = note.title
+            text.value = note.text
+        } catch (e: Exception) {
+            log(e.toString(), Log.ERROR)
+        }
     }
 }

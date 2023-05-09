@@ -26,7 +26,15 @@ class ChecklistItem(
     @ColumnInfo(name = "checklistItemChecked") var checked: Boolean = false,
     @ColumnInfo(name = "checklistItemPosition") val position: Int = 0,
 ) {
-    override fun toString(): String {
-        return "<ChecklistItem: $id / $text>"
-    }
+    override fun toString() = "<ChecklistItem: $id / $text>"
+
+    override fun equals(other: Any?) =
+        other is ChecklistItem &&
+        other.id == id &&
+        other.text == text &&
+        other.noteId == noteId &&
+        other.checked == checked &&
+        other.position == position
+
+    override fun hashCode() = id.hashCode()
 }

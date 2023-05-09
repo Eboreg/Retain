@@ -29,7 +29,8 @@ fun FAB(
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     onAddTextNoteClick: () -> Unit,
-    onAddChecklistClick: () -> Unit
+    onAddChecklistClick: () -> Unit,
+    onClose: () -> Unit,
 ) {
     Column(
         verticalArrangement = Arrangement.Bottom,
@@ -38,7 +39,10 @@ fun FAB(
     ) {
         if (expanded) {
             ExtendedFloatingActionButton(
-                onClick = onAddTextNoteClick,
+                onClick = {
+                    onAddTextNoteClick()
+                    onClose()
+                },
                 shape = CircleShape,
                 text = { Text(stringResource(R.string.add_text_note)) },
                 icon = {
@@ -50,7 +54,10 @@ fun FAB(
                 modifier = Modifier.padding(bottom = 8.dp),
             )
             ExtendedFloatingActionButton(
-                onClick = onAddChecklistClick,
+                onClick = {
+                    onAddChecklistClick()
+                    onClose()
+                },
                 shape = CircleShape,
                 text = { Text(stringResource(R.string.add_checklist)) },
                 icon = {

@@ -15,12 +15,8 @@ import javax.inject.Singleton
 class DatabaseModule {
     @Singleton
     @Provides
-    fun provideDatabase(@ApplicationContext context: Context): Database {
-        return Database.getDatabase(context)
-    }
+    fun provideDatabase(@ApplicationContext context: Context): Database = Database.build(context)
 
     @Provides
-    fun provideNoteDao(database: Database): NoteDao {
-        return database.noteDao()
-    }
+    fun provideNoteDao(database: Database): NoteDao = database.noteDao()
 }

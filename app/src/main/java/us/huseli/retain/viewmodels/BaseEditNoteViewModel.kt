@@ -14,16 +14,17 @@ abstract class BaseEditNoteViewModel(
     internal val repository: NoteRepository,
 ) : ViewModel() {
     val noteId: UUID = UUID.fromString(savedStateHandle.get<String>(NOTE_ID_SAVED_STATE_KEY)!!)
-    val note = repository.getNote(noteId)
+    var note: Note? = null
 
     abstract fun receiveNote(note: Note)
 
     init {
         viewModelScope.launch {
-            note.transformWhile {
+            repository.getNote(noteId).transformWhile {
                 if (it != null) emit(it)
                 it == null
             }.collect {
+                note = it
                 receiveNote(it)
             }
         }

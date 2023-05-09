@@ -15,12 +15,14 @@ class EditChecklistNoteViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     repository: NoteRepository,
 ) : BaseEditNoteViewModel(savedStateHandle, repository) {
+    private var _noteSaved = false
     val title = MutableStateFlow("")
     val showChecked = MutableStateFlow(true)
     val checklistItems = repository.loadChecklistItems(noteId)
 
-    fun save() = viewModelScope.launch {
+    private suspend fun save() {
         repository.upsertChecklistNote(noteId, title.value, showChecked.value)
+        _noteSaved = true
     }
 
     fun deleteItem(item: ChecklistItem) = viewModelScope.launch {
@@ -28,6 +30,7 @@ class EditChecklistNoteViewModel @Inject constructor(
     }
 
     fun insertItem(text: String, checked: Boolean, position: Int) = viewModelScope.launch {
+        if (!_noteSaved) save()
         repository.insertChecklistItem(noteId, text, checked, position)
     }
 

@@ -3,23 +3,34 @@ package us.huseli.retain.data
 import android.database.sqlite.SQLiteConstraintException
 import androidx.room.Dao
 import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 import us.huseli.retain.Enums
 import us.huseli.retain.data.entities.ChecklistItem
 import us.huseli.retain.data.entities.Note
-import java.util.Date
+import java.time.Instant
 import java.util.UUID
 
 @Dao
 interface NoteDao {
     /** Note related stuff */
 
-    @Delete
-    suspend fun deleteNotes(notes: Collection<Note>)
+    @Query("DELETE FROM note WHERE noteId IN (:ids)")
+    suspend fun deleteNotes(ids: Collection<UUID>)
 
     @Query("SELECT * FROM note WHERE noteId = :id")
-    fun getNote(id: UUID): Flow<Note?>
+    suspend fun getNote(id: UUID): Note?
+
+    @Query("SELECT * FROM note")
+    suspend fun getNotes(): List<Note>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertNote(note: Note)
+
+    @Query("SELECT * FROM note WHERE noteId = :id")
+    fun loadNote(id: UUID): Flow<Note?>
 
     @Query("SELECT * FROM note ORDER BY notePosition")
     fun loadNotes(): Flow<List<Note>>
@@ -37,8 +48,8 @@ interface NoteDao {
         text: String,
         showChecked: Boolean,
         position: Int = 0,
-        created: Date = Date(),
-        updated: Date = Date(),
+        created: Instant = Instant.now(),
+        updated: Instant = Instant.now(),
     )
 
     @Query(
@@ -50,12 +61,23 @@ interface NoteDao {
     suspend fun makePlaceForNote(id: UUID, position: Int)
 
     @Query("UPDATE note SET noteTitle=:title, noteText=:text, noteShowChecked=:showChecked, noteUpdated=:updated WHERE noteId=:id")
-    suspend fun updateNote(id: UUID, title: String, text: String, showChecked: Boolean, updated: Date = Date())
+    suspend fun updateNote(
+        id: UUID,
+        title: String,
+        text: String,
+        showChecked: Boolean,
+        updated: Instant = Instant.now()
+    )
+
+    suspend fun upsertNote(note: Note) {
+        makePlaceForNote(note.id, note.position)
+        insertNote(note)
+    }
 
     suspend fun upsertChecklistNote(id: UUID, title: String, showChecked: Boolean) {
         try {
-            makePlaceForNote(id, 0)
             insertNote(id, Enums.NoteType.CHECKLIST, title, "", showChecked)
+            makePlaceForNote(id, 0)
         } catch (e: SQLiteConstraintException) {
             updateNote(id, title, "", showChecked)
         }
@@ -63,8 +85,8 @@ interface NoteDao {
 
     suspend fun upsertTextNote(id: UUID, title: String, text: String) {
         try {
-            makePlaceForNote(id, 0)
             insertNote(id, Enums.NoteType.TEXT, title, text, true)
+            makePlaceForNote(id, 0)
         } catch (e: SQLiteConstraintException) {
             updateNote(id, title, text, true)
         }
@@ -75,6 +97,15 @@ interface NoteDao {
     @Delete
     suspend fun deleteChecklistItem(item: ChecklistItem)
 
+    @Query("DELETE FROM checklistitem WHERE checklistItemNoteId=:noteId")
+    suspend fun deleteChecklistItems(noteId: UUID)
+
+    @Query("SELECT * FROM checklistitem ORDER BY checklistItemNoteId, checklistItemChecked, checklistItemPosition")
+    suspend fun getChecklistItems(): List<ChecklistItem>
+
+    @Query("SELECT * FROM checklistitem WHERE checklistItemNoteId = :noteId ORDER BY checklistItemChecked, checklistItemPosition")
+    suspend fun getChecklistItems(noteId: UUID): List<ChecklistItem>
+
     @Query(
         """
         INSERT INTO checklistitem (checklistItemId, checklistItemNoteId, checklistItemText, checklistItemChecked, checklistItemPosition)
@@ -82,6 +113,9 @@ interface NoteDao {
         """
     )
     suspend fun insertChecklistItem(id: UUID, noteId: UUID, text: String, checked: Boolean, position: Int)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertChecklistItems(items: List<ChecklistItem>)
 
     @Query("SELECT * FROM checklistitem ORDER BY checklistItemPosition")
     fun loadChecklistItems(): Flow<List<ChecklistItem>>
@@ -106,6 +140,11 @@ interface NoteDao {
         """
     )
     suspend fun makePlaceForChecklistItem(noteId: UUID, position: Int)
+
+    suspend fun replaceChecklistItems(noteId: UUID, items: List<ChecklistItem>) {
+        deleteChecklistItems(noteId)
+        insertChecklistItems(items)
+    }
 
     @Query("UPDATE checklistitem SET checklistItemText=:text, checklistItemChecked=:checked, checklistItemPosition=:position WHERE checklistItemId=:id")
     suspend fun updateChecklistItem(id: UUID, text: String, checked: Boolean, position: Int)

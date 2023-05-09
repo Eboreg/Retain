@@ -21,6 +21,14 @@ object Home : RetainDestination {
     override val route = "home"
 }
 
+object Settings : RetainDestination {
+    override val route = "settings"
+}
+
+object Debug : RetainDestination {
+    override val route = "debug"
+}
+
 object EditTextNote : AbstractNoteDestination() {
     override val route = "editTextNote"
 }
