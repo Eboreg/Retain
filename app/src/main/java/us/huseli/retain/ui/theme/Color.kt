@@ -2,6 +2,8 @@
 
 package us.huseli.retain.ui.theme
 
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 val md_theme_light_primary = Color(0xFF00658F)
@@ -105,3 +107,39 @@ val md_theme_dark_surfaceDim = Color(0xFF101415)
 val md_theme_dark_surfaceBright = Color(0xFF363A3A)
 
 val seed = Color(0xFF4E6C81)
+
+val noteColorsDark = listOf(
+    Color.Transparent,
+    Color(0xff77172e),
+    Color(0xff692b17),
+    Color(0xff7c4a03),
+    Color(0xff264d3b),
+    Color(0xff0c625d),
+    Color(0xff256377),
+    Color(0xff284255),
+    Color(0xff472e5b),
+    Color(0xff6c394f),
+    Color(0xff4b443a),
+    Color(0xff232427),
+)
+
+val noteColorsLight = listOf(
+    Color.Transparent,
+    Color(0xfffaafa8),
+    Color(0xfff39f76),
+    Color(0xfffff8b8),
+    Color(0xffe2f6d4),
+    Color(0xffb4ddd3),
+    Color(0xffd4e4ed),
+    Color(0xffaeccdc),
+    Color(0xffd3bfdb),
+    Color(0xfff6e2dd),
+    Color(0xffe9e3d4),
+    Color(0xffefeff1),
+)
+
+@Composable
+fun getNoteColors(): List<Color> = if (isSystemInDarkTheme()) noteColorsDark else noteColorsLight
+
+@Composable
+fun getNoteColor(index: Int): Color = getNoteColors()[index]

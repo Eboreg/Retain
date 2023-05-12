@@ -40,6 +40,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import us.huseli.retain.Constants.PREF_MIN_COLUMN_WIDTH
+import us.huseli.retain.Constants.PREF_NEXTCLOUD_PASSWORD
+import us.huseli.retain.Constants.PREF_NEXTCLOUD_URI
+import us.huseli.retain.Constants.PREF_NEXTCLOUD_USERNAME
 import us.huseli.retain.R
 import us.huseli.retain.ui.theme.RetainTheme
 import us.huseli.retain.viewmodels.SettingsViewModel
@@ -93,31 +97,31 @@ fun NextCloudSection(
     ) {
         OutlinedTextField(
             modifier = Modifier
-                .onFocusChanged { onFocusChange("nextCloudUri", it.isFocused) }
+                .onFocusChanged { onFocusChange(PREF_NEXTCLOUD_URI, it.isFocused) }
                 .fillMaxWidth(),
             label = { Text(stringResource(R.string.nextcloud_uri)) },
             singleLine = true,
             value = uri,
-            onValueChange = { onStringChange("nextCloudUri", it) },
+            onValueChange = { onStringChange(PREF_NEXTCLOUD_URI, it) },
             keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
         )
         OutlinedTextField(
             modifier = Modifier
-                .onFocusChanged { onFocusChange("nextCloudUsername", it.isFocused) }
+                .onFocusChanged { onFocusChange(PREF_NEXTCLOUD_USERNAME, it.isFocused) }
                 .fillMaxWidth(),
             label = { Text(stringResource(R.string.nextcloud_username)) },
             singleLine = true,
             value = username,
-            onValueChange = { onStringChange("nextCloudUsername", it) }
+            onValueChange = { onStringChange(PREF_NEXTCLOUD_USERNAME, it) }
         )
         OutlinedTextField(
             modifier = Modifier
-                .onFocusChanged { onFocusChange("nextCloudPassword", it.isFocused) }
+                .onFocusChanged { onFocusChange(PREF_NEXTCLOUD_PASSWORD, it.isFocused) }
                 .fillMaxWidth(),
             label = { Text(stringResource(R.string.nextcloud_password)) },
             singleLine = true,
             value = password,
-            onValueChange = { onStringChange("nextCloudPassword", it) },
+            onValueChange = { onStringChange(PREF_NEXTCLOUD_PASSWORD, it) },
             visualTransformation = PasswordVisualTransformation(),
         )
     }
@@ -149,7 +153,7 @@ fun GeneralSection(
                 value = minColumnWidthSliderPos.toFloat(),
                 steps = columnWidthSteps,
                 onValueChange = { minColumnWidthSliderPos = it.roundToInt() },
-                onValueChangeFinished = { onIntChange("minColumnWidth", minColumnWidthSliderPos) },
+                onValueChangeFinished = { onIntChange(PREF_MIN_COLUMN_WIDTH, minColumnWidthSliderPos) },
                 valueRange = 50f..maxColumnWidth.toFloat(),
             )
             Text(

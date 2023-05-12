@@ -2,14 +2,15 @@ package us.huseli.retain
 
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import us.huseli.retain.Constants.NOTE_ID_SAVED_STATE_KEY
 import java.util.UUID
 
 interface RetainDestination {
     val route: String
 }
 
-abstract class AbstractNoteDestination : RetainDestination {
-    private val idArg = "noteId"
+abstract class NoteDestination : RetainDestination {
+    private val idArg = NOTE_ID_SAVED_STATE_KEY
     val arguments = listOf(navArgument(idArg) { type = NavType.StringType })
     val routeTemplate: String
         get() = "$route/{$idArg}"
@@ -29,18 +30,18 @@ object Debug : RetainDestination {
     override val route = "debug"
 }
 
-object EditTextNote : AbstractNoteDestination() {
+object EditTextNote : NoteDestination() {
     override val route = "editTextNote"
 }
 
-object EditChecklistNote : AbstractNoteDestination() {
+object EditChecklistNote : NoteDestination() {
     override val route = "editChecklistNote"
 }
 
-object AddTextNote : AbstractNoteDestination() {
+object AddTextNote : NoteDestination() {
     override val route = "addTextNote"
 }
 
-object AddChecklistNote : AbstractNoteDestination() {
+object AddChecklistNote : NoteDestination() {
     override val route = "addChecklistNote"
 }

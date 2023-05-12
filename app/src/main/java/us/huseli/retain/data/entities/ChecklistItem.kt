@@ -21,12 +21,12 @@ class ChecklistItem(
     @PrimaryKey
     @ColumnInfo(name = "checklistItemId")
     val id: UUID = UUID.randomUUID(),
-    @ColumnInfo(name = "checklistItemText") var text: String = "",
+    @ColumnInfo(name = "checklistItemText") val text: String = "",
     @ColumnInfo(name = "checklistItemNoteId") val noteId: UUID,
-    @ColumnInfo(name = "checklistItemChecked") var checked: Boolean = false,
+    @ColumnInfo(name = "checklistItemChecked") val checked: Boolean = false,
     @ColumnInfo(name = "checklistItemPosition") val position: Int = 0,
 ) {
-    override fun toString() = "<ChecklistItem: $id / $text>"
+    override fun toString() = "<ChecklistItem: $id / $text / $position>"
 
     override fun equals(other: Any?) =
         other is ChecklistItem &&
@@ -37,4 +37,14 @@ class ChecklistItem(
         other.position == position
 
     override fun hashCode() = id.hashCode()
+
+    fun copy(text: String? = null, checked: Boolean? = null, position: Int? = null): ChecklistItem {
+        return ChecklistItem(
+            id = id,
+            text = text ?: this.text,
+            checked = checked ?: this.checked,
+            position = position ?: this.position,
+            noteId = noteId
+        )
+    }
 }

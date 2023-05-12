@@ -82,7 +82,7 @@ fun App(viewModel: NoteViewModel = hiltViewModel()) {
                 route = AddTextNote.routeTemplate,
                 arguments = AddTextNote.arguments,
             ) {
-                EditTextNoteScreen(
+                TextNoteScreen(
                     snackbarHostState = snackbarHostState,
                     onSave = viewModel.saveTextNote,
                     onClose = onClose,
@@ -93,7 +93,7 @@ fun App(viewModel: NoteViewModel = hiltViewModel()) {
                 route = AddChecklistNote.routeTemplate,
                 arguments = AddChecklistNote.arguments,
             ) {
-                EditChecklistNoteScreen(
+                ChecklistNoteScreen(
                     snackbarHostState = snackbarHostState,
                     onSave = viewModel.saveChecklistNote,
                     onClose = onClose,
@@ -104,7 +104,7 @@ fun App(viewModel: NoteViewModel = hiltViewModel()) {
                 route = EditChecklistNote.routeTemplate,
                 arguments = EditChecklistNote.arguments,
             ) {
-                EditChecklistNoteScreen(
+                ChecklistNoteScreen(
                     snackbarHostState = snackbarHostState,
                     onSave = viewModel.saveChecklistNote,
                     onClose = onClose,
@@ -115,7 +115,7 @@ fun App(viewModel: NoteViewModel = hiltViewModel()) {
                 route = EditTextNote.routeTemplate,
                 arguments = EditTextNote.arguments,
             ) {
-                EditTextNoteScreen(
+                TextNoteScreen(
                     snackbarHostState = snackbarHostState,
                     onSave = viewModel.saveTextNote,
                     onClose = onClose,

@@ -64,13 +64,15 @@ android {
 
 dependencies {
     implementation("com.google.devtools.ksp:symbol-processing-api:1.8.10-1.0.9")
-    implementation("androidx.core:core-ktx:1.10.0")
+    implementation("androidx.core:core-ktx:1.10.1")
     implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("org.burnoutcrew.composereorderable:reorderable:0.9.6")
     implementation("androidx.recyclerview:recyclerview:1.3.0")
     implementation("androidx.preference:preference-ktx:1.2.0")
     implementation("androidx.activity:activity-compose:1.7.1")
     implementation("androidx.navigation:navigation-compose:2.5.3")
+    // For PickVisualMedia contract
+    implementation("androidx.activity:activity-ktx:1.7.1")
 
     // Lifecycle:
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")

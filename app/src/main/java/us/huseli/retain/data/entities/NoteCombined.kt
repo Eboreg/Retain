@@ -3,7 +3,8 @@ package us.huseli.retain.data.entities
 class NoteCombined(
     note: Note,
     val checklistItems: List<ChecklistItem> = emptyList(),
-    val databaseVersion: Int,
+    val images: List<Image> = emptyList(),
+    @Suppress("unused") val databaseVersion: Int,
 ) : Note(
     id = note.id,
     title = note.title,
@@ -12,19 +13,19 @@ class NoteCombined(
     updated = note.updated,
     position = note.position,
     type = note.type,
-    showChecked = note.showChecked
+    showChecked = note.showChecked,
+    colorIdx = note.colorIdx
 ) {
     override fun equals(other: Any?) =
         other is NoteCombined &&
-        other.id == id &&
-        other.title == title &&
-        other.text == text &&
-        other.created == created &&
-        other.updated == updated &&
-        other.position == position &&
-        other.type == type &&
-        other.showChecked == showChecked &&
-        other.checklistItems.all { checklistItems.contains(it) }
+        super.equals(other) &&
+        other.checklistItems.all { checklistItems.contains(it) } &&
+        other.images.all { images.contains(it) }
 
-    override fun hashCode() = 31 * id.hashCode() + checklistItems.sortedBy { it.id }.hashCode()
+    override fun hashCode(): Int {
+        var result = super.hashCode()
+        result = 31 * result + checklistItems.sortedBy { it.id }.hashCode()
+        result = 31 * result + images.sortedBy { it.filename }.hashCode()
+        return result
+    }
 }

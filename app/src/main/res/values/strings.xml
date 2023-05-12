@@ -21,6 +21,12 @@
     <string name="minimum_column_width_on_home_screen">Minimum column width on home screen</string>
     <string name="close">Close</string>
     <string name="debug">Debug</string>
+    <string name="go_back">Go back</string>
+    <string name="add_image">Add image</string>
+    <string name="delete_image">Delete image</string>
+    <string name="take_picture">Take picture</string>
+    <string name="set_colour">Set colour</string>
+    <string name="select_note_colour">Select note colour</string>
     <plurals name="plus_x_items">
         <item quantity="one">+ 1 item</item>
         <item quantity="other">+ %1$d items</item>

@@ -39,6 +39,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import us.huseli.retain.R
 import us.huseli.retain.logLevelToString
 import us.huseli.retain.viewmodels.NoteViewModel
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import kotlin.math.max
 
 @Composable
 fun LogLevelDropdownMenuItem(
@@ -103,6 +106,7 @@ fun DebugScreen(
     snackbarHostState: SnackbarHostState,
     onClose: () -> Unit,
 ) {
+    val timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS").withZone(ZoneId.systemDefault())
     var logLevel by rememberSaveable { mutableStateOf(Log.INFO) }
     val listState = rememberLazyListState()
     val logMessages = remember {
@@ -116,7 +120,9 @@ fun DebugScreen(
     }
 
     LaunchedEffect(logMessages.filter { it.level >= logLevel }.size) {
-        listState.animateScrollToItem(logMessages.filter { it.level >= logLevel }.size - 1)
+        listState.animateScrollToItem(
+            max(logMessages.filter { it.level >= logLevel }.size - 1, 0)
+        )
     }
 
     Scaffold(
@@ -138,14 +144,14 @@ fun DebugScreen(
                     Row(modifier = Modifier.padding(vertical = 4.dp)) {
                         Column {
                             Text(
-                                text = "${logMessage.timestamp} ${logMessage.levelToString()}",
+                                text = "${timeFormatter.format(logMessage.timestamp)} ${logMessage.levelToString()}",
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 12.sp,
                                 lineHeight = 15.sp,
                                 color = Color.Gray,
                             )
                             Text(
-                                text = "${logMessage.tag} [${logMessage.thread}]",
+                                text = logMessage.tag,
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 12.sp,
                                 lineHeight = 15.sp,

@@ -20,6 +20,7 @@ open class Note(
     @ColumnInfo(name = "notePosition") val position: Int = 0,
     @ColumnInfo(name = "noteType") val type: Enums.NoteType,
     @ColumnInfo(name = "noteShowChecked") val showChecked: Boolean = true,
+    @ColumnInfo(name = "noteColorIdx") val colorIdx: Int = 0,
 ) : Comparable<Note> {
     override fun toString() = "<Note: id=$id, title=$title]>"
 
@@ -34,7 +35,8 @@ open class Note(
         other.updated == updated &&
         other.position == position &&
         other.type == type &&
-        other.showChecked == showChecked
+        other.showChecked == showChecked &&
+        other.colorIdx == colorIdx
 
     override fun hashCode() = id.hashCode()
 }

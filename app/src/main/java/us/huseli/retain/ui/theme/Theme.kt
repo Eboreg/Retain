@@ -15,7 +15,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-
 private val LightColors = lightColorScheme(
     primary = md_theme_light_primary,
     onPrimary = md_theme_light_onPrimary,
@@ -66,7 +65,6 @@ private val LightColors = lightColorScheme(
     // surfaceBright = md_theme_light_surfaceBright,
     // surfaceDim = md_theme_light_surfaceDim,
 )
-
 
 private val DarkColors = darkColorScheme(
     primary = md_theme_dark_primary,

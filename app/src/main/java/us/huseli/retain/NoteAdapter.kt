@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package us.huseli.retain
 
 import android.view.LayoutInflater
@@ -19,9 +21,7 @@ class NoteAdapter : ListAdapter<Note, NoteAdapter.ViewHolder>(Comparator()) {
         getItem(position)
     }
 
-    class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-
-    }
+    class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
 
     class Comparator : DiffUtil.ItemCallback<Note>() {
         override fun areItemsTheSame(oldItem: Note, newItem: Note) = oldItem.id == newItem.id

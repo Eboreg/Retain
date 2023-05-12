@@ -4,42 +4,84 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import us.huseli.retain.Logger
 import us.huseli.retain.data.NoteRepository
 import us.huseli.retain.data.entities.ChecklistItem
-import us.huseli.retain.data.entities.Note
+import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
 class EditChecklistNoteViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     repository: NoteRepository,
-) : BaseEditNoteViewModel(savedStateHandle, repository) {
-    private var _noteSaved = false
-    val title = MutableStateFlow("")
-    val showChecked = MutableStateFlow(true)
-    val checklistItems = repository.loadChecklistItems(noteId)
+    logger: Logger?
+) : EditNoteViewModel(savedStateHandle, repository, logger) {
+    private var _checklistItems = mutableMapOf<UUID, ChecklistItem>()
+    private var _isDirtyMap = mutableMapOf<UUID, Boolean>()
+    private val _checklistItemsFlow = MutableStateFlow<List<ChecklistItem>>(emptyList())
 
-    private suspend fun save() {
-        repository.upsertChecklistNote(noteId, title.value, showChecked.value)
-        _noteSaved = true
+    val checklistItems = _checklistItemsFlow.asStateFlow()
+    val updatedItems: List<ChecklistItem>
+        get() = _isDirtyMap.filterValues { it }.keys.mapNotNull { _checklistItems[it] }
+
+    init {
+        loadItems()
     }
 
     fun deleteItem(item: ChecklistItem) = viewModelScope.launch {
         repository.deleteChecklistItem(item)
+        loadItems()
+        _isDirty = true
     }
 
     fun insertItem(text: String, checked: Boolean, position: Int) = viewModelScope.launch {
-        if (!_noteSaved) save()
+        if (!_isStored) saveNote()
         repository.insertChecklistItem(noteId, text, checked, position)
+        loadItems()
+        _isDirty = true
     }
 
-    fun updateItem(item: ChecklistItem, text: String, checked: Boolean, position: Int) = viewModelScope.launch {
-        repository.updateChecklistItem(item, text, checked, position)
+    private fun loadItems() = viewModelScope.launch {
+        repository.listChecklistItems(noteId).also { items ->
+            items.forEach { item ->
+                if (_checklistItems[item.id] == null) {
+                    _checklistItems[item.id] = item
+                    _isDirtyMap[item.id] = false
+                } else {
+                    @Suppress("ReplaceNotNullAssertionWithElvisReturn")
+                    _checklistItems[item.id] = _checklistItems[item.id]!!.copy(position = item.position)
+                }
+            }
+            _checklistItems.keys.toList().forEach { id ->
+                if (!items.map { it.id }.contains(id)) _checklistItems.remove(id)
+            }
+            _checklistItemsFlow.value = _checklistItems.values.sortedBy { it.position }
+        }
     }
 
-    override fun receiveNote(note: Note) {
-        title.value = note.title
-        showChecked.value = note.showChecked
+    fun toggleShowChecked() {
+        _showChecked.value = !_showChecked.value
+        _isDirty = true
     }
+
+    fun updateItem(id: UUID, text: String? = null, checked: Boolean? = null, position: Int? = null) {
+        _checklistItems[id]?.let { item ->
+            if (
+                (checked != null && item.checked != checked) ||
+                (text != null && item.text != text) ||
+                (position != null && item.position != position)
+            ) {
+                _checklistItems[id] = item.copy(checked = checked, text = text, position = position)
+                _isDirtyMap[id] = true
+                _checklistItemsFlow.value = _checklistItems.values.sortedBy { it.position }
+                _isDirty = true
+            }
+        }
+    }
+
+    fun updateItemChecked(id: UUID, checked: Boolean) = updateItem(id, checked = checked)
+
+    fun updateItemText(id: UUID, text: String) = updateItem(id, text = text)
 }
