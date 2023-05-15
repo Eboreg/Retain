@@ -48,6 +48,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -165,7 +166,10 @@ fun ChecklistRow(
                 )
                 onTextChange(stripNullChar(it.text))
             },
-            keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
+            keyboardOptions = KeyboardOptions.Default.copy(
+                imeAction = ImeAction.Next,
+                capitalization = KeyboardCapitalization.Sentences,
+            ),
             keyboardActions = KeyboardActions(
                 onNext = {
                     val head = textFieldValue.text.substring(0, textFieldValue.selection.start)

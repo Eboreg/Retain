@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import us.huseli.retain.R
@@ -110,7 +111,10 @@ fun NoteTitleField(
         },
         textStyle = MaterialTheme.typography.headlineSmall,
         modifier = modifier,
-        keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
+        keyboardOptions = KeyboardOptions.Default.copy(
+            imeAction = ImeAction.Next,
+            capitalization = KeyboardCapitalization.Sentences,
+        ),
         keyboardActions = KeyboardActions(
             onNext = onNext?.let { { onNext() } }
         ),
