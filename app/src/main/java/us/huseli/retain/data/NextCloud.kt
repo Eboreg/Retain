@@ -218,8 +218,6 @@ class NextCloud @Inject constructor(
     }
 
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
-        log("onSharedPreferenceChanged: key=$key, value=${preferences.getString(key, "")}")
-
         when (key) {
             PREF_NEXTCLOUD_URI -> this.uri = Uri.parse(preferences.getString(key, "") ?: "")
             PREF_NEXTCLOUD_USERNAME -> this.username = preferences.getString(key, "") ?: ""
