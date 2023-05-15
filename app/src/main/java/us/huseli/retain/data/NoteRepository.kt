@@ -9,11 +9,12 @@ import androidx.compose.ui.graphics.asImageBitmap
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import us.huseli.retain.Constants.IMAGE_SUBDIR
+import us.huseli.retain.LogInterface
 import us.huseli.retain.Logger
-import us.huseli.retain.LoggingObject
 import us.huseli.retain.data.entities.ChecklistItem
 import us.huseli.retain.data.entities.Image
 import us.huseli.retain.data.entities.ImageWithBitmap
@@ -32,12 +33,13 @@ class NoteRepository @Inject constructor(
     private val imageDao: ImageDao,
     private val nextCloud: NextCloud,
     private val ioScope: CoroutineScope,
-    override var logger: Logger?,
+    override val logger: Logger,
     private val database: Database,
-) : LoggingObject {
+) : LogInterface {
     val imageDir = File(context.filesDir, IMAGE_SUBDIR).apply { mkdirs() }
     val notes: Flow<List<Note>> = noteDao.flowList()
     val checklistItems: Flow<List<ChecklistItem>> = checklistItemDao.flowList()
+    val nextCloudNeedsTesting = MutableStateFlow(true)
 
     init {
         syncNextCloud()
@@ -148,7 +150,7 @@ class NoteRepository @Inject constructor(
                 if (remoteUpdated.isNotEmpty()) {
                     log(
                         message = "${remoteUpdated.size} new or updated notes synced from Nextcloud.",
-                        addToFlow = true,
+                        showInSnackbar = true,
                     )
                 }
 
@@ -176,6 +178,10 @@ class NoteRepository @Inject constructor(
             }
         }
         nextCloud.RemoveOrphanImagesTask(keep = imageFilenames).run()
+    }
+
+    fun testNextcloud(uri: Uri, username: String, password: String, onResult: (NextCloudTestResult) -> Unit) {
+        nextCloud.testClient(uri, username, password) { result -> onResult(result) }
     }
 
     suspend fun updateChecklistItems(items: Collection<ChecklistItem>) = checklistItemDao.update(items)

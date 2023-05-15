@@ -6,6 +6,7 @@ plugins {
     id("com.google.devtools.ksp")
     id("org.jetbrains.kotlin.kapt")
     id("com.google.dagger.hilt.android")
+    id("kotlin-parcelize")
 }
 
 kotlin {
@@ -87,16 +88,16 @@ dependencies {
     }
 
     // Compose:
-    implementation(platform("androidx.compose:compose-bom:2023.05.00"))
+    implementation(platform("androidx.compose:compose-bom:2023.05.01"))
     implementation("androidx.compose.ui:ui:1.4.3")
     implementation("androidx.compose.ui:ui-graphics:1.4.3")
     implementation("androidx.compose.ui:ui-tooling-preview:1.4.3")
-    implementation("androidx.compose.material3:material3")
-    androidTestImplementation(platform("androidx.compose:compose-bom:2023.05.00"))
+    implementation("androidx.compose.material3:material3:1.1.0")
+    androidTestImplementation(platform("androidx.compose:compose-bom:2023.05.01"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.4.3")
     debugImplementation("androidx.compose.ui:ui-tooling:1.4.3")
     debugImplementation("androidx.compose.ui:ui-test-manifest:1.4.3")
-    implementation("androidx.compose.material3:material3:1.0.1")
+    implementation("androidx.compose.material3:material3:1.1.0")
     implementation("androidx.compose.material:material-icons-extended:1.4.3")
 
     // Room:
@@ -105,12 +106,15 @@ dependencies {
     implementation("androidx.room:room-ktx:2.5.1")
 
     // Hilt:
-    implementation("com.google.dagger:hilt-android:2.46")
+    implementation("com.google.dagger:hilt-android:2.46.1")
     implementation("androidx.hilt:hilt-navigation-compose:1.0.0")
-    kapt("com.google.dagger:hilt-compiler:2.46")
+    kapt("com.google.dagger:hilt-compiler:2.46.1")
 
     // Gson:
     implementation("com.google.code.gson:gson:2.10.1")
+
+    // Reorder:
+    implementation("org.burnoutcrew.composereorderable:reorderable:0.9.6")
 
     // testImplementation("junit:junit:4.13.2")
     // androidTestImplementation("androidx.test.ext:junit:1.1.5")

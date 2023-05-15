@@ -19,8 +19,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import okhttp3.internal.toImmutableList
-import us.huseli.retain.Logger
-import us.huseli.retain.LoggingObject
 import us.huseli.retain.R
 import us.huseli.retain.data.entities.Image
 import us.huseli.retain.data.entities.ImageWithBitmap
@@ -28,7 +26,7 @@ import us.huseli.retain.data.entities.ImageWithBitmap
 class ImageIterator(
     private val objects: List<ImageWithBitmap>,
     private val maxRows: Int = Int.MAX_VALUE
-) : Iterator<List<ImageWithBitmap>>, LoggingObject {
+) : Iterator<List<ImageWithBitmap>> {
     private var currentIndex = 0
     private var currentRow = 0
 
@@ -47,11 +45,8 @@ class ImageIterator(
         }
 
         currentRow++
-        log("ImageIterator: currentIndex=$currentIndex, objects=$objects, returning: $result")
         return result.toImmutableList()
     }
-
-    override var logger: Logger? = null
 }
 
 @Composable

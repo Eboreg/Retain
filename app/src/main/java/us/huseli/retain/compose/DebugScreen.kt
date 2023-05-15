@@ -34,11 +34,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import us.huseli.retain.Logger
 import us.huseli.retain.R
 import us.huseli.retain.logLevelToString
-import us.huseli.retain.viewmodels.NoteViewModel
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.math.max
@@ -98,11 +97,10 @@ fun DebugTopAppBar(
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DebugScreen(
     modifier: Modifier = Modifier,
-    viewModel: NoteViewModel = hiltViewModel(),
+    logger: Logger,
     snackbarHostState: SnackbarHostState,
     onClose: () -> Unit,
 ) {
@@ -111,11 +109,11 @@ fun DebugScreen(
     val listState = rememberLazyListState()
     val logMessages = remember {
         mutableStateListOf(
-            *viewModel.logMessages.replayCache.filterNotNull().toTypedArray()
+            *logger.logMessages.replayCache.filterNotNull().toTypedArray()
         )
     }
 
-    viewModel.logMessages.collectAsStateWithLifecycle(null).value?.let {
+    logger.logMessages.collectAsStateWithLifecycle(null).value?.let {
         if (!logMessages.contains(it)) logMessages.add(it)
     }
 

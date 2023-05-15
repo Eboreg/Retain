@@ -6,7 +6,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import us.huseli.retain.Logger
 import us.huseli.retain.data.NoteRepository
 import us.huseli.retain.data.entities.ChecklistItem
 import java.util.UUID
@@ -15,9 +14,8 @@ import javax.inject.Inject
 @HiltViewModel
 class EditChecklistNoteViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    repository: NoteRepository,
-    logger: Logger?
-) : EditNoteViewModel(savedStateHandle, repository, logger) {
+    repository: NoteRepository
+) : EditNoteViewModel(savedStateHandle, repository) {
     private var _checklistItems = mutableMapOf<UUID, ChecklistItem>()
     private var _isDirtyMap = mutableMapOf<UUID, Boolean>()
     private val _checklistItemsFlow = MutableStateFlow<List<ChecklistItem>>(emptyList())
@@ -84,4 +82,18 @@ class EditChecklistNoteViewModel @Inject constructor(
     fun updateItemChecked(id: UUID, checked: Boolean) = updateItem(id, checked = checked)
 
     fun updateItemText(id: UUID, text: String) = updateItem(id, text = text)
+
+    fun switchItemPositions(fromId: UUID, toId: UUID) {
+        val from = _checklistItems[fromId]
+        val to = _checklistItems[toId]
+
+        if (from != null && to != null) {
+            _checklistItems[fromId] = from.copy(position = to.position)
+            _checklistItems[toId] = to.copy(position = from.position)
+            _isDirtyMap[fromId] = true
+            _isDirtyMap[toId] = true
+            _checklistItemsFlow.value = _checklistItems.values.sortedBy { it.position }
+            _isDirty = true
+        }
+    }
 }

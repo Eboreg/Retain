@@ -8,11 +8,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -25,6 +22,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -36,7 +34,6 @@ import us.huseli.retain.ui.theme.getNoteColor
 import us.huseli.retain.viewmodels.EditNoteViewModel
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BaseNoteScreen(
     modifier: Modifier = Modifier,
@@ -44,7 +41,7 @@ fun BaseNoteScreen(
     snackbarHostState: SnackbarHostState,
     onTitleFieldNext: (() -> Unit)?,
     onClose: () -> Unit,
-    content: @Composable ColumnScope.() -> Unit,
+    content: @Composable ColumnScope.(Color) -> Unit,
 ) {
     val title by viewModel.title.collectAsStateWithLifecycle()
     val colorIdx by viewModel.colorIdx.collectAsStateWithLifecycle()
@@ -65,10 +62,9 @@ fun BaseNoteScreen(
     ) { innerPadding ->
         Column(
             modifier = modifier
-                .padding(innerPadding)
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .background(noteColor)
+                .padding(innerPadding)
+                .background(noteColor),
         ) {
             NoteImageGrid(
                 imagesWithBitmap = imagesWithBitmap,
@@ -86,7 +82,7 @@ fun BaseNoteScreen(
                 onNext = onTitleFieldNext,
             )
             Spacer(Modifier.height(4.dp))
-            content()
+            content(noteColor)
         }
 
         currentCarouselIndex?.let {
@@ -100,7 +96,6 @@ fun BaseNoteScreen(
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoteTitleField(
     modifier: Modifier = Modifier,

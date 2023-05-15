@@ -10,8 +10,8 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import us.huseli.retain.BuildConfig
+import us.huseli.retain.LogMessage
 import us.huseli.retain.Logger
-import us.huseli.retain.LoggingObject
 import us.huseli.retain.data.entities.ChecklistItem
 import us.huseli.retain.data.entities.Image
 import us.huseli.retain.data.entities.Note
@@ -33,15 +33,13 @@ abstract class Database : RoomDatabase() {
         fun logger(): Logger
     }
 
-    companion object : LoggingObject {
-        override var logger: Logger? = null
-
+    companion object {
         fun build(context: Context): Database {
             val hiltEntryPoint = EntryPointAccessors.fromApplication(
                 context.applicationContext,
                 DatabaseEntryPoint::class.java
             )
-            this.logger = hiltEntryPoint.logger()
+            val logger = hiltEntryPoint.logger()
 
             val builder = Room
                 .databaseBuilder(context.applicationContext, Database::class.java, "db.sqlite3")
@@ -50,7 +48,14 @@ abstract class Database : RoomDatabase() {
             if (BuildConfig.DEBUG) {
                 class Callback : QueryCallback {
                     override fun onQuery(sqlQuery: String, bindArgs: List<Any?>) {
-                        log("$sqlQuery, bindArgs=$bindArgs", Log.DEBUG)
+                        logger.log(
+                            LogMessage(
+                                level = Log.DEBUG,
+                                tag = "${javaClass.simpleName}<${System.identityHashCode(this)}>",
+                                thread = Thread.currentThread().name,
+                                message = "$sqlQuery, bindArgs=$bindArgs",
+                            )
+                        )
                     }
                 }
 

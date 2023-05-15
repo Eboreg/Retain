@@ -1,28 +1,41 @@
 package us.huseli.retain.compose
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Save
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ShapeDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,9 +45,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -45,6 +61,8 @@ import us.huseli.retain.Constants.PREF_NEXTCLOUD_PASSWORD
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_URI
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_USERNAME
 import us.huseli.retain.R
+import us.huseli.retain.cleanUri
+import us.huseli.retain.data.NextCloudTestResult
 import us.huseli.retain.ui.theme.RetainTheme
 import us.huseli.retain.viewmodels.SettingsViewModel
 import kotlin.math.max
@@ -81,49 +99,137 @@ fun SettingsSection(
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ErrorDialog(
+    modifier: Modifier = Modifier,
+    title: String,
+    text: String,
+    onClose: () -> Unit
+) {
+    AlertDialog(
+        modifier = modifier,
+        title = { Text(title) },
+        text = { Text(text) },
+        dismissButton = {
+            TextButton(onClick = onClose) {
+                Text(stringResource(R.string.close).uppercase())
+            }
+        },
+        onDismissRequest = onClose,
+        confirmButton = {},
+    )
+}
+
+
 @Composable
 fun NextCloudSection(
     modifier: Modifier = Modifier,
     uri: String,
     username: String,
     password: String,
-    onStringChange: (String, String) -> Unit,
-    onFocusChange: (String, Boolean) -> Unit,
+    isTesting: Boolean,
+    isWorking: Boolean?,
+    isUrlFail: Boolean,
+    isCredentialsFail: Boolean,
+    onTestClick: () -> Unit,
+    onChange: (field: String, value: Any) -> Unit,
 ) {
+    var uriState by rememberSaveable(uri) { mutableStateOf(uri) }
+    val workingIcon = @Composable {
+        Icon(
+            imageVector = Icons.Filled.Check,
+            contentDescription = null,
+            tint = Color.Green
+        )
+    }
+    val failIcon = @Composable {
+        Icon(
+            imageVector = Icons.Filled.Error,
+            contentDescription = null,
+            tint = Color.Red
+        )
+    }
+
     SettingsSection(
         modifier = modifier,
-        title = stringResource(R.string.nextcloud)
+        title = stringResource(R.string.nextcloud_sync)
     ) {
-        OutlinedTextField(
-            modifier = Modifier
-                .onFocusChanged { onFocusChange(PREF_NEXTCLOUD_URI, it.isFocused) }
-                .fillMaxWidth(),
-            label = { Text(stringResource(R.string.nextcloud_uri)) },
-            singleLine = true,
-            value = uri,
-            onValueChange = { onStringChange(PREF_NEXTCLOUD_URI, it) },
-            keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
-        )
-        OutlinedTextField(
-            modifier = Modifier
-                .onFocusChanged { onFocusChange(PREF_NEXTCLOUD_USERNAME, it.isFocused) }
-                .fillMaxWidth(),
-            label = { Text(stringResource(R.string.nextcloud_username)) },
-            singleLine = true,
-            value = username,
-            onValueChange = { onStringChange(PREF_NEXTCLOUD_USERNAME, it) }
-        )
-        OutlinedTextField(
-            modifier = Modifier
-                .onFocusChanged { onFocusChange(PREF_NEXTCLOUD_PASSWORD, it.isFocused) }
-                .fillMaxWidth(),
-            label = { Text(stringResource(R.string.nextcloud_password)) },
-            singleLine = true,
-            value = password,
-            onValueChange = { onStringChange(PREF_NEXTCLOUD_PASSWORD, it) },
-            visualTransformation = PasswordVisualTransformation(),
-        )
+        Box(modifier = Modifier.fillMaxWidth()) {
+            OutlinedTextField(
+                modifier = Modifier
+                    .onFocusChanged {
+                        if (!it.isFocused) {
+                            if (uriState.isNotEmpty()) {
+                                uriState = cleanUri(uriState)
+                                onChange(PREF_NEXTCLOUD_URI, uriState)
+                            }
+                        }
+                    }
+                    .fillMaxWidth(),
+                label = { Text(stringResource(R.string.nextcloud_uri)) },
+                singleLine = true,
+                value = uriState,
+                onValueChange = {
+                    uriState = it
+                    onChange(PREF_NEXTCLOUD_URI, it)
+                },
+                keyboardOptions = KeyboardOptions.Default.copy(
+                    imeAction = ImeAction.Next,
+                    keyboardType = KeyboardType.Uri
+                ),
+                enabled = !isTesting,
+                trailingIcon = {
+                    if (isWorking == true) workingIcon()
+                    else if (isUrlFail) failIcon()
+                }
+            )
+        }
+        Box(modifier = Modifier.fillMaxWidth()) {
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.nextcloud_username)) },
+                singleLine = true,
+                value = username,
+                enabled = !isTesting,
+                onValueChange = { onChange(PREF_NEXTCLOUD_USERNAME, it) },
+                trailingIcon = {
+                    if (isWorking == true) workingIcon()
+                    else if (isCredentialsFail) failIcon()
+                }
+            )
+        }
+        Box(modifier = Modifier.fillMaxWidth()) {
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.nextcloud_password)) },
+                singleLine = true,
+                value = password,
+                onValueChange = { onChange(PREF_NEXTCLOUD_PASSWORD, it) },
+                visualTransformation = PasswordVisualTransformation(),
+                enabled = !isTesting,
+                trailingIcon = {
+                    if (isWorking == true) workingIcon()
+                    else if (isCredentialsFail) failIcon()
+                }
+            )
+        }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            OutlinedButton(
+                onClick = onTestClick,
+                shape = ShapeDefaults.ExtraSmall,
+                enabled = !isTesting && uriState.isNotEmpty() && username.isNotEmpty() && password.isNotEmpty(),
+            ) {
+                Text(
+                    text = if (isTesting) stringResource(R.string.testing) else stringResource(R.string.test_connection),
+                )
+            }
+            if (isTesting) {
+                LinearProgressIndicator()
+            }
+        }
     }
 }
 
@@ -132,7 +238,7 @@ fun NextCloudSection(
 fun GeneralSection(
     modifier: Modifier = Modifier,
     minColumnWidth: Int,
-    onIntChange: (String, Int) -> Unit,
+    onChange: (field: String, value: Any) -> Unit,
 ) {
     var minColumnWidthSliderPos by remember { mutableStateOf(minColumnWidth) }
     val maxScreenWidth = max(LocalConfiguration.current.screenHeightDp, LocalConfiguration.current.screenWidthDp)
@@ -149,11 +255,11 @@ fun GeneralSection(
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
             Slider(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 value = minColumnWidthSliderPos.toFloat(),
                 steps = columnWidthSteps,
                 onValueChange = { minColumnWidthSliderPos = it.roundToInt() },
-                onValueChangeFinished = { onIntChange(PREF_MIN_COLUMN_WIDTH, minColumnWidthSliderPos) },
+                onValueChangeFinished = { onChange(PREF_MIN_COLUMN_WIDTH, minColumnWidthSliderPos) },
                 valueRange = 50f..maxColumnWidth.toFloat(),
             )
             Text(
@@ -168,18 +274,18 @@ fun GeneralSection(
 @Composable
 fun SettingsTopAppBar(
     modifier: Modifier = Modifier,
-    onSave: () -> Unit = {},
+    onClose: () -> Unit = {},
 ) {
     TopAppBar(
         modifier = modifier,
         title = {
             Text(stringResource(R.string.settings))
         },
-        actions = {
-            IconButton(onClick = onSave) {
+        navigationIcon = {
+            IconButton(onClick = onClose) {
                 Icon(
-                    imageVector = Icons.Filled.Save,
-                    contentDescription = stringResource(R.string.save_settings),
+                    imageVector = Icons.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.close)
                 )
             }
         },
@@ -187,7 +293,7 @@ fun SettingsTopAppBar(
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SettingsScreenImpl(
     modifier: Modifier = Modifier,
@@ -196,50 +302,47 @@ fun SettingsScreenImpl(
     nextCloudPassword: String,
     minColumnWidth: Int,
     snackbarHostState: SnackbarHostState,
-    onStringChange: (String, String) -> Unit = { _, _ -> },
-    onIntChange: (String, Int) -> Unit = { _, _ -> },
-    onFocusChange: (String, Boolean) -> Unit = { _, _ -> },
+    isNextCloudTesting: Boolean = false,
+    isNextCloudWorking: Boolean? = null,
+    isNextCloudUrlFail: Boolean = false,
+    isNextCloudCredentialsFail: Boolean = false,
     onSave: () -> Unit = {},
+    onNextCloudTestClick: () -> Unit,
+    onChange: (field: String, value: Any) -> Unit = { _, _ -> },
 ) {
     Scaffold(
-        topBar = { SettingsTopAppBar(onSave = onSave) },
+        topBar = { SettingsTopAppBar(onClose = onSave) },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     ) { innerPadding ->
-        BoxWithConstraints(modifier = modifier.padding(innerPadding)) {
-            if (maxWidth > 600.dp) {
-                val columnWidth = maxWidth / 2
-
-                Row {
-                    Column(modifier = Modifier.width(columnWidth)) {
-                        GeneralSection(
-                            minColumnWidth = minColumnWidth,
-                            onIntChange = onIntChange,
-                        )
-                    }
-                    Column {
-                        NextCloudSection(
-                            uri = nextCloudUri,
-                            username = nextCloudUsername,
-                            password = nextCloudPassword,
-                            onStringChange = onStringChange,
-                            onFocusChange = onFocusChange,
-                        )
-                    }
-                }
-            } else {
-                Column {
-                    GeneralSection(
-                        minColumnWidth = minColumnWidth,
-                        onIntChange = onIntChange,
-                    )
-                    NextCloudSection(
-                        uri = nextCloudUri,
-                        username = nextCloudUsername,
-                        password = nextCloudPassword,
-                        onStringChange = onStringChange,
-                        onFocusChange = onFocusChange,
-                    )
-                }
+        LazyVerticalStaggeredGrid(
+            contentPadding = PaddingValues(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalItemSpacing = 8.dp,
+            columns = StaggeredGridCells.Adaptive(minSize = 400.dp),
+            modifier = modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+        ) {
+            item {
+                GeneralSection(
+                    modifier = Modifier.fillMaxWidth(),
+                    minColumnWidth = minColumnWidth,
+                    onChange = onChange,
+                )
+            }
+            item {
+                NextCloudSection(
+                    modifier = Modifier.fillMaxWidth(),
+                    uri = nextCloudUri,
+                    username = nextCloudUsername,
+                    password = nextCloudPassword,
+                    isTesting = isNextCloudTesting,
+                    onTestClick = onNextCloudTestClick,
+                    onChange = onChange,
+                    isCredentialsFail = isNextCloudCredentialsFail,
+                    isUrlFail = isNextCloudUrlFail,
+                    isWorking = isNextCloudWorking,
+                )
             }
         }
     }
@@ -257,6 +360,27 @@ fun SettingsScreen(
     val nextCloudUsername by viewModel.nextCloudUsername.collectAsStateWithLifecycle("")
     val nextCloudPassword by viewModel.nextCloudPassword.collectAsStateWithLifecycle("")
     val minColumnWidth by viewModel.minColumnWidth.collectAsStateWithLifecycle()
+    val isNextCloudTesting by viewModel.isNextCloudTesting.collectAsStateWithLifecycle()
+    val isNextCloudWorking by viewModel.isNextCloudWorking.collectAsStateWithLifecycle()
+    val isNextCloudUrlFail by viewModel.isNextCloudUrlFail.collectAsStateWithLifecycle()
+    val isNextCloudCredentialsFail by viewModel.isNextCloudCredentialsFail.collectAsStateWithLifecycle()
+    var nextCloudTestResult by remember { mutableStateOf<NextCloudTestResult?>(null) }
+    val nextCloudSuccessMessage = stringResource(R.string.successfully_connected_to_nextcloud)
+    val context = LocalContext.current
+
+    nextCloudTestResult?.let { result ->
+        if (result.success) {
+            LaunchedEffect(result) {
+                snackbarHostState.showSnackbar(nextCloudSuccessMessage)
+            }
+        } else {
+            ErrorDialog(
+                title = stringResource(R.string.nextcloud_error),
+                text = result.getErrorMessage(context),
+                onClose = { nextCloudTestResult = null }
+            )
+        }
+    }
 
     SettingsScreenImpl(
         modifier = modifier,
@@ -265,13 +389,18 @@ fun SettingsScreen(
         nextCloudPassword = nextCloudPassword,
         minColumnWidth = minColumnWidth,
         snackbarHostState = snackbarHostState,
-        onStringChange = viewModel.setString,
-        onIntChange = viewModel.setInt,
-        onFocusChange = { field, value -> if (!value) viewModel.save(field) },
+        isNextCloudTesting = isNextCloudTesting,
         onSave = {
-            viewModel.saveAll()
+            viewModel.save()
             onClose()
         },
+        onNextCloudTestClick = {
+            viewModel.testNextCloud { result -> nextCloudTestResult = result }
+        },
+        onChange = viewModel.updateField,
+        isNextCloudCredentialsFail = isNextCloudCredentialsFail,
+        isNextCloudUrlFail = isNextCloudUrlFail,
+        isNextCloudWorking = isNextCloudWorking,
     )
 }
 
@@ -288,6 +417,7 @@ fun SettingsScreenPreview() {
             nextCloudPassword = "apeliapanap",
             minColumnWidth = 180,
             snackbarHostState = snackbarHostState,
+            onNextCloudTestClick = {},
         )
     }
 }

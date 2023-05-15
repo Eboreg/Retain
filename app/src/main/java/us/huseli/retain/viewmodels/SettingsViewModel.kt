@@ -2,21 +2,28 @@ package us.huseli.retain.viewmodels
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.net.Uri
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.preference.PreferenceManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import us.huseli.retain.Constants.DEFAULT_MIN_COLUMN_WIDTH
 import us.huseli.retain.Constants.PREF_MIN_COLUMN_WIDTH
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_PASSWORD
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_URI
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_USERNAME
+import us.huseli.retain.data.NextCloudTestResult
+import us.huseli.retain.data.NoteRepository
 import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     @ApplicationContext context: Context,
+    private val repository: NoteRepository
 ) : ViewModel(), SharedPreferences.OnSharedPreferenceChangeListener {
     private val preferences = PreferenceManager.getDefaultSharedPreferences(context)
 
@@ -24,43 +31,44 @@ class SettingsViewModel @Inject constructor(
     val nextCloudUsername = MutableStateFlow(preferences.getString(PREF_NEXTCLOUD_USERNAME, "") ?: "")
     val nextCloudPassword = MutableStateFlow(preferences.getString(PREF_NEXTCLOUD_PASSWORD, "") ?: "")
     val minColumnWidth = MutableStateFlow(preferences.getInt(PREF_MIN_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH))
+    val isNextCloudTesting = MutableStateFlow(false)
+    val isNextCloudWorking = MutableStateFlow<Boolean?>(null)
+    val isNextCloudUrlFail = MutableStateFlow(false)
+    val isNextCloudCredentialsFail = MutableStateFlow(false)
+    val nextCloudNeedsTesting = repository.nextCloudNeedsTesting.asStateFlow()
 
-    private fun cleanUri(value: String): String {
-        val regex = Regex("^https?://.+")
-        if (value.isBlank()) return ""
-        if (!regex.matches(value)) return "https://$value".trimEnd('/')
-        return value.trimEnd('/')
-    }
-
-    fun save(field: String) {
-        when (field) {
-            PREF_NEXTCLOUD_URI -> preferences.edit().putString(field, cleanUri(nextCloudUri.value)).apply()
-            PREF_NEXTCLOUD_USERNAME -> preferences.edit().putString(field, nextCloudUsername.value).apply()
-            PREF_NEXTCLOUD_PASSWORD -> preferences.edit().putString(field, nextCloudPassword.value).apply()
-            PREF_MIN_COLUMN_WIDTH -> preferences.edit().putInt(field, minColumnWidth.value).apply()
+    fun testNextCloud(onResult: (NextCloudTestResult) -> Unit) = viewModelScope.launch {
+        repository.nextCloudNeedsTesting.value = false
+        isNextCloudTesting.value = true
+        repository.testNextcloud(
+            Uri.parse(nextCloudUri.value),
+            nextCloudUsername.value,
+            nextCloudPassword.value
+        ) { result ->
+            isNextCloudTesting.value = false
+            isNextCloudWorking.value = result.success
+            isNextCloudUrlFail.value = result.isUrlFail
+            isNextCloudCredentialsFail.value = result.isCredentialsFail
+            onResult(result)
         }
     }
 
-    fun saveAll() {
+    fun save() {
         preferences.edit()
-            .putString(PREF_NEXTCLOUD_URI, cleanUri(nextCloudUri.value))
+            .putString(PREF_NEXTCLOUD_URI, nextCloudUri.value)
             .putString(PREF_NEXTCLOUD_USERNAME, nextCloudUsername.value)
             .putString(PREF_NEXTCLOUD_PASSWORD, nextCloudPassword.value)
             .putInt(PREF_MIN_COLUMN_WIDTH, minColumnWidth.value)
             .apply()
+        repository.nextCloudNeedsTesting.value = true
     }
 
-    val setString: (field: String, value: String) -> Unit = { field, value ->
+    val updateField: (field: String, value: Any) -> Unit = { field, value ->
         when (field) {
-            PREF_NEXTCLOUD_URI -> nextCloudUri.value = value
-            PREF_NEXTCLOUD_USERNAME -> nextCloudUsername.value = value
-            PREF_NEXTCLOUD_PASSWORD -> nextCloudPassword.value = value
-        }
-    }
-
-    val setInt: (field: String, value: Int) -> Unit = { field, value ->
-        when (field) {
-            PREF_MIN_COLUMN_WIDTH -> minColumnWidth.value = value
+            PREF_NEXTCLOUD_URI -> nextCloudUri.value = value as String
+            PREF_NEXTCLOUD_USERNAME -> nextCloudUsername.value = value as String
+            PREF_NEXTCLOUD_PASSWORD -> nextCloudPassword.value = value as String
+            PREF_MIN_COLUMN_WIDTH -> minColumnWidth.value = value as Int
         }
     }
 

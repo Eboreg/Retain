@@ -5,8 +5,10 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
@@ -22,9 +24,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import us.huseli.retain.Enums
@@ -73,7 +77,7 @@ fun HomeScreen(
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreenImpl(
     modifier: Modifier = Modifier,
@@ -110,15 +114,26 @@ fun HomeScreenImpl(
                 onDebugClick = onDebugClick,
             )
         },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.zIndex(2f),
+            )
+        },
     ) { innerPadding ->
-        FAB(
-            expanded = isFABExpanded,
-            onAddTextNoteClick = onAddTextNoteClick,
-            onAddChecklistClick = onAddChecklistClick,
-            onExpandedChange = { isFABExpanded = it },
-            onClose = { isFABExpanded = false },
-        )
+        Column(
+            verticalArrangement = Arrangement.Bottom,
+            horizontalAlignment = Alignment.End,
+            modifier = Modifier.fillMaxSize().padding(bottom = 16.dp, end = 16.dp).zIndex(1f)
+        ) {
+            FAB(
+                expanded = isFABExpanded,
+                onAddTextNoteClick = onAddTextNoteClick,
+                onAddChecklistClick = onAddChecklistClick,
+                onExpandedChange = { isFABExpanded = it },
+                onClose = { isFABExpanded = false },
+            )
+        }
 
         if (deleteDialogOpen) {
             DeleteNotesDialog(

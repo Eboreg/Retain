@@ -20,8 +20,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import us.huseli.retain.Constants.DEFAULT_MAX_IMAGE_DIMEN
 import us.huseli.retain.Constants.NOTE_ID_SAVED_STATE_KEY
-import us.huseli.retain.Logger
-import us.huseli.retain.LoggingObject
 import us.huseli.retain.copyFileToLocal
 import us.huseli.retain.data.NoteRepository
 import us.huseli.retain.data.entities.Image
@@ -37,9 +35,8 @@ import kotlin.math.roundToInt
 @HiltViewModel
 open class EditNoteViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    protected val repository: NoteRepository,
-    override var logger: Logger?
-) : LoggingObject, ViewModel() {
+    protected val repository: NoteRepository
+) : ViewModel() {
     private val _title = MutableStateFlow("")
     private val _text = MutableStateFlow("")
     private val _colorIdx = MutableStateFlow(0)

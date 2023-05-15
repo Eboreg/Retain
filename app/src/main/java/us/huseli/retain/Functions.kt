@@ -2,9 +2,8 @@ package us.huseli.retain
 
 import android.content.Context
 import android.net.Uri
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.Dispatchers
@@ -31,10 +30,17 @@ suspend fun copyFileToLocal(context: Context, uri: Uri, outFile: File): File {
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun outlinedTextFieldColors() = TextFieldDefaults.outlinedTextFieldColors(
+fun outlinedTextFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedBorderColor = Color.Transparent,
     unfocusedBorderColor = Color.Transparent,
-    placeholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+    unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
 )
+
+
+fun cleanUri(value: String): String {
+    val regex = Regex("^https?://.+")
+    if (value.isBlank()) return ""
+    if (!regex.matches(value)) return "https://$value".trimEnd('/')
+    return value.trimEnd('/')
+}
