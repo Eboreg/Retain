@@ -165,7 +165,7 @@ class NextCloud @Inject constructor(
         this.uri = uri
         this.username = username
         this.password = password
-        testClient(callback)
+        if (this.uri.host != null) testClient(callback)
     }
 
     private fun testClient(callback: ((NextCloudTestResult) -> Unit)? = null) {
