@@ -42,7 +42,7 @@ fun NoteScreenTopAppBar(
     val photoTempDir = File(context.cacheDir, "photos").apply { mkdirs() }
     val photoTempFile = File(photoTempDir, "${UUID.randomUUID()}.png")
     val photoUri by remember {
-        mutableStateOf(FileProvider.getUriForFile(context, "us.huseli.retain.fileprovider", photoTempFile))
+        mutableStateOf(FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", photoTempFile))
     }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) onImagePick(uri)
