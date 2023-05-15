@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 
 private val LightColors = lightColorScheme(
     primary = md_theme_light_primary,
@@ -157,10 +158,14 @@ fun RetainTheme(
     content: @Composable () -> Unit
 ) {
     val colors = if (!useDarkTheme) LightColors else DarkColors
+    val systemUiController = rememberSystemUiController()
+
+    systemUiController.setStatusBarColor(colors.surface)
+    systemUiController.setNavigationBarColor(colors.background)
 
     MaterialTheme(
         colorScheme = colors,
-        content = content,
         typography = Typography,
+        content = content
     )
 }

@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -124,7 +123,11 @@ fun HomeScreenImpl(
         Column(
             verticalArrangement = Arrangement.Bottom,
             horizontalAlignment = Alignment.End,
-            modifier = Modifier.fillMaxSize().padding(bottom = 16.dp, end = 16.dp).zIndex(1f)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(bottom = 16.dp, end = 16.dp)
+                .zIndex(1f)
         ) {
             FAB(
                 expanded = isFABExpanded,
