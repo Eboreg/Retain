@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import us.huseli.retain.Constants.DEFAULT_MAX_IMAGE_DIMEN
 import us.huseli.retain.Constants.NOTE_ID_SAVED_STATE_KEY
+import us.huseli.retain.Enums.NoteType
 import us.huseli.retain.copyFileToLocal
 import us.huseli.retain.data.NoteRepository
 import us.huseli.retain.data.entities.Image
@@ -44,6 +45,7 @@ open class EditNoteViewModel @Inject constructor(
     protected val _showChecked = MutableStateFlow(true)
     protected var _isDirty = false
     protected var _isStored = false
+    protected open var _type = NoteType.TEXT
 
     val noteId: UUID = UUID.fromString(savedStateHandle.get<String>(NOTE_ID_SAVED_STATE_KEY)!!)
     var note: Note? = null
@@ -58,7 +60,7 @@ open class EditNoteViewModel @Inject constructor(
 
     protected suspend fun saveNote() {
         if (!_isStored || _isDirty) {
-            repository.upsertNote(noteId, _title.value, _text.value, _showChecked.value, _colorIdx.value)
+            repository.upsertNote(noteId, _type, _title.value, _text.value, _showChecked.value, _colorIdx.value)
             _isStored = true
             _isDirty = false
         }

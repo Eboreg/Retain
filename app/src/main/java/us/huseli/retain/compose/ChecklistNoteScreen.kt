@@ -391,6 +391,7 @@ fun ChecklistNoteScreen(
                     focusedItemPosition = position
                 }
                 .padding(bottom = 8.dp)
+                .fillMaxWidth()
         ) {
             Icon(
                 imageVector = Icons.Filled.Add,

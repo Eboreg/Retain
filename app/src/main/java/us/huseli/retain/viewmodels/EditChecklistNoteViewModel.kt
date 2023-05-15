@@ -6,6 +6,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import us.huseli.retain.Enums.NoteType
 import us.huseli.retain.data.NoteRepository
 import us.huseli.retain.data.entities.ChecklistItem
 import java.util.UUID
@@ -19,6 +20,8 @@ class EditChecklistNoteViewModel @Inject constructor(
     private var _checklistItems = mutableMapOf<UUID, ChecklistItem>()
     private var _isDirtyMap = mutableMapOf<UUID, Boolean>()
     private val _checklistItemsFlow = MutableStateFlow<List<ChecklistItem>>(emptyList())
+
+    override var _type = NoteType.CHECKLIST
 
     val checklistItems = _checklistItemsFlow.asStateFlow()
     val updatedItems: List<ChecklistItem>

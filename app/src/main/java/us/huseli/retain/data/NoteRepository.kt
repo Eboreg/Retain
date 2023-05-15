@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import us.huseli.retain.Constants.IMAGE_SUBDIR
+import us.huseli.retain.Enums.NoteType
 import us.huseli.retain.LogInterface
 import us.huseli.retain.Logger
 import us.huseli.retain.data.entities.ChecklistItem
@@ -186,8 +187,8 @@ class NoteRepository @Inject constructor(
 
     suspend fun updateChecklistItems(items: Collection<ChecklistItem>) = checklistItemDao.update(items)
 
-    suspend fun upsertNote(id: UUID, title: String, text: String, showChecked: Boolean, colorIdx: Int) {
-        noteDao.upsert(id, title, text, showChecked, colorIdx)
+    suspend fun upsertNote(id: UUID, type: NoteType, title: String, text: String, showChecked: Boolean, colorIdx: Int) {
+        noteDao.upsert(id, type, title, text, showChecked, colorIdx)
         noteDao.get(id)?.let { note ->
             nextCloud.UploadNoteTask(
                 noteCombined = NoteCombined(

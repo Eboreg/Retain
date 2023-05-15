@@ -6,7 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
-import us.huseli.retain.Enums
+import us.huseli.retain.Enums.NoteType
 import us.huseli.retain.data.entities.Note
 import java.time.Instant
 import java.util.UUID
@@ -36,7 +36,7 @@ interface NoteDao {
     )
     suspend fun insert(
         id: UUID,
-        type: Enums.NoteType,
+        type: NoteType,
         title: String,
         text: String,
         showChecked: Boolean,
@@ -75,9 +75,9 @@ interface NoteDao {
         insert(note)
     }
 
-    suspend fun upsert(id: UUID, title: String, text: String, showChecked: Boolean, colorIdx: Int) {
+    suspend fun upsert(id: UUID, type: NoteType, title: String, text: String, showChecked: Boolean, colorIdx: Int) {
         try {
-            insert(id, Enums.NoteType.TEXT, title, text, showChecked, colorIdx = colorIdx)
+            insert(id, type, title, text, showChecked, colorIdx = colorIdx)
             makePlaceFor(id, 0)
         } catch (e: SQLiteConstraintException) {
             update(id, title, text, showChecked, colorIdx)

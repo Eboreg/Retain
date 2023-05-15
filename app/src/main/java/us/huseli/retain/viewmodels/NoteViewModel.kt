@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import us.huseli.retain.Enums.NoteType
 import us.huseli.retain.LogInterface
 import us.huseli.retain.Logger
 import us.huseli.retain.data.NoteRepository
@@ -56,7 +57,7 @@ class NoteViewModel @Inject constructor(
         { shouldSave, id, title, text, colorIdx ->
             if (shouldSave) {
                 viewModelScope.launch {
-                    repository.upsertNote(id, title, text, true, colorIdx)
+                    repository.upsertNote(id, NoteType.TEXT, title, text, true, colorIdx)
                 }
             }
         }
@@ -65,7 +66,7 @@ class NoteViewModel @Inject constructor(
         { shouldSave, id, title, showChecked, colorIdx, updatedItems ->
             if (shouldSave) {
                 viewModelScope.launch {
-                    repository.upsertNote(id, title, "", showChecked, colorIdx)
+                    repository.upsertNote(id, NoteType.CHECKLIST, title, "", showChecked, colorIdx)
                     repository.updateChecklistItems(updatedItems)
                 }
             }
