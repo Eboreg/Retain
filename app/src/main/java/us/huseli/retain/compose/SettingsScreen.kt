@@ -18,6 +18,8 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -52,6 +54,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -62,7 +65,7 @@ import us.huseli.retain.Constants.PREF_NEXTCLOUD_URI
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_USERNAME
 import us.huseli.retain.R
 import us.huseli.retain.cleanUri
-import us.huseli.retain.data.NextCloudTestResult
+import us.huseli.retain.nextcloud.tasks.TestNextCloudTaskResult
 import us.huseli.retain.ui.theme.RetainTheme
 import us.huseli.retain.viewmodels.SettingsViewModel
 import kotlin.math.max
@@ -135,6 +138,8 @@ fun NextCloudSection(
     onChange: (field: String, value: Any) -> Unit,
 ) {
     var uriState by rememberSaveable(uri) { mutableStateOf(uri) }
+    var isPasswordFieldFocused by rememberSaveable { mutableStateOf(false) }
+    var isPasswordShown by rememberSaveable { mutableStateOf(false) }
     val workingIcon = @Composable {
         Icon(
             imageVector = Icons.Filled.Check,
@@ -192,6 +197,7 @@ fun NextCloudSection(
                 value = username,
                 enabled = !isTesting,
                 onValueChange = { onChange(PREF_NEXTCLOUD_USERNAME, it) },
+                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
                 trailingIcon = {
                     if (isWorking == true) workingIcon()
                     else if (isCredentialsFail) failIcon()
@@ -200,15 +206,32 @@ fun NextCloudSection(
         }
         Box(modifier = Modifier.fillMaxWidth()) {
             OutlinedTextField(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { isPasswordFieldFocused = it.isFocused },
                 label = { Text(stringResource(R.string.nextcloud_password)) },
                 singleLine = true,
                 value = password,
                 onValueChange = { onChange(PREF_NEXTCLOUD_PASSWORD, it) },
-                visualTransformation = PasswordVisualTransformation(),
+                visualTransformation = if (isPasswordShown) VisualTransformation.None else PasswordVisualTransformation(),
                 enabled = !isTesting,
+                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
                 trailingIcon = {
-                    if (isWorking == true) workingIcon()
+                    if (isPasswordFieldFocused && isPasswordShown)
+                        IconButton(onClick = { isPasswordShown = false }) {
+                            Icon(
+                                imageVector = Icons.Filled.VisibilityOff,
+                                contentDescription = stringResource(R.string.hide_password),
+                            )
+                        }
+                    else if (isPasswordFieldFocused)
+                        IconButton(onClick = { isPasswordShown = true }) {
+                            Icon(
+                                imageVector = Icons.Filled.Visibility,
+                                contentDescription = stringResource(R.string.show_password),
+                            )
+                        }
+                    else if (isWorking == true) workingIcon()
                     else if (isCredentialsFail) failIcon()
                 }
             )
@@ -364,7 +387,7 @@ fun SettingsScreen(
     val isNextCloudWorking by viewModel.isNextCloudWorking.collectAsStateWithLifecycle()
     val isNextCloudUrlFail by viewModel.isNextCloudUrlFail.collectAsStateWithLifecycle()
     val isNextCloudCredentialsFail by viewModel.isNextCloudCredentialsFail.collectAsStateWithLifecycle()
-    var nextCloudTestResult by remember { mutableStateOf<NextCloudTestResult?>(null) }
+    var nextCloudTestResult by remember { mutableStateOf<TestNextCloudTaskResult?>(null) }
     val nextCloudSuccessMessage = stringResource(R.string.successfully_connected_to_nextcloud)
     val context = LocalContext.current
 

@@ -1,13 +1,15 @@
 package us.huseli.retain.compose
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
@@ -19,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -42,14 +45,16 @@ fun BaseNoteScreen(
     snackbarHostState: SnackbarHostState,
     onTitleFieldNext: (() -> Unit)?,
     onClose: () -> Unit,
-    content: @Composable ColumnScope.(Color) -> Unit,
+    onBackgroundClick: (() -> Unit)? = null,
+    content: LazyListScope.(Color) -> Unit,
 ) {
     val title by viewModel.title.collectAsStateWithLifecycle()
     val colorIdx by viewModel.colorIdx.collectAsStateWithLifecycle()
     val noteColor = getNoteColor(colorIdx)
     val context = LocalContext.current
-    val imagesWithBitmap by viewModel.imagesWithBitmap.collectAsStateWithLifecycle(emptyList())
+    val bitmapImages by viewModel.bitmapImages.collectAsStateWithLifecycle(emptyList())
     var currentCarouselIndex by rememberSaveable { mutableStateOf<Int?>(null) }
+    val interactionSource = remember { MutableInteractionSource() }
 
     Scaffold(
         topBar = {
@@ -61,34 +66,41 @@ fun BaseNoteScreen(
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     ) { innerPadding ->
-        Column(
+        LazyColumn(
             modifier = modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(noteColor),
-        ) {
-            NoteImageGrid(
-                imagesWithBitmap = imagesWithBitmap,
-                showDeleteButton = true,
-                onImageClick = { currentCarouselIndex = it },
-                onDeleteButtonClick = { viewModel.deleteImage(it) },
-                secondaryRowHeight = 200.dp,
-            )
-            NoteTitleField(
-                modifier = Modifier.fillMaxWidth(),
-                value = title,
-                onValueChange = {
-                    viewModel.setTitle(it)
+                .background(noteColor)
+                .clickable(interactionSource = interactionSource, indication = null) {
+                    onBackgroundClick?.invoke()
                 },
-                onNext = onTitleFieldNext,
-            )
-            Spacer(Modifier.height(4.dp))
+        ) {
+            item {
+                NoteImageGrid(
+                    bitmapImages = bitmapImages,
+                    showDeleteButton = true,
+                    onImageClick = { currentCarouselIndex = bitmapImages.indexOf(it) },
+                    onDeleteButtonClick = { viewModel.deleteImage(it.image) },
+                    secondaryRowHeight = 200.dp,
+                )
+            }
+            item {
+                NoteTitleField(
+                    modifier = Modifier.fillMaxWidth(),
+                    value = title,
+                    onValueChange = {
+                        viewModel.setTitle(it)
+                    },
+                    onNext = onTitleFieldNext,
+                )
+                Spacer(Modifier.height(4.dp))
+            }
             content(noteColor)
         }
 
         currentCarouselIndex?.let {
             ImageCarousel(
-                images = imagesWithBitmap,
+                images = bitmapImages,
                 startIndex = it,
                 onClose = { currentCarouselIndex = null }
             )
@@ -105,12 +117,10 @@ fun NoteTitleField(
     onNext: (() -> Unit)? = null,
 ) {
     OutlinedTextField(
-        value = value,
-        onValueChange = {
-            onValueChange(it)
-        },
-        textStyle = MaterialTheme.typography.headlineSmall,
         modifier = modifier,
+        value = value,
+        onValueChange = { onValueChange(it) },
+        textStyle = MaterialTheme.typography.headlineSmall,
         keyboardOptions = KeyboardOptions.Default.copy(
             imeAction = ImeAction.Next,
             capitalization = KeyboardCapitalization.Sentences,

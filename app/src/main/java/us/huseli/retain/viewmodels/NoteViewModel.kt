@@ -11,8 +11,8 @@ import us.huseli.retain.Enums.NoteType
 import us.huseli.retain.LogInterface
 import us.huseli.retain.Logger
 import us.huseli.retain.data.NoteRepository
+import us.huseli.retain.data.entities.BitmapImage
 import us.huseli.retain.data.entities.ChecklistItem
-import us.huseli.retain.data.entities.ImageWithBitmap
 import us.huseli.retain.data.entities.Note
 import java.util.UUID
 import javax.inject.Inject
@@ -26,7 +26,7 @@ class NoteViewModel @Inject constructor(
 
     val notes: Flow<List<Note>> = repository.notes
     val checklistItems: Flow<List<ChecklistItem>> = repository.checklistItems
-    val imagesWithBitmap: Flow<List<ImageWithBitmap>> = repository.flowImagesWithBitmap()
+    val bitmapImages: Flow<List<BitmapImage>> = repository.bitmapImages
 
     val selectedNoteIds: Flow<Set<UUID>> = combine(notes, _selectedNoteIds) { notes, selectedIds ->
         selectedIds.intersect(notes.map { it.id }.toSet()).also { log("selectedNoteIds=$it") }

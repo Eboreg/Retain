@@ -15,6 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -23,8 +24,8 @@ import us.huseli.retain.Constants.NOTE_ID_SAVED_STATE_KEY
 import us.huseli.retain.Enums.NoteType
 import us.huseli.retain.copyFileToLocal
 import us.huseli.retain.data.NoteRepository
+import us.huseli.retain.data.entities.BitmapImage
 import us.huseli.retain.data.entities.Image
-import us.huseli.retain.data.entities.ImageWithBitmap
 import us.huseli.retain.data.entities.Note
 import java.io.File
 import java.io.FileOutputStream
@@ -53,7 +54,9 @@ open class EditNoteViewModel @Inject constructor(
     val text = _text.asStateFlow()
     val colorIdx = _colorIdx.asStateFlow()
     val showChecked = _showChecked.asStateFlow()
-    val imagesWithBitmap: Flow<List<ImageWithBitmap>> = repository.flowImagesWithBitmap(noteId)
+    val bitmapImages: Flow<List<BitmapImage>> = repository.bitmapImages.map { bitmapImages ->
+        bitmapImages.filter { it.image.noteId == noteId }
+    }
 
     val shouldSave: Boolean
         get() = _isDirty || !_isStored

@@ -31,8 +31,8 @@ import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import us.huseli.retain.Enums
+import us.huseli.retain.data.entities.BitmapImage
 import us.huseli.retain.data.entities.ChecklistItem
-import us.huseli.retain.data.entities.ImageWithBitmap
 import us.huseli.retain.data.entities.Note
 import us.huseli.retain.ui.theme.RetainTheme
 import us.huseli.retain.viewmodels.NoteViewModel
@@ -54,14 +54,14 @@ fun HomeScreen(
     val notes by viewModel.notes.collectAsStateWithLifecycle(emptyList())
     val selectedNoteIds by viewModel.selectedNoteIds.collectAsStateWithLifecycle(emptyList())
     val checklistItems by viewModel.checklistItems.collectAsStateWithLifecycle(emptyList())
-    val imagesWithBitmap by viewModel.imagesWithBitmap.collectAsStateWithLifecycle(emptyList())
+    val bitmapImages by viewModel.bitmapImages.collectAsStateWithLifecycle(emptyList())
 
     HomeScreenImpl(
         modifier = modifier,
         notes = notes,
         snackbarHostState = snackbarHostState,
         checklistItems = checklistItems,
-        imagesWithBitmap = imagesWithBitmap,
+        bitmapImages = bitmapImages,
         selectedNoteIds = selectedNoteIds,
         onAddTextNoteClick = onAddTextNoteClick,
         onAddChecklistClick = onAddChecklistClick,
@@ -84,7 +84,7 @@ fun HomeScreenImpl(
     settingsViewModel: SettingsViewModel = hiltViewModel(),
     notes: List<Note>,
     checklistItems: List<ChecklistItem>,
-    imagesWithBitmap: List<ImageWithBitmap>,
+    bitmapImages: List<BitmapImage>,
     selectedNoteIds: Collection<UUID>,
     onAddTextNoteClick: () -> Unit = {},
     onAddChecklistClick: () -> Unit = {},
@@ -161,7 +161,7 @@ fun HomeScreenImpl(
                     modifier = Modifier.fillMaxWidth(),
                     note = note,
                     checklistItems = checklistItems.filter { it.noteId == note.id },
-                    imagesWithBitmap = imagesWithBitmap.filter { it.image.noteId == note.id },
+                    bitmapImages = bitmapImages.filter { it.image.noteId == note.id },
                     onClick = {
                         if (isSelectEnabled) {
                             if (selectedNoteIds.contains(note.id)) onDeselectNote(note)
@@ -221,7 +221,7 @@ fun HomeScreenPreview() {
             notes = notes,
             checklistItems = checklistItems,
             selectedNoteIds = emptyList(),
-            imagesWithBitmap = emptyList(),
+            bitmapImages = emptyList(),
             snackbarHostState = snackbarHostState,
         )
     }
@@ -239,7 +239,7 @@ fun HomeScreenPreviewDark() {
             notes = notes,
             checklistItems = checklistItems,
             selectedNoteIds = emptyList(),
-            imagesWithBitmap = emptyList(),
+            bitmapImages = emptyList(),
             snackbarHostState = snackbarHostState,
         )
     }

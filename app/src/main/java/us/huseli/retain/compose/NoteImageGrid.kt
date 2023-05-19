@@ -10,6 +10,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,20 +22,19 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import okhttp3.internal.toImmutableList
 import us.huseli.retain.R
-import us.huseli.retain.data.entities.Image
-import us.huseli.retain.data.entities.ImageWithBitmap
+import us.huseli.retain.data.entities.BitmapImage
 
 class ImageIterator(
-    private val objects: List<ImageWithBitmap>,
+    private val objects: List<BitmapImage>,
     private val maxRows: Int = Int.MAX_VALUE
-) : Iterator<List<ImageWithBitmap>> {
+) : Iterator<List<BitmapImage>> {
     private var currentIndex = 0
     private var currentRow = 0
 
     override fun hasNext() = currentIndex < objects.size && currentRow < maxRows
 
-    override fun next(): List<ImageWithBitmap> {
-        val result = mutableListOf<ImageWithBitmap>()
+    override fun next(): List<BitmapImage> {
+        val result = mutableListOf<BitmapImage>()
         var collectedRatio = 0f
 
         for (i in currentIndex until objects.size) {
@@ -52,47 +53,50 @@ class ImageIterator(
 @Composable
 fun NoteImageGrid(
     modifier: Modifier = Modifier,
-    imagesWithBitmap: List<ImageWithBitmap>,
+    bitmapImages: List<BitmapImage>,
     showDeleteButton: Boolean,
     maxRows: Int = Int.MAX_VALUE,
     secondaryRowHeight: Dp,
-    onImageClick: ((Int) -> Unit)? = null,
-    onDeleteButtonClick: ((Image) -> Unit)? = null,
+    onImageClick: ((BitmapImage) -> Unit)? = null,
+    onDeleteButtonClick: ((BitmapImage) -> Unit)? = null,
 ) {
-    val imageWithBitmapLists = ImageIterator(
-        objects = imagesWithBitmap,
+    val bitmapImageLists = ImageIterator(
+        objects = bitmapImages,
         maxRows = maxRows
     )
 
-    imageWithBitmapLists.asSequence().forEachIndexed { index, sublist ->
+    bitmapImageLists.asSequence().forEachIndexed { index, sublist ->
         var rowModifier = modifier.fillMaxWidth()
         if (index > 0) rowModifier = rowModifier.heightIn(max = secondaryRowHeight)
 
         Row(modifier = rowModifier) {
-            sublist.forEachIndexed { sublistIndex, (image, bitmap) ->
+            sublist.forEach { bitmapImage ->
                 Box(
-                    modifier = Modifier.weight(if (sublist.size == 1) 1f else image.ratio)
+                    modifier = Modifier.weight(if (sublist.size == 1) 1f else bitmapImage.image.ratio)
                 ) {
                     var imageModifier = Modifier.fillMaxWidth()
                     if (onImageClick != null) imageModifier = imageModifier.clickable {
-                        onImageClick.invoke(index + sublistIndex)
+                        onImageClick.invoke(bitmapImage)
                     }
 
                     Image(
-                        bitmap = bitmap,
+                        bitmap = bitmapImage.imageBitmap,
                         contentScale = ContentScale.FillWidth,
                         contentDescription = null,
                         modifier = imageModifier,
                     )
                     if (showDeleteButton) {
                         FilledTonalIconButton(
-                            onClick = { onDeleteButtonClick?.invoke(image) },
+                            onClick = { onDeleteButtonClick?.invoke(bitmapImage) },
+                            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.75f),
+                            ),
                             modifier = Modifier.align(Alignment.TopEnd).scale(0.75f)
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Close,
                                 contentDescription = stringResource(R.string.delete_image),
-                                tint = Color.LightGray
+                                tint = Color.LightGray.copy(alpha = 0.75f),
                             )
                         }
                     }

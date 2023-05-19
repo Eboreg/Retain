@@ -34,6 +34,8 @@
     <string name="server_reported_authorization_error">The server reported an authorization error. Username and/or password is probably incorrect.</string>
     <string name="server_reported_file_not_found">Server reported “file not found”. There is probably no Nextcloud instance at this address.</string>
     <string name="failed_to_connect_to_nextcloud">Failed to connect to Nextcloud</string>
+    <string name="hide_password">Hide password</string>
+    <string name="show_password">Show password</string>
     <plurals name="plus_x_items">
         <item quantity="one">+ 1 item</item>
         <item quantity="other">+ %1$d items</item>
@@ -45,5 +47,9 @@
     <plurals name="delete_x_notes">
         <item quantity="one">Delete 1 note?</item>
         <item quantity="other">Delete %1$d notes?</item>
+    </plurals>
+    <plurals name="plus_x_checked_items">
+        <item quantity="one">+ 1 checked item</item>
+        <item quantity="other">+ %1$d checked items</item>
     </plurals>
 </resources>

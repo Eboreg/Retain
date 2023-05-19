@@ -16,8 +16,8 @@ import us.huseli.retain.Constants.PREF_MIN_COLUMN_WIDTH
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_PASSWORD
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_URI
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_USERNAME
-import us.huseli.retain.data.NextCloudTestResult
 import us.huseli.retain.data.NoteRepository
+import us.huseli.retain.nextcloud.tasks.TestNextCloudTaskResult
 import javax.inject.Inject
 
 @HiltViewModel
@@ -37,7 +37,7 @@ class SettingsViewModel @Inject constructor(
     val isNextCloudCredentialsFail = MutableStateFlow(false)
     val nextCloudNeedsTesting = repository.nextCloudNeedsTesting.asStateFlow()
 
-    fun testNextCloud(onResult: (NextCloudTestResult) -> Unit) = viewModelScope.launch {
+    fun testNextCloud(onResult: (TestNextCloudTaskResult) -> Unit) = viewModelScope.launch {
         repository.nextCloudNeedsTesting.value = false
         isNextCloudTesting.value = true
         repository.testNextcloud(

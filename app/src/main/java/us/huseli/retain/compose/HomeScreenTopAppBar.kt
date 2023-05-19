@@ -14,7 +14,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import us.huseli.retain.R
@@ -60,9 +61,9 @@ fun HomeScreenTopAppBar(
         title = {},
         navigationIcon = {
             Image(
-                painter = painterResource(id = R.drawable.ic_launcher_round),
+                bitmap = ImageBitmap.imageResource(R.mipmap.ic_launcher_round),
                 modifier = Modifier.height(50.dp),
-                contentDescription = null
+                contentDescription = null,
             )
         },
         actions = {

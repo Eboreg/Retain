@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -59,7 +59,6 @@ import org.burnoutcrew.reorderable.ReorderableItem
 import org.burnoutcrew.reorderable.ReorderableLazyListState
 import org.burnoutcrew.reorderable.detectReorder
 import org.burnoutcrew.reorderable.rememberReorderableLazyListState
-import org.burnoutcrew.reorderable.reorderable
 import us.huseli.retain.R
 import us.huseli.retain.data.entities.ChecklistItem
 import us.huseli.retain.viewmodels.EditChecklistNoteViewModel
@@ -120,7 +119,7 @@ fun ChecklistRow(
         else modifier
 
     Row(
-        modifier = realModifier, //.offset { IntOffset(0, offsetY.roundToInt()) },
+        modifier = realModifier,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -201,9 +200,9 @@ fun ChecklistRow(
 }
 
 
-@Composable
 fun Checklist(
     modifier: Modifier = Modifier,
+    scope: LazyListScope,
     checklistItems: List<ChecklistItem>,
     focusedItemPosition: Int?,
     itemSelectionStarts: Map<UUID, Int>,
@@ -226,80 +225,77 @@ fun Checklist(
         val toKey = to.key
         if (fromKey is UUID && toKey is UUID) onSwitchPositions(fromKey, toKey)
     }
-    val uncheckedState = rememberReorderableLazyListState(onMove = onMove)
-    val checkedState = rememberReorderableLazyListState(onMove = onMove)
 
-    LazyColumn(
-        modifier = Modifier.reorderable(uncheckedState),
-        state = uncheckedState.listState
-    ) {
-        items(uncheckedItems, key = { it.id }) { item ->
-            ReorderableItem(uncheckedState, key = item.id) { isDragging ->
-                ChecklistRow(
-                    modifier = modifier.background(backgroundColor),
-                    item = item,
-                    isFocused = isItemFocused(item),
-                    isDragging = isDragging,
-                    selectionStart = itemSelectionStarts[item.id] ?: 0,
-                    onDeleteClick = { onItemDeleteClick(item) },
-                    onTextChange = { onItemTextChange(item, it) },
-                    onCheckedChange = { onItemCheckedChange(item, it) },
-                    onNext = { head, tail -> onItemNext(item, head, tail) },
-                    onPrevious = { text -> onItemPrevious(item, text) },
-                    onFocus = clearFocusedItemPosition,
-                    reorderableState = uncheckedState,
-                )
-            }
+    scope.items(uncheckedItems, key = { it.id }) { item ->
+        val uncheckedState = rememberReorderableLazyListState(onMove = onMove)
+
+        ReorderableItem(uncheckedState, key = item.id) { isDragging ->
+            ChecklistRow(
+                modifier = modifier.background(backgroundColor),
+                item = item,
+                isFocused = isItemFocused(item),
+                isDragging = isDragging,
+                selectionStart = itemSelectionStarts[item.id] ?: 0,
+                onDeleteClick = { onItemDeleteClick(item) },
+                onTextChange = { onItemTextChange(item, it) },
+                onCheckedChange = { onItemCheckedChange(item, it) },
+                onNext = { head, tail -> onItemNext(item, head, tail) },
+                onPrevious = { text -> onItemPrevious(item, text) },
+                onFocus = clearFocusedItemPosition,
+                reorderableState = uncheckedState,
+            )
         }
     }
 
     // Checked items:
     if (checkedItems.isNotEmpty()) {
-        val showCheckedIconRotation by animateFloatAsState(if (showChecked) 0f else 180f)
+        scope.item {
+            val showCheckedIconRotation by animateFloatAsState(if (showChecked) 0f else 180f)
 
-        Spacer(Modifier.height(4.dp))
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.clickable { onShowCheckedClick() },
-        ) {
-            Icon(
-                imageVector = Icons.Filled.ExpandMore,
-                contentDescription = null,
-                modifier = Modifier.padding(horizontal = 12.dp).rotate(showCheckedIconRotation),
-                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-            )
-            Text(
-                text = pluralStringResource(R.plurals.x_checked_items, checkedItems.size, checkedItems.size),
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                modifier = Modifier.padding(horizontal = 6.dp),
-            )
-        }
-        if (showChecked) {
-            LazyColumn(
-                modifier = Modifier.reorderable(checkedState),
-                state = checkedState.listState,
+            Spacer(Modifier.height(4.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.clickable { onShowCheckedClick() },
             ) {
-                items(checkedItems, key = { it.id }) { item ->
-                    ReorderableItem(checkedState, key = item.id) { isDragging ->
-                        ChecklistRow(
-                            modifier = modifier.background(backgroundColor),
-                            item = item,
-                            isFocused = isItemFocused(item),
-                            isDragging = isDragging,
-                            selectionStart = itemSelectionStarts[item.id] ?: 0,
-                            onFocus = clearFocusedItemPosition,
-                            onDeleteClick = { onItemDeleteClick(item) },
-                            onCheckedChange = { onItemCheckedChange(item, it) },
-                            onTextChange = { onItemTextChange(item, it) },
-                            onNext = { head, tail -> onItemNext(item, head, tail) },
-                            onPrevious = { text -> onItemPrevious(item, text) },
-                            reorderableState = checkedState,
-                        )
-                    }
+                Icon(
+                    imageVector = Icons.Filled.ExpandMore,
+                    contentDescription = null,
+                    modifier = Modifier.padding(horizontal = 12.dp).rotate(showCheckedIconRotation),
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                )
+                Text(
+                    text = pluralStringResource(R.plurals.x_checked_items, checkedItems.size, checkedItems.size),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                    modifier = Modifier.padding(horizontal = 6.dp),
+                )
+            }
+        }
+
+        if (showChecked) {
+            scope.items(checkedItems, key = { it.id }) { item ->
+                val checkedState = rememberReorderableLazyListState(onMove = onMove)
+
+                ReorderableItem(checkedState, key = item.id) { isDragging ->
+                    ChecklistRow(
+                        modifier = modifier.background(backgroundColor),
+                        item = item,
+                        isFocused = isItemFocused(item),
+                        isDragging = isDragging,
+                        selectionStart = itemSelectionStarts[item.id] ?: 0,
+                        onFocus = clearFocusedItemPosition,
+                        onDeleteClick = { onItemDeleteClick(item) },
+                        onCheckedChange = { onItemCheckedChange(item, it) },
+                        onTextChange = { onItemTextChange(item, it) },
+                        onNext = { head, tail -> onItemNext(item, head, tail) },
+                        onPrevious = { text -> onItemPrevious(item, text) },
+                        reorderableState = checkedState,
+                    )
                 }
             }
         } else {
-            Spacer(Modifier.height(4.dp))
+            scope.item {
+                Spacer(Modifier.height(4.dp))
+            }
         }
     }
 }
@@ -341,6 +337,7 @@ fun ChecklistNoteScreen(
         },
     ) { backgroundColor ->
         Checklist(
+            scope = this,
             checklistItems = checklistItems,
             focusedItemPosition = focusedItemPosition,
             itemSelectionStarts = itemSelectionStarts,
@@ -383,31 +380,32 @@ fun ChecklistNoteScreen(
             }
         )
 
-        Spacer(Modifier.height(4.dp))
-
-        // "Add item" link:
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .clickable {
-                    val position = checklistItems.lastOrNull()?.let { it.position + 1 } ?: 0
-                    viewModel.insertItem(text = "", checked = false, position = position)
-                    focusedItemPosition = position
-                }
-                .padding(bottom = 8.dp)
-                .fillMaxWidth()
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Add,
-                contentDescription = null,
-                modifier = Modifier.padding(horizontal = 12.dp),
-                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-            )
-            Text(
-                text = stringResource(R.string.add_item),
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                modifier = Modifier.padding(horizontal = 6.dp)
-            )
+        item {
+            Spacer(Modifier.height(4.dp))
+            // "Add item" link:
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clickable {
+                        val position = checklistItems.lastOrNull()?.let { it.position + 1 } ?: 0
+                        viewModel.insertItem(text = "", checked = false, position = position)
+                        focusedItemPosition = position
+                    }
+                    .padding(bottom = 8.dp)
+                    .fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = null,
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                )
+                Text(
+                    text = stringResource(R.string.add_item),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                    modifier = Modifier.padding(horizontal = 6.dp)
+                )
+            }
         }
     }
 }

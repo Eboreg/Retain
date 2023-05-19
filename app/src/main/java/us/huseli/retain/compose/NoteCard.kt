@@ -27,10 +27,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import us.huseli.retain.Enums
 import us.huseli.retain.R
+import us.huseli.retain.data.entities.BitmapImage
 import us.huseli.retain.data.entities.ChecklistItem
-import us.huseli.retain.data.entities.ImageWithBitmap
 import us.huseli.retain.data.entities.Note
 import us.huseli.retain.ui.theme.getNoteColor
+import kotlin.math.min
+
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -40,7 +42,7 @@ fun NoteCard(
     onLongClick: () -> Unit,
     note: Note,
     checklistItems: List<ChecklistItem>,
-    imagesWithBitmap: List<ImageWithBitmap>,
+    bitmapImages: List<BitmapImage>,
     isSelected: Boolean,
 ) {
     val border =
@@ -60,7 +62,7 @@ fun NoteCard(
     ) {
         Column {
             NoteImageGrid(
-                imagesWithBitmap = imagesWithBitmap,
+                bitmapImages = bitmapImages,
                 showDeleteButton = false,
                 maxRows = 2,
                 secondaryRowHeight = 100.dp,
@@ -91,50 +93,62 @@ fun NoteCard(
                     }
 
                     Enums.NoteType.CHECKLIST -> {
-                        if (note.title.isNotBlank() && checklistItems.isNotEmpty()) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                        }
-
-                        Column {
-                            val slicedItems =
-                                if (checklistItems.size <= 5) checklistItems.sortedBy { it.checked }
-                                else checklistItems.sortedBy { it.checked }.subList(0, 5)
-
-                            slicedItems.forEach { item ->
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = if (item.checked) Icons.Filled.CheckBox else Icons.Filled.CheckBoxOutlineBlank,
-                                        contentDescription = null,
-                                        modifier = Modifier.padding(end = 8.dp).size(16.dp),
-                                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
-                                    )
-                                    Text(
-                                        text = item.text,
-                                        overflow = TextOverflow.Ellipsis,
-                                        maxLines = 1,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
-                                    )
-                                }
-                            }
-
-                            // "+ X items"
-                            if (checklistItems.size > 5) {
-                                Text(
-                                    text = pluralStringResource(
-                                        id = R.plurals.plus_x_items,
-                                        count = checklistItems.size - 5,
-                                        checklistItems.size - 5,
-                                    ),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                                    modifier = Modifier.padding(top = 8.dp),
-                                )
-                            }
-                        }
+                        NoteCardChecklist(note = note, checklistItems = checklistItems)
                     }
                 }
             }
+        }
+    }
+}
+
+
+@Composable
+fun NoteCardChecklist(
+    note: Note,
+    checklistItems: List<ChecklistItem>,
+) {
+    val filteredItems = if (!note.showChecked) checklistItems.filter { !it.checked } else checklistItems
+    val shownItems = checklistItems.subList(0, min(filteredItems.size, 5))
+    val hiddenItemCount = checklistItems.size - shownItems.size
+
+    if (note.title.isNotBlank() && checklistItems.isNotEmpty()) {
+        Spacer(modifier = Modifier.height(8.dp))
+    }
+
+    Column {
+        shownItems.forEach { item ->
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
+                Icon(
+                    imageVector = if (item.checked) Icons.Filled.CheckBox else Icons.Filled.CheckBoxOutlineBlank,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 8.dp).size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
+                )
+                Text(
+                    text = item.text,
+                    overflow = TextOverflow.Ellipsis,
+                    maxLines = 1,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
+                )
+            }
+        }
+
+        // "+ X items"
+        if (hiddenItemCount > 0) {
+            val text = pluralStringResource(
+                if (checklistItems.minus(shownItems.toSet()).all { it.checked }) R.plurals.plus_x_checked_items
+                else R.plurals.plus_x_items,
+                hiddenItemCount,
+                hiddenItemCount,
+            )
+
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                modifier = Modifier.padding(top = 8.dp),
+            )
         }
     }
 }

@@ -32,13 +32,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import us.huseli.retain.R
-import us.huseli.retain.data.entities.ImageWithBitmap
+import us.huseli.retain.data.entities.BitmapImage
 import kotlin.math.abs
 
 @Composable
 fun ImageCarousel(
     modifier: Modifier = Modifier,
-    images: List<ImageWithBitmap>,
+    images: List<BitmapImage>,
     startIndex: Int = 0,
     onClose: () -> Unit,
 ) {

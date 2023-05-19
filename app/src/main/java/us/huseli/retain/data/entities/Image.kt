@@ -1,11 +1,19 @@
 package us.huseli.retain.data.entities
 
+import android.content.Context
+import android.graphics.ImageDecoder
+import android.net.Uri
+import android.os.Build
+import android.provider.MediaStore
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Ignore
 import androidx.room.PrimaryKey
+import us.huseli.retain.Constants
+import java.io.File
 import java.time.Instant
 import java.util.UUID
 
@@ -45,8 +53,27 @@ data class Image(
     override fun hashCode() = filename.hashCode()
 
     override fun compareTo(other: Image) = (added.epochSecond - other.added.epochSecond).toInt()
+
+    @Suppress("SameReturnValue")
+    fun toBitmapImage(context: Context): BitmapImage? {
+        val imageDir = File(context.filesDir, Constants.IMAGE_SUBDIR).apply { mkdirs() }
+        val imageFile = File(imageDir, filename)
+
+        if (imageFile.isFile) {
+            Uri.fromFile(imageFile)?.let { uri ->
+                val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, uri))
+                } else {
+                    @Suppress("DEPRECATION")
+                    MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
+                }
+                bitmap?.let { return BitmapImage(this, it.asImageBitmap()) }
+            }
+        }
+        return null
+    }
 }
 
-data class ImageWithBitmap(val image: Image, val imageBitmap: ImageBitmap) {
+data class BitmapImage(val image: Image, val imageBitmap: ImageBitmap) {
     override fun toString() = image.filename
 }
