@@ -12,7 +12,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import us.huseli.retain.Constants.DEFAULT_MIN_COLUMN_WIDTH
+import us.huseli.retain.Constants.NEXTCLOUD_BASE_DIR
 import us.huseli.retain.Constants.PREF_MIN_COLUMN_WIDTH
+import us.huseli.retain.Constants.PREF_NEXTCLOUD_BASE_DIR
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_PASSWORD
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_URI
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_USERNAME
@@ -30,6 +32,7 @@ class SettingsViewModel @Inject constructor(
     val nextCloudUri = MutableStateFlow(preferences.getString(PREF_NEXTCLOUD_URI, "") ?: "")
     val nextCloudUsername = MutableStateFlow(preferences.getString(PREF_NEXTCLOUD_USERNAME, "") ?: "")
     val nextCloudPassword = MutableStateFlow(preferences.getString(PREF_NEXTCLOUD_PASSWORD, "") ?: "")
+    val nextCloudBaseDir = MutableStateFlow(preferences.getString(PREF_NEXTCLOUD_BASE_DIR, NEXTCLOUD_BASE_DIR) ?: "")
     val minColumnWidth = MutableStateFlow(preferences.getInt(PREF_MIN_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH))
     val isNextCloudTesting = MutableStateFlow(false)
     val isNextCloudWorking = MutableStateFlow<Boolean?>(null)
@@ -43,7 +46,8 @@ class SettingsViewModel @Inject constructor(
         repository.testNextcloud(
             Uri.parse(nextCloudUri.value),
             nextCloudUsername.value,
-            nextCloudPassword.value
+            nextCloudPassword.value,
+            nextCloudBaseDir.value,
         ) { result ->
             isNextCloudTesting.value = false
             isNextCloudWorking.value = result.success
@@ -58,6 +62,7 @@ class SettingsViewModel @Inject constructor(
             .putString(PREF_NEXTCLOUD_URI, nextCloudUri.value)
             .putString(PREF_NEXTCLOUD_USERNAME, nextCloudUsername.value)
             .putString(PREF_NEXTCLOUD_PASSWORD, nextCloudPassword.value)
+            .putString(PREF_NEXTCLOUD_BASE_DIR, nextCloudBaseDir.value)
             .putInt(PREF_MIN_COLUMN_WIDTH, minColumnWidth.value)
             .apply()
         repository.nextCloudNeedsTesting.value = true
@@ -68,6 +73,7 @@ class SettingsViewModel @Inject constructor(
             PREF_NEXTCLOUD_URI -> nextCloudUri.value = value as String
             PREF_NEXTCLOUD_USERNAME -> nextCloudUsername.value = value as String
             PREF_NEXTCLOUD_PASSWORD -> nextCloudPassword.value = value as String
+            PREF_NEXTCLOUD_BASE_DIR -> nextCloudBaseDir.value = value as String
             PREF_MIN_COLUMN_WIDTH -> minColumnWidth.value = value as Int
         }
     }
@@ -82,6 +88,8 @@ class SettingsViewModel @Inject constructor(
             PREF_NEXTCLOUD_USERNAME -> nextCloudUsername.value = preferences.getString(key, "") ?: ""
             PREF_NEXTCLOUD_PASSWORD -> nextCloudPassword.value = preferences.getString(key, "") ?: ""
             PREF_MIN_COLUMN_WIDTH -> minColumnWidth.value = preferences.getInt(key, DEFAULT_MIN_COLUMN_WIDTH)
+            PREF_NEXTCLOUD_BASE_DIR -> nextCloudBaseDir.value =
+                preferences.getString(key, NEXTCLOUD_BASE_DIR) ?: NEXTCLOUD_BASE_DIR
         }
     }
 }

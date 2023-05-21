@@ -7,7 +7,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.internal.toImmutableList
-import us.huseli.retain.Constants
+import us.huseli.retain.Constants.NEXTCLOUD_IMAGE_SUBDIR
+import us.huseli.retain.Constants.NEXTCLOUD_JSON_SUBDIR
 import us.huseli.retain.LogMessage
 import us.huseli.retain.data.entities.Image
 import us.huseli.retain.data.entities.NoteCombined
@@ -76,7 +77,7 @@ class DownloadMissingImagesTask(
 
     override fun getChildTask(obj: Image) = DownloadFileTask(
         engine = engine,
-        remotePath = "${Constants.NEXTCLOUD_IMAGE_DIR}/${obj.filename}",
+        remotePath = engine.getAbsolutePath(NEXTCLOUD_IMAGE_SUBDIR, obj.filename),
         tempDir = engine.tempDirDown,
         localFile = File(File(engine.context.filesDir, "images"), obj.filename),
     )
@@ -96,7 +97,7 @@ class DownloadNoteImagesTask(
 
     override fun getChildTask(obj: Image) = DownloadFileTask(
         engine = engine,
-        remotePath = "${Constants.NEXTCLOUD_IMAGE_DIR}/${obj.filename}",
+        remotePath = engine.getAbsolutePath(NEXTCLOUD_IMAGE_SUBDIR, obj.filename),
         tempDir = engine.tempDirDown,
         localFile = File(File(engine.context.filesDir, "images"), obj.filename),
     )
@@ -156,7 +157,7 @@ class DownstreamSyncTaskResult(
 class DownstreamSyncTask(engine: NextCloudEngine) :
     ListFilesListTask<DownstreamSyncTaskResult, DownloadNoteTaskResult, DownloadNoteTask>(
         engine = engine,
-        remoteDir = Constants.NEXTCLOUD_JSON_DIR,
+        remoteDir = engine.getAbsolutePath(NEXTCLOUD_JSON_SUBDIR),
         filter = { remoteFile ->
             remoteFile.mimeType == "application/json" &&
             remoteFile.remotePath.split("/").last().startsWith("note-")

@@ -4,7 +4,8 @@ import android.content.Context
 import android.os.Parcelable
 import com.owncloud.android.lib.common.operations.RemoteOperationResult
 import kotlinx.parcelize.Parcelize
-import us.huseli.retain.Constants
+import us.huseli.retain.Constants.NEXTCLOUD_IMAGE_SUBDIR
+import us.huseli.retain.Constants.NEXTCLOUD_JSON_SUBDIR
 import us.huseli.retain.LogMessage
 import us.huseli.retain.R
 import us.huseli.retain.nextcloud.NextCloudEngine
@@ -46,7 +47,7 @@ class TestNextCloudTaskResult(
 class TestNextCloudTask(engine: NextCloudEngine) :
     ListTask<TestNextCloudTaskResult, OperationTaskResult, CreateDirTask, String>(
         engine = engine,
-        objects = listOf(Constants.NEXTCLOUD_IMAGE_DIR, Constants.NEXTCLOUD_JSON_DIR)
+        objects = listOf(engine.getAbsolutePath(NEXTCLOUD_IMAGE_SUBDIR), engine.getAbsolutePath(NEXTCLOUD_JSON_SUBDIR))
     ) {
     private var remoteOperationResult: RemoteOperationResult<*>? = null
 

@@ -61,6 +61,7 @@ import org.burnoutcrew.reorderable.detectReorder
 import org.burnoutcrew.reorderable.rememberReorderableLazyListState
 import us.huseli.retain.R
 import us.huseli.retain.data.entities.ChecklistItem
+import us.huseli.retain.data.entities.Image
 import us.huseli.retain.viewmodels.EditChecklistNoteViewModel
 import java.util.UUID
 import kotlin.math.max
@@ -306,8 +307,10 @@ fun ChecklistNoteScreen(
     modifier: Modifier = Modifier,
     viewModel: EditChecklistNoteViewModel = hiltViewModel(),
     snackbarHostState: SnackbarHostState,
+    imageCarouselCurrentId: String? = null,
     onSave: (Boolean, UUID, String, Boolean, Int, Collection<ChecklistItem>) -> Unit,
-    onClose: () -> Unit,
+    onBackClick: () -> Unit,
+    onImageClick: ((Image) -> Unit)? = null,
 ) {
     val showChecked by viewModel.showChecked.collectAsStateWithLifecycle()
     val checklistItems by viewModel.checklistItems.collectAsStateWithLifecycle(emptyList())
@@ -318,13 +321,14 @@ fun ChecklistNoteScreen(
         modifier = modifier,
         snackbarHostState = snackbarHostState,
         viewModel = viewModel,
+        carouselImageId = imageCarouselCurrentId,
         onTitleFieldNext = {
             if (checklistItems.isEmpty()) {
                 viewModel.insertItem(text = "", checked = false, position = 0)
                 focusedItemPosition = 0
             }
         },
-        onClose = {
+        onBackClick = {
             onSave(
                 viewModel.shouldSave,
                 viewModel.noteId,
@@ -333,8 +337,9 @@ fun ChecklistNoteScreen(
                 viewModel.colorIdx.value,
                 viewModel.updatedItems
             )
-            onClose()
+            onBackClick()
         },
+        onImageClick = { onImageClick?.invoke(it) }
     ) { backgroundColor ->
         Checklist(
             scope = this,

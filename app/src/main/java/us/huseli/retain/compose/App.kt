@@ -13,15 +13,15 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.launch
-import us.huseli.retain.AddChecklistNote
-import us.huseli.retain.AddTextNote
-import us.huseli.retain.Debug
-import us.huseli.retain.EditChecklistNote
-import us.huseli.retain.EditTextNote
+import us.huseli.retain.ChecklistNoteDestination
+import us.huseli.retain.Constants.NAV_ARG_IMAGE_CAROUSEL_CURRENT_ID
+import us.huseli.retain.Constants.NAV_ARG_NOTE_ID
+import us.huseli.retain.DebugDestination
 import us.huseli.retain.Enums
-import us.huseli.retain.Home
+import us.huseli.retain.HomeDestination
 import us.huseli.retain.Logger
-import us.huseli.retain.Settings
+import us.huseli.retain.SettingsDestination
+import us.huseli.retain.TextNoteDestination
 import us.huseli.retain.ui.theme.RetainTheme
 import us.huseli.retain.viewmodels.NoteViewModel
 import us.huseli.retain.viewmodels.SettingsViewModel
@@ -58,33 +58,34 @@ fun App(
 
         NavHost(
             navController = navController,
-            startDestination = Home.route,
+            startDestination = HomeDestination.route,
         ) {
-            composable(route = Home.route) {
+            composable(route = HomeDestination.route) {
                 HomeScreen(
                     snackbarHostState = snackbarHostState,
                     onAddChecklistClick = {
-                        navController.navigate(AddChecklistNote.routeForNoteId(UUID.randomUUID()))
+                        navController.navigate(ChecklistNoteDestination.routeForNoteId(UUID.randomUUID()))
                     },
                     onAddTextNoteClick = {
-                        navController.navigate(AddTextNote.routeForNoteId(UUID.randomUUID()))
+                        navController.navigate(TextNoteDestination.routeForNoteId(UUID.randomUUID()))
                     },
                     onCardClick = { note ->
                         when (note.type) {
-                            Enums.NoteType.CHECKLIST -> navController.navigate(EditChecklistNote.routeForNoteId(note.id))
-                            Enums.NoteType.TEXT -> navController.navigate(EditTextNote.routeForNoteId(note.id))
+                            Enums.NoteType.TEXT -> navController.navigate(TextNoteDestination.routeForNoteId(note.id))
+                            Enums.NoteType.CHECKLIST ->
+                                navController.navigate(ChecklistNoteDestination.routeForNoteId(note.id))
                         }
                     },
                     onSettingsClick = {
-                        navController.navigate(Settings.route)
+                        navController.navigate(SettingsDestination.route)
                     },
                     onDebugClick = {
-                        navController.navigate(Debug.route)
+                        navController.navigate(DebugDestination.route)
                     },
                 )
             }
 
-            composable(route = Debug.route) {
+            composable(route = DebugDestination.route) {
                 DebugScreen(
                     logger = logger,
                     onClose = onClose,
@@ -92,7 +93,7 @@ fun App(
                 )
             }
 
-            composable(route = Settings.route) {
+            composable(route = SettingsDestination.route) {
                 SettingsScreen(
                     snackbarHostState = snackbarHostState,
                     onClose = onClose,
@@ -100,46 +101,40 @@ fun App(
             }
 
             composable(
-                route = AddTextNote.routeTemplate,
-                arguments = AddTextNote.arguments,
+                route = TextNoteDestination.routeTemplate,
+                arguments = TextNoteDestination.arguments,
             ) {
+                val noteId: UUID = UUID.fromString(it.arguments?.getString(NAV_ARG_NOTE_ID))
+                val imageCarouselCurrentId = it.arguments?.getString(NAV_ARG_IMAGE_CAROUSEL_CURRENT_ID)
+
+                @Suppress("Destructure")
                 TextNoteScreen(
                     snackbarHostState = snackbarHostState,
+                    imageCarouselCurrentId = imageCarouselCurrentId,
                     onSave = viewModel.saveTextNote,
-                    onClose = onClose,
+                    onBackClick = onClose,
+                    onImageClick = { image ->
+                        navController.navigate(TextNoteDestination.routeForNoteId(noteId, image.filename))
+                    },
                 )
             }
 
             composable(
-                route = AddChecklistNote.routeTemplate,
-                arguments = AddChecklistNote.arguments,
+                route = ChecklistNoteDestination.routeTemplate,
+                arguments = ChecklistNoteDestination.arguments,
             ) {
+                val noteId: UUID = UUID.fromString(it.arguments?.getString(NAV_ARG_NOTE_ID))
+                val imageCarouselCurrentId = it.arguments?.getString(NAV_ARG_IMAGE_CAROUSEL_CURRENT_ID)
+
+                @Suppress("Destructure")
                 ChecklistNoteScreen(
                     snackbarHostState = snackbarHostState,
+                    imageCarouselCurrentId = imageCarouselCurrentId,
                     onSave = viewModel.saveChecklistNote,
-                    onClose = onClose,
-                )
-            }
-
-            composable(
-                route = EditChecklistNote.routeTemplate,
-                arguments = EditChecklistNote.arguments,
-            ) {
-                ChecklistNoteScreen(
-                    snackbarHostState = snackbarHostState,
-                    onSave = viewModel.saveChecklistNote,
-                    onClose = onClose,
-                )
-            }
-
-            composable(
-                route = EditTextNote.routeTemplate,
-                arguments = EditTextNote.arguments,
-            ) {
-                TextNoteScreen(
-                    snackbarHostState = snackbarHostState,
-                    onSave = viewModel.saveTextNote,
-                    onClose = onClose,
+                    onBackClick = onClose,
+                    onImageClick = { image ->
+                        navController.navigate(ChecklistNoteDestination.routeForNoteId(noteId, image.filename))
+                    }
                 )
             }
         }

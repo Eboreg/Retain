@@ -3,8 +3,8 @@ package us.huseli.retain.nextcloud.tasks
 import com.owncloud.android.lib.resources.files.RemoveFileRemoteOperation
 import com.owncloud.android.lib.resources.files.model.RemoteFile
 import okhttp3.internal.toImmutableList
-import us.huseli.retain.Constants
-import us.huseli.retain.Constants.NEXTCLOUD_JSON_DIR
+import us.huseli.retain.Constants.NEXTCLOUD_IMAGE_SUBDIR
+import us.huseli.retain.Constants.NEXTCLOUD_JSON_SUBDIR
 import us.huseli.retain.data.entities.Image
 import us.huseli.retain.nextcloud.NextCloudEngine
 import java.util.UUID
@@ -17,7 +17,7 @@ open class RemoveFileTask(engine: NextCloudEngine, remotePath: String) : Operati
 
 /** Remove: 1 image file */
 class RemoveImageTask(engine: NextCloudEngine, image: Image) :
-    RemoveFileTask(engine, "${Constants.NEXTCLOUD_IMAGE_DIR}/${image.filename}")
+    RemoveFileTask(engine, engine.getAbsolutePath(NEXTCLOUD_IMAGE_SUBDIR, image.filename))
 
 
 /** Remove: 0..n note JSON file */
@@ -26,7 +26,7 @@ class RemoveNotesTask(engine: NextCloudEngine, noteIds: Collection<UUID>) :
     override val failOnUnsuccessfulChildTask = false
 
     override fun getChildTask(obj: UUID) =
-        RemoveFileTask(engine = engine, remotePath = "$NEXTCLOUD_JSON_DIR/note-$obj.json")
+        RemoveFileTask(engine = engine, remotePath = engine.getAbsolutePath(NEXTCLOUD_JSON_SUBDIR, "note-$obj.json"))
 
     override fun getResult() = TaskResult(success, error)
 }
@@ -48,7 +48,7 @@ class RemoveOrphanImagesTask(
     private val keep: List<String>
 ) : ListFilesListTask<ListFilesTaskResult, OperationTaskResult, RemoveFileTask>(
     engine = engine,
-    remoteDir = Constants.NEXTCLOUD_IMAGE_DIR,
+    remoteDir = engine.getAbsolutePath(NEXTCLOUD_IMAGE_SUBDIR),
     filter = { remoteFile ->
         remoteFile.mimeType != "DIR" &&
         !keep.contains(remoteFile.remotePath.split("/").last())

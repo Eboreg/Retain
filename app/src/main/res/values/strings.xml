@@ -36,6 +36,7 @@
     <string name="failed_to_connect_to_nextcloud">Failed to connect to Nextcloud</string>
     <string name="hide_password">Hide password</string>
     <string name="show_password">Show password</string>
+    <string name="nextcloud_base_path">Nextcloud base path</string>
     <plurals name="plus_x_items">
         <item quantity="one">+ 1 item</item>
         <item quantity="other">+ %1$d items</item>

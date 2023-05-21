@@ -1,13 +1,16 @@
 package us.huseli.retain.data
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.net.Uri
+import androidx.preference.PreferenceManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import us.huseli.retain.Constants.IMAGE_SUBDIR
+import us.huseli.retain.Constants.PREF_NEXTCLOUD_BASE_DIR
 import us.huseli.retain.Enums.NoteType
 import us.huseli.retain.LogInterface
 import us.huseli.retain.Logger
@@ -44,7 +47,8 @@ class NoteRepository @Inject constructor(
     private val ioScope: CoroutineScope,
     override val logger: Logger,
     private val database: Database,
-) : LogInterface {
+) : LogInterface, SharedPreferences.OnSharedPreferenceChangeListener {
+    private val preferences = PreferenceManager.getDefaultSharedPreferences(context)
     val imageDir = File(context.filesDir, IMAGE_SUBDIR).apply { mkdirs() }
     val notes: Flow<List<Note>> = noteDao.flowList()
     val checklistItems: Flow<List<ChecklistItem>> = checklistItemDao.flowList()
@@ -53,6 +57,7 @@ class NoteRepository @Inject constructor(
 
     init {
         syncNextCloud()
+        preferences.registerOnSharedPreferenceChangeListener(this)
 
         ioScope.launch {
             imageDao.flowList().collect { images ->
@@ -223,8 +228,14 @@ class NoteRepository @Inject constructor(
         RemoveOrphanImagesTask(nextCloudEngine, keep = imageFilenames).run()
     }
 
-    fun testNextcloud(uri: Uri, username: String, password: String, onResult: (TestNextCloudTaskResult) -> Unit) {
-        nextCloudEngine.testClient(uri, username, password) { result -> onResult(result) }
+    fun testNextcloud(
+        uri: Uri,
+        username: String,
+        password: String,
+        baseDir: String,
+        onResult: (TestNextCloudTaskResult) -> Unit
+    ) {
+        nextCloudEngine.testClient(uri, username, password, baseDir) { result -> onResult(result) }
     }
 
     suspend fun updateChecklistItems(items: Collection<ChecklistItem>) = checklistItemDao.update(items)
@@ -244,5 +255,9 @@ class NoteRepository @Inject constructor(
                 if (!result.success) logError("Failed to upload note to Nextcloud", result.error)
             }
         }
+    }
+
+    override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
+        if (key == PREF_NEXTCLOUD_BASE_DIR) syncNextCloud()
     }
 }

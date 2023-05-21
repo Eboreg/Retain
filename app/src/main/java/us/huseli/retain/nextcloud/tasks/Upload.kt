@@ -5,6 +5,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import us.huseli.retain.Constants
+import us.huseli.retain.Constants.NEXTCLOUD_IMAGE_SUBDIR
+import us.huseli.retain.Constants.NEXTCLOUD_JSON_SUBDIR
 import us.huseli.retain.LogMessage
 import us.huseli.retain.data.entities.Image
 import us.huseli.retain.data.entities.NoteCombined
@@ -38,7 +40,7 @@ open class UploadFileTask(
 /** Up: 1 image file */
 class UploadImageTask(engine: NextCloudEngine, image: Image) : UploadFileTask(
     engine = engine,
-    remotePath = "${Constants.NEXTCLOUD_IMAGE_DIR}/${image.filename}",
+    remotePath = engine.getAbsolutePath(NEXTCLOUD_IMAGE_SUBDIR, image.filename),
     localFile = File(File(engine.context.filesDir, Constants.IMAGE_SUBDIR), image.filename),
     mimeType = image.mimeType
 )
@@ -58,7 +60,7 @@ class UploadMissingImagesTask(engine: NextCloudEngine, private val images: Colle
     override fun start() {
         ListFilesTask(
             engine = engine,
-            remoteDir = Constants.NEXTCLOUD_IMAGE_DIR,
+            remoteDir = engine.getAbsolutePath(NEXTCLOUD_IMAGE_SUBDIR),
             filter = { remoteFile -> remoteFile.mimeType != "DIR" },
         ).run(triggerStatus) { result ->
             missingImages.addAll(
@@ -94,7 +96,7 @@ class UploadNoteTask(
     private val noteCombined: NoteCombined
 ) : OperationTask(engine) {
     private val filename = "note-${noteCombined.id}.json"
-    private val remotePath = "${Constants.NEXTCLOUD_JSON_DIR}/$filename"
+    private val remotePath = engine.getAbsolutePath(NEXTCLOUD_JSON_SUBDIR, filename)
     private val localFile = File(engine.tempDirUp, filename).apply { deleteOnExit() }
     override val successMessageString = "Successfully saved $noteCombined to $remotePath on Nextcloud"
     override val startMessageString = "Uploading file $remotePath from $localFile"

@@ -15,6 +15,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import us.huseli.retain.Constants.NEXTCLOUD_BASE_DIR
+import us.huseli.retain.Constants.PREF_NEXTCLOUD_BASE_DIR
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_PASSWORD
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_URI
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_USERNAME
@@ -69,6 +71,14 @@ class NextCloudEngine @Inject constructor(
             }
         }
 
+    private var baseDir = NEXTCLOUD_BASE_DIR
+        set(value) {
+            if (field != value.trimEnd('/')) {
+                field = value.trimEnd('/')
+                updateClient()
+            }
+        }
+
     internal val client: OwnCloudClient = OwnCloudClientFactory.createOwnCloudClient(uri, context, true).apply {
         setDefaultTimeouts(120_000, 120_000)
     }
@@ -76,9 +86,16 @@ class NextCloudEngine @Inject constructor(
     init {
         uri = Uri.parse(preferences.getString(PREF_NEXTCLOUD_URI, "") ?: "")
         username = preferences.getString(PREF_NEXTCLOUD_USERNAME, "") ?: ""
-        preferences.registerOnSharedPreferenceChangeListener(this)
         password = preferences.getString(PREF_NEXTCLOUD_PASSWORD, "") ?: ""
+        baseDir = preferences.getString(PREF_NEXTCLOUD_BASE_DIR, NEXTCLOUD_BASE_DIR) ?: NEXTCLOUD_BASE_DIR
+        preferences.registerOnSharedPreferenceChangeListener(this)
     }
+
+    fun getAbsolutePath(vararg segments: String) =
+        listOf(
+            baseDir.trimEnd('/'),
+            *segments.map { it.trim('/') }.toTypedArray()
+        ).joinToString("/")
 
     fun awaitStatus(value: Int, callback: () -> Unit) {
         if (status >= value) callback()
@@ -94,11 +111,13 @@ class NextCloudEngine @Inject constructor(
         uri: Uri,
         username: String,
         password: String,
+        baseDir: String,
         callback: ((TestNextCloudTaskResult) -> Unit)? = null
     ) {
         this.uri = uri
         this.username = username
         this.password = password
+        this.baseDir = baseDir
         if (this.uri.host != null) testClient(callback)
     }
 
@@ -153,9 +172,10 @@ class NextCloudEngine @Inject constructor(
 
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
         when (key) {
-            PREF_NEXTCLOUD_URI -> this.uri = Uri.parse(preferences.getString(key, "") ?: "")
-            PREF_NEXTCLOUD_USERNAME -> this.username = preferences.getString(key, "") ?: ""
-            PREF_NEXTCLOUD_PASSWORD -> this.password = preferences.getString(key, "") ?: ""
+            PREF_NEXTCLOUD_URI -> uri = Uri.parse(preferences.getString(key, "") ?: "")
+            PREF_NEXTCLOUD_USERNAME -> username = preferences.getString(key, "") ?: ""
+            PREF_NEXTCLOUD_PASSWORD -> password = preferences.getString(key, "") ?: ""
+            PREF_NEXTCLOUD_BASE_DIR -> baseDir = preferences.getString(key, NEXTCLOUD_BASE_DIR) ?: NEXTCLOUD_BASE_DIR
         }
     }
 

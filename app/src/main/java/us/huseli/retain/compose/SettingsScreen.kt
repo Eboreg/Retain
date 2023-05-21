@@ -59,7 +59,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import us.huseli.retain.Constants.NEXTCLOUD_BASE_DIR
 import us.huseli.retain.Constants.PREF_MIN_COLUMN_WIDTH
+import us.huseli.retain.Constants.PREF_NEXTCLOUD_BASE_DIR
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_PASSWORD
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_URI
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_USERNAME
@@ -130,6 +132,7 @@ fun NextCloudSection(
     uri: String,
     username: String,
     password: String,
+    baseDir: String,
     isTesting: Boolean,
     isWorking: Boolean?,
     isUrlFail: Boolean,
@@ -236,6 +239,18 @@ fun NextCloudSection(
                 }
             )
         }
+        Box(modifier = Modifier.fillMaxWidth()) {
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = baseDir,
+                label = { Text(stringResource(R.string.nextcloud_base_path)) },
+                singleLine = true,
+                onValueChange = { onChange(PREF_NEXTCLOUD_BASE_DIR, it) },
+                enabled = !isTesting,
+                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
+                trailingIcon = { if (isWorking == true) workingIcon() },
+            )
+        }
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -323,6 +338,7 @@ fun SettingsScreenImpl(
     nextCloudUri: String,
     nextCloudUsername: String,
     nextCloudPassword: String,
+    nextCloudBaseDir: String,
     minColumnWidth: Int,
     snackbarHostState: SnackbarHostState,
     isNextCloudTesting: Boolean = false,
@@ -359,6 +375,7 @@ fun SettingsScreenImpl(
                     uri = nextCloudUri,
                     username = nextCloudUsername,
                     password = nextCloudPassword,
+                    baseDir = nextCloudBaseDir,
                     isTesting = isNextCloudTesting,
                     onTestClick = onNextCloudTestClick,
                     onChange = onChange,
@@ -382,6 +399,7 @@ fun SettingsScreen(
     val nextCloudUri by viewModel.nextCloudUri.collectAsStateWithLifecycle("")
     val nextCloudUsername by viewModel.nextCloudUsername.collectAsStateWithLifecycle("")
     val nextCloudPassword by viewModel.nextCloudPassword.collectAsStateWithLifecycle("")
+    val nextCloudBaseDir by viewModel.nextCloudBaseDir.collectAsStateWithLifecycle("")
     val minColumnWidth by viewModel.minColumnWidth.collectAsStateWithLifecycle()
     val isNextCloudTesting by viewModel.isNextCloudTesting.collectAsStateWithLifecycle()
     val isNextCloudWorking by viewModel.isNextCloudWorking.collectAsStateWithLifecycle()
@@ -410,6 +428,7 @@ fun SettingsScreen(
         nextCloudUri = nextCloudUri,
         nextCloudUsername = nextCloudUsername,
         nextCloudPassword = nextCloudPassword,
+        nextCloudBaseDir = nextCloudBaseDir,
         minColumnWidth = minColumnWidth,
         snackbarHostState = snackbarHostState,
         isNextCloudTesting = isNextCloudTesting,
@@ -438,6 +457,7 @@ fun SettingsScreenPreview() {
             nextCloudUri = "https://apan.ap",
             nextCloudUsername = "apan",
             nextCloudPassword = "apeliapanap",
+            nextCloudBaseDir = NEXTCLOUD_BASE_DIR,
             minColumnWidth = 180,
             snackbarHostState = snackbarHostState,
             onNextCloudTestClick = {},

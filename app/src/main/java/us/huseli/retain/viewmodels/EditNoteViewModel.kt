@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import us.huseli.retain.Constants.DEFAULT_MAX_IMAGE_DIMEN
-import us.huseli.retain.Constants.NOTE_ID_SAVED_STATE_KEY
+import us.huseli.retain.Constants.NAV_ARG_NOTE_ID
 import us.huseli.retain.Enums.NoteType
 import us.huseli.retain.copyFileToLocal
 import us.huseli.retain.data.NoteRepository
@@ -48,7 +48,7 @@ open class EditNoteViewModel @Inject constructor(
     protected var _isStored = false
     protected open var _type = NoteType.TEXT
 
-    val noteId: UUID = UUID.fromString(savedStateHandle.get<String>(NOTE_ID_SAVED_STATE_KEY)!!)
+    val noteId: UUID = UUID.fromString(savedStateHandle.get<String>(NAV_ARG_NOTE_ID)!!)
     var note: Note? = null
     val title = _title.asStateFlow()
     val text = _text.asStateFlow()

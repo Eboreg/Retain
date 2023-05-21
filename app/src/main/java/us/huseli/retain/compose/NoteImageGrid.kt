@@ -91,7 +91,7 @@ fun NoteImageGrid(
                             colors = IconButtonDefaults.filledTonalIconButtonColors(
                                 containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.75f),
                             ),
-                            modifier = Modifier.align(Alignment.TopEnd).scale(0.75f)
+                            modifier = Modifier.scale(0.5f).align(Alignment.TopEnd)
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Close,

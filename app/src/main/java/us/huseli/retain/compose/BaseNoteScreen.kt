@@ -22,7 +22,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -33,6 +32,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import us.huseli.retain.R
+import us.huseli.retain.data.entities.Image
 import us.huseli.retain.outlinedTextFieldColors
 import us.huseli.retain.ui.theme.getNoteColor
 import us.huseli.retain.viewmodels.EditNoteViewModel
@@ -43,8 +43,10 @@ fun BaseNoteScreen(
     modifier: Modifier = Modifier,
     viewModel: EditNoteViewModel,
     snackbarHostState: SnackbarHostState,
+    carouselImageId: String? = null,
     onTitleFieldNext: (() -> Unit)?,
-    onClose: () -> Unit,
+    onBackClick: () -> Unit,
+    onImageClick: (Image) -> Unit,
     onBackgroundClick: (() -> Unit)? = null,
     content: LazyListScope.(Color) -> Unit,
 ) {
@@ -52,14 +54,17 @@ fun BaseNoteScreen(
     val colorIdx by viewModel.colorIdx.collectAsStateWithLifecycle()
     val noteColor = getNoteColor(colorIdx)
     val context = LocalContext.current
-    val bitmapImages by viewModel.bitmapImages.collectAsStateWithLifecycle(emptyList())
-    var currentCarouselIndex by rememberSaveable { mutableStateOf<Int?>(null) }
     val interactionSource = remember { MutableInteractionSource() }
+
+    val bitmapImages by viewModel.bitmapImages.collectAsStateWithLifecycle(emptyList())
+    var currentCarouselImageId by remember { mutableStateOf(carouselImageId) }
+    val currentCarouselImage = bitmapImages.find { it.image.filename == currentCarouselImageId }
+    val currentCarouselImageIdx = bitmapImages.indexOf(currentCarouselImage)
 
     Scaffold(
         topBar = {
             NoteScreenTopAppBar(
-                onBackClick = onClose,
+                onBackClick = onBackClick,
                 onImagePick = { uri -> viewModel.insertImage(uri, context) },
                 onColorSelected = { index -> viewModel.setColorIdx(index) }
             )
@@ -79,7 +84,7 @@ fun BaseNoteScreen(
                 NoteImageGrid(
                     bitmapImages = bitmapImages,
                     showDeleteButton = true,
-                    onImageClick = { currentCarouselIndex = bitmapImages.indexOf(it) },
+                    onImageClick = { onImageClick(it.image) },
                     onDeleteButtonClick = { viewModel.deleteImage(it.image) },
                     secondaryRowHeight = 200.dp,
                 )
@@ -98,11 +103,20 @@ fun BaseNoteScreen(
             content(noteColor)
         }
 
-        currentCarouselIndex?.let {
+        currentCarouselImage?.let {
             ImageCarousel(
-                images = bitmapImages,
-                startIndex = it,
-                onClose = { currentCarouselIndex = null }
+                bitmapImage = it,
+                onClose = onBackClick,
+                onSwipeLeft = {
+                    currentCarouselImageId =
+                        if (currentCarouselImage != bitmapImages.last()) bitmapImages[currentCarouselImageIdx + 1].image.filename
+                        else bitmapImages[0].image.filename
+                },
+                onSwipeRight = {
+                    currentCarouselImageId =
+                        if (currentCarouselImageIdx > 0) bitmapImages[currentCarouselImageIdx - 1].image.filename
+                        else bitmapImages.last().image.filename
+                },
             )
         }
     }
