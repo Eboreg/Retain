@@ -109,7 +109,7 @@ val md_theme_dark_surfaceBright = Color(0xFF363A3A)
 val seed = Color(0xFF4E6C81)
 
 val noteColorsDark = listOf(
-    Color.Transparent,
+    md_theme_dark_background,
     Color(0xff77172e),
     Color(0xff692b17),
     Color(0xff7c4a03),
@@ -124,7 +124,7 @@ val noteColorsDark = listOf(
 )
 
 val noteColorsLight = listOf(
-    Color.Transparent,
+    md_theme_light_background,
     Color(0xfffaafa8),
     Color(0xfff39f76),
     Color(0xfffff8b8),

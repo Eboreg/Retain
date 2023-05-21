@@ -89,11 +89,6 @@ class NoteRepository @Inject constructor(
         }
     }
 
-    suspend fun deleteChecklistItem(item: ChecklistItem) {
-        checklistItemDao.delete(item)
-        noteDao.touch(item.noteId)
-    }
-
     suspend fun deleteImage(image: Image) {
         imageDao.delete(image)
         noteDao.touch(image.noteId)
@@ -113,12 +108,6 @@ class NoteRepository @Inject constructor(
     }
 
     fun flowNote(id: UUID): Flow<Note?> = noteDao.flow(id)
-
-    suspend fun insertChecklistItem(noteId: UUID, text: String, checked: Boolean, position: Int) {
-        checklistItemDao.makePlaceFor(noteId, position)
-        checklistItemDao.insert(UUID.randomUUID(), noteId, text, checked, position)
-        noteDao.touch(noteId)
-    }
 
     suspend fun insertImage(noteId: UUID, filename: String, mimeType: String?, width: Int?, height: Int?, size: Int) {
         imageDao.insert(noteId, filename, mimeType, width, height, size)
@@ -238,7 +227,8 @@ class NoteRepository @Inject constructor(
         nextCloudEngine.testClient(uri, username, password, baseDir) { result -> onResult(result) }
     }
 
-    suspend fun updateChecklistItems(items: Collection<ChecklistItem>) = checklistItemDao.update(items)
+    suspend fun replaceChecklistItems(noteId: UUID, items: Collection<ChecklistItem>) =
+        checklistItemDao.replace(noteId, items)
 
     suspend fun upsertNote(id: UUID, type: NoteType, title: String, text: String, showChecked: Boolean, colorIdx: Int) {
         noteDao.upsert(id, type, title, text, showChecked, colorIdx)

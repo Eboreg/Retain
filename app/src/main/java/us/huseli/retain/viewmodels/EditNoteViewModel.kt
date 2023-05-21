@@ -42,10 +42,10 @@ open class EditNoteViewModel @Inject constructor(
     private val _title = MutableStateFlow("")
     private val _text = MutableStateFlow("")
     private val _colorIdx = MutableStateFlow(0)
+    private var _isStored = false
 
     protected val _showChecked = MutableStateFlow(true)
     protected var _isDirty = false
-    protected var _isStored = false
     protected open var _type = NoteType.TEXT
 
     val noteId: UUID = UUID.fromString(savedStateHandle.get<String>(NAV_ARG_NOTE_ID)!!)
@@ -61,8 +61,8 @@ open class EditNoteViewModel @Inject constructor(
     val shouldSave: Boolean
         get() = _isDirty || !_isStored
 
-    protected suspend fun saveNote() {
-        if (!_isStored || _isDirty) {
+    private suspend fun saveNote() {
+        if (shouldSave) {
             repository.upsertNote(noteId, _type, _title.value, _text.value, _showChecked.value, _colorIdx.value)
             _isStored = true
             _isDirty = false

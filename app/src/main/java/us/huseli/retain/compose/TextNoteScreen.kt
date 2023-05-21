@@ -6,6 +6,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,29 +45,30 @@ fun TextNoteScreen(
         mutableStateOf(TextFieldValue(text = text, selection = selection))
     }
 
+    DisposableEffect(Unit) {
+        onDispose {
+            onSave?.invoke(
+                viewModel.shouldSave,
+                viewModel.noteId,
+                viewModel.title.value,
+                viewModel.text.value,
+                viewModel.colorIdx.value
+            )
+        }
+    }
+
     BaseNoteScreen(
         modifier = modifier,
-        snackbarHostState = snackbarHostState,
         viewModel = viewModel,
+        snackbarHostState = snackbarHostState,
         carouselImageId = imageCarouselCurrentId,
         onTitleFieldNext = null,
+        onBackClick = { onBackClick?.invoke() },
+        onImageClick = { onImageClick?.invoke(it) },
         onBackgroundClick = {
             selection = TextRange(text.length)
             focusRequester.requestFocus()
         },
-        onBackClick = {
-            if (onSave != null) {
-                onSave(
-                    viewModel.shouldSave,
-                    viewModel.noteId,
-                    viewModel.title.value,
-                    viewModel.text.value,
-                    viewModel.colorIdx.value
-                )
-            }
-            if (onBackClick != null) onBackClick()
-        },
-        onImageClick = { onImageClick?.invoke(it) },
     ) {
         item {
             OutlinedTextField(

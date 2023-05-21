@@ -51,7 +51,7 @@ abstract class Database : RoomDatabase() {
                         logger.log(
                             LogMessage(
                                 level = Log.DEBUG,
-                                tag = "${javaClass.simpleName}<${System.identityHashCode(this)}>",
+                                tag = "Database<${System.identityHashCode(this)}>",
                                 thread = Thread.currentThread().name,
                                 message = "$sqlQuery, bindArgs=$bindArgs",
                             )

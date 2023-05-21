@@ -63,11 +63,11 @@ class NoteViewModel @Inject constructor(
         }
 
     val saveChecklistNote: (Boolean, UUID, String, Boolean, Int, Collection<ChecklistItem>) -> Unit =
-        { shouldSave, id, title, showChecked, colorIdx, updatedItems ->
+        { shouldSave, noteId, title, showChecked, colorIdx, checklistItems ->
             if (shouldSave) {
                 viewModelScope.launch {
-                    repository.upsertNote(id, NoteType.CHECKLIST, title, "", showChecked, colorIdx)
-                    repository.updateChecklistItems(updatedItems)
+                    repository.upsertNote(noteId, NoteType.CHECKLIST, title, "", showChecked, colorIdx)
+                    repository.replaceChecklistItems(noteId, checklistItems)
                 }
             }
         }

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
@@ -31,6 +32,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.burnoutcrew.reorderable.ReorderableLazyListState
+import org.burnoutcrew.reorderable.reorderable
 import us.huseli.retain.R
 import us.huseli.retain.data.entities.Image
 import us.huseli.retain.outlinedTextFieldColors
@@ -44,6 +47,7 @@ fun BaseNoteScreen(
     viewModel: EditNoteViewModel,
     snackbarHostState: SnackbarHostState,
     carouselImageId: String? = null,
+    reorderableState: ReorderableLazyListState? = null,
     onTitleFieldNext: (() -> Unit)?,
     onBackClick: () -> Unit,
     onImageClick: (Image) -> Unit,
@@ -71,14 +75,18 @@ fun BaseNoteScreen(
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     ) { innerPadding ->
+        var columnModifier = modifier
+            .fillMaxSize()
+            .padding(innerPadding)
+            .background(noteColor)
+            .clickable(interactionSource = interactionSource, indication = null) {
+                onBackgroundClick?.invoke()
+            }
+        if (reorderableState != null) columnModifier = columnModifier.reorderable(reorderableState)
+
         LazyColumn(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .background(noteColor)
-                .clickable(interactionSource = interactionSource, indication = null) {
-                    onBackgroundClick?.invoke()
-                },
+            state = reorderableState?.listState ?: rememberLazyListState(),
+            modifier = columnModifier,
         ) {
             item {
                 NoteImageGrid(

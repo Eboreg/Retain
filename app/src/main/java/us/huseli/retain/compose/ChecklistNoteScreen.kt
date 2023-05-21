@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -28,6 +28,7 @@ import androidx.compose.material3.ShapeDefaults
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -54,7 +55,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.burnoutcrew.reorderable.ItemPosition
 import org.burnoutcrew.reorderable.ReorderableItem
 import org.burnoutcrew.reorderable.ReorderableLazyListState
 import org.burnoutcrew.reorderable.detectReorder
@@ -94,29 +94,26 @@ fun ChecklistRow(
     onPrevious: (String) -> Unit,
     reorderableState: ReorderableLazyListState,
 ) {
-    val text by rememberSaveable(item.text) { mutableStateOf(item.text) }
-    val checked by rememberSaveable(item.checked) { mutableStateOf(item.checked) }
-    val alpha = if (checked) 0.5f else 1f
+    fun stripNullChar(str: String): String = str.filter { it != Char.MIN_VALUE }
+    fun addNullChar(str: String): String = Char.MIN_VALUE + stripNullChar(str)
+    fun adjustSelection(range: TextRange): TextRange = if (range.start < 1) TextRange(1, max(range.end, 1)) else range
+
+    val alpha = if (item.checked) 0.5f else 1f
     val focusRequester = remember { FocusRequester() }
-    val stripNullChar = { str: String -> str.filter { it != Char.MIN_VALUE } }
-    val addNullChar = { str: String -> Char.MIN_VALUE + stripNullChar(str) }
     var selection by remember(selectionStart) { mutableStateOf(TextRange(selectionStart + 1)) }
-
-    val adjustSelection = { range: TextRange ->
-        if (range.start < 1) TextRange(1, max(range.end, 1))
-        else range
+    val text by remember(item.text) { mutableStateOf(addNullChar(item.text)) }
+    var textFieldValue by remember(item.text) {
+        mutableStateOf(TextFieldValue(text = text, selection = selection))
     }
-
-    var textFieldValue by remember(text) {
-        mutableStateOf(TextFieldValue(text = addNullChar(text), selection = selection))
-    }
+    // Log.i("ChecklistNoteScreen", "text=$text, textFieldValue.text=${textFieldValue.text}, item.text=${item.text}, selection=$selection, selectionStart=$selectionStart, textFieldValue.selection=${textFieldValue.selection}")
 
     val realModifier =
-        if (isDragging) modifier.border(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-            shape = ShapeDefaults.ExtraSmall
-        )
+        if (isDragging) modifier
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                shape = ShapeDefaults.ExtraSmall
+            )
         else modifier
 
     Row(
@@ -132,7 +129,7 @@ fun ChecklistRow(
         )
         Checkbox(
             modifier = Modifier.padding(start = 0.dp),
-            checked = checked,
+            checked = item.checked,
             onCheckedChange = onCheckedChange,
             colors = CheckboxDefaults.colors(
                 checkedColor = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
@@ -156,15 +153,17 @@ fun ChecklistRow(
                  * row: just re-insert the null character move the selection
                  * start to after it.
                  */
-                if (it.text.isEmpty() || it.text[0] != Char.MIN_VALUE) {
-                    onPrevious(stripNullChar(it.text))
+                // Log.i("ChecklistNoteScreen", "it.text=${it.text}, text=$text, textFieldValue.text=${textFieldValue.text}, it.selection=${it.selection}, textValue.selection=${textFieldValue.selection}")
+                if ((it.text.isEmpty() || it.text[0] != Char.MIN_VALUE)) {
+                    if (it.text != textFieldValue.text) onPrevious(stripNullChar(it.text))
+                } else {
+                    if (it.text != textFieldValue.text) onTextChange(stripNullChar(it.text))
                 }
-                selection = adjustSelection(it.selection)
+                selection = it.selection
                 textFieldValue = it.copy(
-                    selection = adjustSelection(selection),
-                    text = addNullChar(it.text),
+                    selection = adjustSelection(it.selection),
+                    text = it.text,
                 )
-                onTextChange(stripNullChar(it.text))
             },
             keyboardOptions = KeyboardOptions.Default.copy(
                 imeAction = ImeAction.Next,
@@ -204,46 +203,38 @@ fun ChecklistRow(
 fun Checklist(
     modifier: Modifier = Modifier,
     scope: LazyListScope,
+    state: ReorderableLazyListState,
     checklistItems: List<ChecklistItem>,
-    focusedItemPosition: Int?,
+    focusedItemIndex: Int?,
     itemSelectionStarts: Map<UUID, Int>,
     showChecked: Boolean,
     onItemDeleteClick: (ChecklistItem) -> Unit,
     onItemCheckedChange: (ChecklistItem, Boolean) -> Unit,
     onItemTextChange: (ChecklistItem, String) -> Unit,
-    onItemNext: (ChecklistItem, String, String) -> Unit,
-    onItemPrevious: (ChecklistItem, String) -> Unit,
-    onSwitchPositions: (UUID, UUID) -> Unit,
-    clearFocusedItemPosition: () -> Unit,
+    onItemNext: (Int, ChecklistItem, String, String) -> Unit,
+    onItemPrevious: (Int, ChecklistItem, String) -> Unit,
+    clearFocusedItemIndex: () -> Unit,
     onShowCheckedClick: () -> Unit,
     backgroundColor: Color,
 ) {
-    val isItemFocused = { item: ChecklistItem -> focusedItemPosition == item.position }
     val uncheckedItems = checklistItems.filter { !it.checked }
     val checkedItems = checklistItems.filter { it.checked }
-    val onMove: (from: ItemPosition, to: ItemPosition) -> Unit = { from, to ->
-        val fromKey = from.key
-        val toKey = to.key
-        if (fromKey is UUID && toKey is UUID) onSwitchPositions(fromKey, toKey)
-    }
 
-    scope.items(uncheckedItems, key = { it.id }) { item ->
-        val uncheckedState = rememberReorderableLazyListState(onMove = onMove)
-
-        ReorderableItem(uncheckedState, key = item.id) { isDragging ->
+    scope.itemsIndexed(uncheckedItems, key = { _, item -> item.id }) { index, item ->
+        ReorderableItem(state, key = item.id) { isDragging ->
             ChecklistRow(
                 modifier = modifier.background(backgroundColor),
                 item = item,
-                isFocused = isItemFocused(item),
+                isFocused = focusedItemIndex == index,
                 isDragging = isDragging,
                 selectionStart = itemSelectionStarts[item.id] ?: 0,
                 onDeleteClick = { onItemDeleteClick(item) },
                 onTextChange = { onItemTextChange(item, it) },
                 onCheckedChange = { onItemCheckedChange(item, it) },
-                onNext = { head, tail -> onItemNext(item, head, tail) },
-                onPrevious = { text -> onItemPrevious(item, text) },
-                onFocus = clearFocusedItemPosition,
-                reorderableState = uncheckedState,
+                onNext = { head, tail -> onItemNext(index, item, head, tail) },
+                onPrevious = { text -> onItemPrevious(index, item, text) },
+                onFocus = clearFocusedItemIndex,
+                reorderableState = state,
             )
         }
     }
@@ -256,7 +247,7 @@ fun Checklist(
             Spacer(Modifier.height(4.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.clickable { onShowCheckedClick() },
+                modifier = Modifier.fillMaxWidth().clickable { onShowCheckedClick() },
             ) {
                 Icon(
                     imageVector = Icons.Filled.ExpandMore,
@@ -273,23 +264,21 @@ fun Checklist(
         }
 
         if (showChecked) {
-            scope.items(checkedItems, key = { it.id }) { item ->
-                val checkedState = rememberReorderableLazyListState(onMove = onMove)
-
-                ReorderableItem(checkedState, key = item.id) { isDragging ->
+            scope.itemsIndexed(checkedItems, key = { _, item -> item.id }) { index, item ->
+                ReorderableItem(state, key = item.id) { isDragging ->
                     ChecklistRow(
                         modifier = modifier.background(backgroundColor),
                         item = item,
-                        isFocused = isItemFocused(item),
+                        isFocused = focusedItemIndex == index + uncheckedItems.size,
                         isDragging = isDragging,
                         selectionStart = itemSelectionStarts[item.id] ?: 0,
-                        onFocus = clearFocusedItemPosition,
+                        onFocus = clearFocusedItemIndex,
                         onDeleteClick = { onItemDeleteClick(item) },
                         onCheckedChange = { onItemCheckedChange(item, it) },
                         onTextChange = { onItemTextChange(item, it) },
-                        onNext = { head, tail -> onItemNext(item, head, tail) },
-                        onPrevious = { text -> onItemPrevious(item, text) },
-                        reorderableState = checkedState,
+                        onNext = { head, tail -> onItemNext(index + uncheckedItems.size, item, head, tail) },
+                        onPrevious = { text -> onItemPrevious(index + uncheckedItems.size, item, text) },
+                        reorderableState = state,
                     )
                 }
             }
@@ -314,75 +303,72 @@ fun ChecklistNoteScreen(
 ) {
     val showChecked by viewModel.showChecked.collectAsStateWithLifecycle()
     val checklistItems by viewModel.checklistItems.collectAsStateWithLifecycle(emptyList())
-    var focusedItemPosition by rememberSaveable { mutableStateOf<Int?>(null) }
+    var focusedItemIndex by rememberSaveable { mutableStateOf<Int?>(null) }
     val itemSelectionStarts = remember { mutableStateMapOf<UUID, Int>() }
+    val reorderableState = rememberReorderableLazyListState(
+        onMove = { from, to -> viewModel.switchItemPositions(from, to) },
+    )
 
-    BaseNoteScreen(
-        modifier = modifier,
-        snackbarHostState = snackbarHostState,
-        viewModel = viewModel,
-        carouselImageId = imageCarouselCurrentId,
-        onTitleFieldNext = {
-            if (checklistItems.isEmpty()) {
-                viewModel.insertItem(text = "", checked = false, position = 0)
-                focusedItemPosition = 0
-            }
-        },
-        onBackClick = {
+    DisposableEffect(Unit) {
+        onDispose {
             onSave(
                 viewModel.shouldSave,
                 viewModel.noteId,
                 viewModel.title.value,
                 showChecked,
                 viewModel.colorIdx.value,
-                viewModel.updatedItems
+                viewModel.checklistItems.value
             )
-            onBackClick()
+        }
+    }
+
+    BaseNoteScreen(
+        modifier = modifier,
+        viewModel = viewModel,
+        snackbarHostState = snackbarHostState,
+        reorderableState = reorderableState,
+        carouselImageId = imageCarouselCurrentId,
+        onTitleFieldNext = {
+            if (checklistItems.isEmpty()) {
+                viewModel.insertItem(text = "", checked = false, index = 0)
+                focusedItemIndex = 0
+            }
         },
+        onBackClick = onBackClick,
         onImageClick = { onImageClick?.invoke(it) }
     ) { backgroundColor ->
         Checklist(
             scope = this,
+            state = reorderableState,
             checklistItems = checklistItems,
-            focusedItemPosition = focusedItemPosition,
+            focusedItemIndex = focusedItemIndex,
             itemSelectionStarts = itemSelectionStarts,
             showChecked = showChecked,
+            onItemDeleteClick = { viewModel.deleteItem(it) },
             onItemCheckedChange = { item, checked -> viewModel.updateItemChecked(item.id, checked) },
             onItemTextChange = { item, text -> viewModel.updateItemText(item.id, text) },
-            onItemDeleteClick = { viewModel.deleteItem(it) },
-            backgroundColor = backgroundColor,
-            onItemNext = { item, head, tail ->
-                viewModel.insertItem(text = tail, checked = item.checked, position = item.position + 1)
-                focusedItemPosition = item.position + 1
+            onItemNext = { index, item, head, tail ->
+                viewModel.insertItem(text = tail, checked = item.checked, index = index + 1)
+                focusedItemIndex = index + 1
                 itemSelectionStarts[item.id] = 0
-                viewModel.updateItem(item.id, head, item.checked, item.position)
+                viewModel.updateItemText(item.id, head)
             },
-            onItemPrevious = { item, text ->
-                val itemIdx = checklistItems.indexOf(item)
-                if (itemIdx > 0) {
-                    val previousItem = checklistItems[itemIdx - 1]
-                    focusedItemPosition = previousItem.position
+            onItemPrevious = { index, item, text ->
+                if (index > 0) {
+                    val previousItem = checklistItems[index - 1]
+                    focusedItemIndex = index - 1
                     itemSelectionStarts[previousItem.id] = previousItem.text.length
-                    if (text.isNotEmpty()) {
-                        viewModel.updateItem(
-                            id = previousItem.id,
-                            text = previousItem.text + text,
-                            checked = previousItem.checked,
-                            position = previousItem.position
-                        )
-                    }
+                    if (text.isNotEmpty()) viewModel.updateItemText(previousItem.id, previousItem.text + text)
                     viewModel.deleteItem(item)
                 } else if (text.isEmpty()) {
                     viewModel.deleteItem(item)
                 }
             },
-            clearFocusedItemPosition = { focusedItemPosition = null },
+            clearFocusedItemIndex = { focusedItemIndex = null },
             onShowCheckedClick = {
                 viewModel.toggleShowChecked()
             },
-            onSwitchPositions = { fromId, toId ->
-                viewModel.switchItemPositions(fromId, toId)
-            }
+            backgroundColor = backgroundColor
         )
 
         item {
@@ -392,9 +378,9 @@ fun ChecklistNoteScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .clickable {
-                        val position = checklistItems.lastOrNull()?.let { it.position + 1 } ?: 0
-                        viewModel.insertItem(text = "", checked = false, position = position)
-                        focusedItemPosition = position
+                        val index = checklistItems.filter { !it.checked }.size
+                        viewModel.insertItem(text = "", checked = false, index = index)
+                        focusedItemIndex = index
                     }
                     .padding(bottom = 8.dp)
                     .fillMaxWidth()

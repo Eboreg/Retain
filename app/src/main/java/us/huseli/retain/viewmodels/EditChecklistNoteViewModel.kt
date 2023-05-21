@@ -6,7 +6,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.burnoutcrew.reorderable.ItemPosition
 import us.huseli.retain.Enums.NoteType
+import us.huseli.retain.LogInterface
+import us.huseli.retain.Logger
 import us.huseli.retain.data.NoteRepository
 import us.huseli.retain.data.entities.ChecklistItem
 import java.util.UUID
@@ -15,51 +18,39 @@ import javax.inject.Inject
 @HiltViewModel
 class EditChecklistNoteViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    repository: NoteRepository
-) : EditNoteViewModel(savedStateHandle, repository) {
-    private var _checklistItems = mutableMapOf<UUID, ChecklistItem>()
-    private var _isDirtyMap = mutableMapOf<UUID, Boolean>()
-    private val _checklistItemsFlow = MutableStateFlow<List<ChecklistItem>>(emptyList())
-
+    repository: NoteRepository,
+    override val logger: Logger,
+) : EditNoteViewModel(savedStateHandle, repository), LogInterface {
+    private val _checklistItems = MutableStateFlow<List<ChecklistItem>>(emptyList())
     override var _type = NoteType.CHECKLIST
-
-    val checklistItems = _checklistItemsFlow.asStateFlow()
-    val updatedItems: List<ChecklistItem>
-        get() = _isDirtyMap.filterValues { it }.keys.mapNotNull { _checklistItems[it] }
+    val checklistItems = _checklistItems.asStateFlow()
 
     init {
         loadItems()
     }
 
     fun deleteItem(item: ChecklistItem) = viewModelScope.launch {
-        repository.deleteChecklistItem(item)
-        loadItems()
+        _checklistItems.value = _checklistItems.value.toMutableList().apply { remove(item) }
         _isDirty = true
     }
 
-    fun insertItem(text: String, checked: Boolean, position: Int) = viewModelScope.launch {
-        if (!_isStored) saveNote()
-        repository.insertChecklistItem(noteId, text, checked, position)
-        loadItems()
+    private fun updatePositions() {
+        log("updatePositions() before: ${_checklistItems.value}")
+        _checklistItems.value = _checklistItems.value.mapIndexed { index, item -> item.copy(position = index) }
+        log("updatePositions() after: ${_checklistItems.value}")
+    }
+
+    fun insertItem(text: String, checked: Boolean, index: Int) = viewModelScope.launch {
+        val item = ChecklistItem(text = text, checked = checked, noteId = noteId, position = index)
+
+        log("insertItem($text, $checked, $index): inserting $item")
+        _checklistItems.value = _checklistItems.value.toMutableList().apply { add(index, item) }
+        updatePositions()
         _isDirty = true
     }
 
     private fun loadItems() = viewModelScope.launch {
-        repository.listChecklistItems(noteId).also { items ->
-            items.forEach { item ->
-                if (_checklistItems[item.id] == null) {
-                    _checklistItems[item.id] = item
-                    _isDirtyMap[item.id] = false
-                } else {
-                    @Suppress("ReplaceNotNullAssertionWithElvisReturn")
-                    _checklistItems[item.id] = _checklistItems[item.id]!!.copy(position = item.position)
-                }
-            }
-            _checklistItems.keys.toList().forEach { id ->
-                if (!items.map { it.id }.contains(id)) _checklistItems.remove(id)
-            }
-            _checklistItemsFlow.value = _checklistItems.values.sortedBy { it.position }
-        }
+        _checklistItems.value = repository.listChecklistItems(noteId)
     }
 
     fun toggleShowChecked() {
@@ -67,18 +58,15 @@ class EditChecklistNoteViewModel @Inject constructor(
         _isDirty = true
     }
 
-    fun updateItem(id: UUID, text: String? = null, checked: Boolean? = null, position: Int? = null) {
-        _checklistItems[id]?.let { item ->
-            if (
-                (checked != null && item.checked != checked) ||
-                (text != null && item.text != text) ||
-                (position != null && item.position != position)
-            ) {
-                _checklistItems[id] = item.copy(checked = checked, text = text, position = position)
-                _isDirtyMap[id] = true
-                _checklistItemsFlow.value = _checklistItems.values.sortedBy { it.position }
-                _isDirty = true
+    private fun updateItem(id: UUID, text: String? = null, checked: Boolean? = null) {
+        _checklistItems.value.find { it.id == id }?.let { item ->
+            val index = _checklistItems.value.indexOf(item)
+
+            log("updateItem($id, $text, $checked): updating item $item")
+            _checklistItems.value = _checklistItems.value.toMutableList().apply {
+                add(index, removeAt(index).copy(text = text, checked = checked))
             }
+            _isDirty = true
         }
     }
 
@@ -86,16 +74,19 @@ class EditChecklistNoteViewModel @Inject constructor(
 
     fun updateItemText(id: UUID, text: String) = updateItem(id, text = text)
 
-    fun switchItemPositions(fromId: UUID, toId: UUID) {
-        val from = _checklistItems[fromId]
-        val to = _checklistItems[toId]
+    fun switchItemPositions(from: ItemPosition, to: ItemPosition) {
+        /**
+         * We cannot use ItemPosition.index because the lazy column contains
+         * a whole bunch of other junk than checklist items.
+         */
+        val fromIdx = _checklistItems.value.indexOfFirst { it.id == from.key }
+        val toIdx = _checklistItems.value.indexOfFirst { it.id == to.key }
 
-        if (from != null && to != null) {
-            _checklistItems[fromId] = from.copy(position = to.position)
-            _checklistItems[toId] = to.copy(position = from.position)
-            _isDirtyMap[fromId] = true
-            _isDirtyMap[toId] = true
-            _checklistItemsFlow.value = _checklistItems.values.sortedBy { it.position }
+        if (fromIdx > -1 && toIdx > -1) {
+            log("switchItemPositions($from, $to) before: ${_checklistItems.value}")
+            _checklistItems.value = _checklistItems.value.toMutableList().apply { add(toIdx, removeAt(fromIdx)) }
+            log("switchItemPositions($from, $to) after: ${_checklistItems.value}")
+            updatePositions()
             _isDirty = true
         }
     }
