@@ -106,6 +106,7 @@ fun BaseNoteScreen(
         currentCarouselImage?.let {
             ImageCarousel(
                 bitmapImage = it,
+                multiple = bitmapImages.size > 1,
                 onClose = onBackClick,
                 onSwipeLeft = {
                     currentCarouselImageId =

@@ -49,6 +49,7 @@ import kotlin.math.roundToInt
 fun ImageCarousel(
     modifier: Modifier = Modifier,
     bitmapImage: BitmapImage,
+    multiple: Boolean,
     onClose: () -> Unit,
     onSwipeRight: () -> Unit,
     onSwipeLeft: () -> Unit,
@@ -107,11 +108,8 @@ fun ImageCarousel(
                 else if (panX + panChange.x < -maxX) panX = -maxX
             }
 
-            if (overScroll < -500f) {
-                slideTo = Side.LEFT
-            } else if (overScroll > 500f) {
-                slideTo = Side.RIGHT
-            }
+            if (overScroll < -500f && multiple) slideTo = Side.LEFT
+            else if (overScroll > 500f && multiple) slideTo = Side.RIGHT
 
             if (originalImageHeight * scale > maxHeight) {
                 if (abs(panY + panChange.y) <= maxY) panY += panChange.y
