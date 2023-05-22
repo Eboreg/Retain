@@ -5,7 +5,6 @@
     <string name="add_checklist">Add checklist</string>
     <string name="title">Title</string>
     <string name="add_item">Add item</string>
-    <string name="delete_notes">Delete notes</string>
     <string name="delete">Delete</string>
     <string name="cancel">Cancel</string>
     <string name="app_settings">App settings</string>
@@ -40,6 +39,7 @@
     <string name="list_view">List view</string>
     <string name="grid_view">Grid view</string>
     <string name="move_card">Move card</string>
+    <string name="send_to_trash">Send to trash</string>
     <plurals name="plus_x_items">
         <item quantity="one">+ 1 item</item>
         <item quantity="other">+ %1$d items</item>
@@ -48,9 +48,13 @@
         <item quantity="one">1 checked item</item>
         <item quantity="other">%1$d checked items</item>
     </plurals>
-    <plurals name="delete_x_notes">
-        <item quantity="one">Delete 1 note?</item>
-        <item quantity="other">Delete %1$d notes?</item>
+    <plurals name="send_x_notes_to_trash">
+        <item quantity="one">Send 1 note to trash?</item>
+        <item quantity="other">Send %1$d notes to trash?</item>
+    </plurals>
+    <plurals name="send_notes_to_trash">
+        <item quantity="one">Send note to trash</item>
+        <item quantity="other">Send notes to trash</item>
     </plurals>
     <plurals name="plus_x_checked_items">
         <item quantity="one">+ 1 checked item</item>

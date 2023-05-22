@@ -313,7 +313,7 @@ fun ChecklistNoteScreen(
     DisposableEffect(Unit) {
         onDispose {
             onSave(
-                viewModel.shouldSave,
+                viewModel.isDirty,
                 viewModel.note.value,
                 viewModel.bitmapImages.value.map { it.image },
                 viewModel.checklistItems.value

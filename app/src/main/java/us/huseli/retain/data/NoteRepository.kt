@@ -38,7 +38,7 @@ import us.huseli.retain.nextcloud.tasks.RemoveNotesTask
 import us.huseli.retain.nextcloud.tasks.RemoveOrphanImagesTask
 import us.huseli.retain.nextcloud.tasks.TestNextCloudTaskResult
 import us.huseli.retain.nextcloud.tasks.UploadMissingImagesTask
-import us.huseli.retain.nextcloud.tasks.UploadNoteTask
+import us.huseli.retain.nextcloud.tasks.UploadNoteCombinedTask
 import us.huseli.retain.nextcloud.tasks.UpstreamSyncTask
 import java.io.File
 import java.io.FileOutputStream
@@ -155,8 +155,9 @@ class NoteRepository @Inject constructor(
         }
     }
 
+    @Suppress("unused")
     suspend fun deleteNotes(ids: Collection<UUID>) {
-        val images = imageDao.list(ids)
+        val images = imageDao.listByNoteIds(ids)
         @Suppress("Destructure")
         images.forEach { image ->
             File(imageDir, image.filename).delete()
@@ -281,13 +282,23 @@ class NoteRepository @Inject constructor(
         // notes.forEach { noteDao.updatePosition(it.id, it.position) }
     }
 
-    suspend fun upsertNote(note: Note, images: Collection<Image>) = upsertNote(note, emptyList(), images)
+    suspend fun upsertNote(note: Note) {
+        val images = imageDao.listByNoteId(note.id)
+        upsertNote(note, images)
+    }
+
+    suspend fun upsertNote(note: Note, images: Collection<Image>) {
+        val checklistItems =
+            if (note.type == NoteType.CHECKLIST) checklistItemDao.listByNoteId(note.id)
+            else emptyList()
+        upsertNote(note, checklistItems, images)
+    }
 
     suspend fun upsertNote(note: Note, checklistItems: Collection<ChecklistItem>, images: Collection<Image>) {
         noteDao.upsert(note)
         if (note.type == NoteType.CHECKLIST) checklistItemDao.replace(note.id, checklistItems)
         imageDao.replace(note.id, images)
-        UploadNoteTask(
+        UploadNoteCombinedTask(
             nextCloudEngine,
             noteCombined = NoteCombined(
                 note = note,

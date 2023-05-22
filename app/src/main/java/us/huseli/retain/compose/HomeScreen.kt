@@ -47,7 +47,6 @@ import us.huseli.retain.data.entities.Note
 import us.huseli.retain.ui.theme.RetainTheme
 import us.huseli.retain.viewmodels.NoteViewModel
 import us.huseli.retain.viewmodels.SettingsViewModel
-import java.util.UUID
 
 
 @Composable
@@ -62,7 +61,7 @@ fun HomeScreen(
     onDebugClick: () -> Unit,
 ) {
     val notes by viewModel.notes.collectAsStateWithLifecycle(emptyList())
-    val selectedNoteIds by viewModel.selectedNoteIds.collectAsStateWithLifecycle(emptyList())
+    val selectedNotes by viewModel.selectedNotes.collectAsStateWithLifecycle(emptySet())
     val checklistItems by viewModel.checklistItems.collectAsStateWithLifecycle(emptyList())
     val bitmapImages by viewModel.bitmapImages.collectAsStateWithLifecycle(emptyList())
 
@@ -72,12 +71,12 @@ fun HomeScreen(
         snackbarHostState = snackbarHostState,
         checklistItems = checklistItems,
         bitmapImages = bitmapImages,
-        selectedNoteIds = selectedNoteIds,
+        selectedNotes = selectedNotes,
         onAddTextNoteClick = onAddTextNoteClick,
         onAddChecklistClick = onAddChecklistClick,
         onCardClick = onCardClick,
         onEndSelectModeClick = viewModel.deselectAllNotes,
-        onDeleteNotesClick = { viewModel.deleteNotes(it) },
+        onTrashNotesClick = { viewModel.trashNotes(it) },
         onSelectNote = viewModel.selectNote,
         onDeselectNote = viewModel.deselectNote,
         onSettingsClick = onSettingsClick,
@@ -97,12 +96,12 @@ fun HomeScreenImpl(
     notes: List<Note>,
     checklistItems: List<ChecklistItem>,
     bitmapImages: List<BitmapImage>,
-    selectedNoteIds: Collection<UUID>,
+    selectedNotes: Collection<Note>,
     onAddTextNoteClick: () -> Unit = {},
     onAddChecklistClick: () -> Unit = {},
     onCardClick: (Note) -> Unit = {},
     onEndSelectModeClick: () -> Unit = {},
-    onDeleteNotesClick: (Collection<UUID>) -> Unit = {},
+    onTrashNotesClick: (Collection<Note>) -> Unit = {},
     onSelectNote: (Note) -> Unit = {},
     onDeselectNote: (Note) -> Unit = {},
     onSettingsClick: () -> Unit = {},
@@ -110,9 +109,9 @@ fun HomeScreenImpl(
     onSwitchPositions: (ItemPosition, ItemPosition) -> Unit = { _, _ -> },
     onReordered: () -> Unit = {},
 ) {
-    val isSelectEnabled = selectedNoteIds.isNotEmpty()
+    val isSelectEnabled = selectedNotes.isNotEmpty()
     var isFABExpanded by rememberSaveable { mutableStateOf(false) }
-    var deleteDialogOpen by rememberSaveable { mutableStateOf(false) }
+    var trashDialogOpen by rememberSaveable { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
     val minColumnWidth by settingsViewModel.minColumnWidth.collectAsStateWithLifecycle()
     var viewType by rememberSaveable { mutableStateOf(HomeScreenViewType.GRID) }
@@ -124,9 +123,9 @@ fun HomeScreenImpl(
     Scaffold(
         topBar = {
             if (isSelectEnabled) SelectionTopAppBar(
-                selectedCount = selectedNoteIds.size,
+                selectedCount = selectedNotes.size,
                 onCloseClick = onEndSelectModeClick,
-                onTrashClick = { deleteDialogOpen = true },
+                onTrashClick = { trashDialogOpen = true },
             ) else HomeScreenTopAppBar(
                 viewType = viewType,
                 onSettingsClick = onSettingsClick,
@@ -159,11 +158,11 @@ fun HomeScreenImpl(
             )
         }
 
-        if (deleteDialogOpen) {
-            DeleteNotesDialog(
-                selectedNoteIds = selectedNoteIds,
-                onDelete = onDeleteNotesClick,
-                onClose = { deleteDialogOpen = false },
+        if (trashDialogOpen) {
+            TrashNotesDialog(
+                selectedNotes = selectedNotes,
+                onTrash = onTrashNotesClick,
+                onClose = { trashDialogOpen = false },
             )
         }
 
@@ -180,7 +179,7 @@ fun HomeScreenImpl(
                 bitmapImages = bitmapImages.filter { it.image.noteId == note.id },
                 onClick = {
                     if (isSelectEnabled) {
-                        if (selectedNoteIds.contains(note.id)) onDeselectNote(note)
+                        if (selectedNotes.contains(note)) onDeselectNote(note)
                         else onSelectNote(note)
                     } else onCardClick(note)
                 },
@@ -188,7 +187,7 @@ fun HomeScreenImpl(
                     if (!isSelectEnabled) onSelectNote(note)
                     else onDeselectNote(note)
                 },
-                isSelected = selectedNoteIds.contains(note.id),
+                isSelected = selectedNotes.contains(note),
                 showDragHandle = viewType == HomeScreenViewType.LIST,
                 reorderableState = reorderableState,
             )
@@ -264,7 +263,7 @@ fun HomeScreenPreview() {
         HomeScreenImpl(
             notes = notes,
             checklistItems = checklistItems,
-            selectedNoteIds = emptyList(),
+            selectedNotes = emptyList(),
             bitmapImages = emptyList(),
             snackbarHostState = snackbarHostState,
         )
@@ -282,7 +281,7 @@ fun HomeScreenPreviewDark() {
         HomeScreenImpl(
             notes = notes,
             checklistItems = checklistItems,
-            selectedNoteIds = emptyList(),
+            selectedNotes = emptyList(),
             bitmapImages = emptyList(),
             snackbarHostState = snackbarHostState,
         )

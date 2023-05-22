@@ -8,35 +8,35 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import us.huseli.retain.R
-import java.util.UUID
+import us.huseli.retain.data.entities.Note
 
 @Composable
-fun DeleteNotesDialog(
+fun TrashNotesDialog(
     modifier: Modifier = Modifier,
-    selectedNoteIds: Collection<UUID>,
-    onDelete: (Collection<UUID>) -> Unit,
+    selectedNotes: Collection<Note>,
+    onTrash: (Collection<Note>) -> Unit,
     onClose: () -> Unit,
 ) {
     AlertDialog(
         modifier = modifier,
-        title = { Text(stringResource(R.string.delete_notes)) },
+        title = { Text(pluralStringResource(R.plurals.send_notes_to_trash, selectedNotes.size)) },
         text = {
             Text(
                 pluralStringResource(
-                    R.plurals.delete_x_notes,
-                    selectedNoteIds.size,
-                    selectedNoteIds.size
+                    R.plurals.send_x_notes_to_trash,
+                    selectedNotes.size,
+                    selectedNotes.size
                 )
             )
         },
         confirmButton = {
             TextButton(
                 onClick = {
-                    onDelete(selectedNoteIds)
+                    onTrash(selectedNotes)
                     onClose()
                 }
             ) {
-                Text(stringResource(R.string.delete).uppercase())
+                Text(stringResource(R.string.send_to_trash).uppercase())
             }
         },
         dismissButton = {

@@ -21,8 +21,8 @@ abstract class BaseEditNoteViewModel(
     private val repository: NoteRepository,
     type: NoteType
 ) : ViewModel() {
-    protected val _note = MutableStateFlow(Note(type = type))
     private val _bitmapImages = MutableStateFlow<List<BitmapImage>>(emptyList())
+    protected val _note = MutableStateFlow(Note(type = type))
     protected var _isDirty = true
 
     val noteId: UUID = UUID.fromString(savedStateHandle.get<String>(Constants.NAV_ARG_NOTE_ID)!!)
@@ -32,6 +32,9 @@ abstract class BaseEditNoteViewModel(
     val colorIdx = _note.map { it.colorIdx }
     val showChecked = _note.map { it.showChecked }
     val bitmapImages = _bitmapImages.asStateFlow()
+
+    val isDirty: Boolean
+        get() = _isDirty
 
     init {
         _bitmapImages.value = repository.bitmapImages.value.filter { it.image.noteId == noteId }
@@ -43,9 +46,6 @@ abstract class BaseEditNoteViewModel(
             }
         }
     }
-
-    val shouldSave: Boolean
-        get() = _isDirty
 
     protected fun updateNote(
         title: String? = null,

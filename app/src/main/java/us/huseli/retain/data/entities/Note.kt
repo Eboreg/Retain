@@ -48,6 +48,7 @@ open class Note(
         showChecked: Boolean? = null,
         colorIdx: Int? = null,
         position: Int? = null,
+        isDeleted: Boolean? = null,
     ): Note {
         return Note(
             id = id,
@@ -59,7 +60,7 @@ open class Note(
             type = type,
             showChecked = showChecked ?: this.showChecked,
             colorIdx = colorIdx ?: this.colorIdx,
-            isDeleted = isDeleted,
+            isDeleted = isDeleted ?: this.isDeleted,
         )
     }
 }

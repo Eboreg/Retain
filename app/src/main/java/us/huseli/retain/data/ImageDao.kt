@@ -17,7 +17,10 @@ interface ImageDao {
     fun flowList(): Flow<List<Image>>
 
     @Query("SELECT * FROM image WHERE imageNoteId IN (:noteIds) AND imageIsDeleted = 0 ORDER BY imagePosition")
-    suspend fun list(noteIds: Collection<UUID>): List<Image>
+    suspend fun listByNoteIds(noteIds: Collection<UUID>): List<Image>
+
+    @Query("SELECT * FROM image WHERE imageNoteId = :noteId AND imageIsDeleted = 0 ORDER BY imagePosition")
+    suspend fun listByNoteId(noteId: UUID): List<Image>
 
     @Query("SELECT * FROM image WHERE imageIsDeleted = 0 ORDER BY imagePosition")
     suspend fun list(): List<Image>

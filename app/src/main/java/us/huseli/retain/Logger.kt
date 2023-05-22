@@ -54,8 +54,8 @@ class Logger {
                 logMessage.tag,
                 "[${logMessage.thread}] ${logMessage.message}"
             )
+            _logMessages.tryEmit(logMessage)
         }
-        _logMessages.tryEmit(logMessage)
     }
 
     fun log(logMessage: LogMessage, showInSnackbar: Boolean = false) = addMessage(logMessage, showInSnackbar)

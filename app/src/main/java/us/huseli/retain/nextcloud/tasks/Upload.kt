@@ -91,7 +91,7 @@ class UploadMissingImagesTask(engine: NextCloudEngine, private val images: Colle
 
 
 /** Up: 1 note JSON file */
-class UploadNoteTask(
+class UploadNoteCombinedTask(
     engine: NextCloudEngine,
     private val noteCombined: NoteCombined
 ) : OperationTask(engine) {
@@ -133,11 +133,11 @@ class UpstreamSyncTaskResult(
 class UpstreamSyncTask(
     engine: NextCloudEngine,
     notes: Collection<NoteCombined>,
-) : BaseListTask<UpstreamSyncTaskResult, OperationTaskResult, UploadNoteTask, NoteCombined>(engine, notes) {
+) : BaseListTask<UpstreamSyncTaskResult, OperationTaskResult, UploadNoteCombinedTask, NoteCombined>(engine, notes) {
     override val failOnUnsuccessfulChildTask = false
     override val startMessageString = "Starting upstream sync of $notes"
 
-    override fun getChildTask(obj: NoteCombined) = UploadNoteTask(engine, obj)
+    override fun getChildTask(obj: NoteCombined) = UploadNoteCombinedTask(engine, obj)
 
     override fun getResult() = UpstreamSyncTaskResult(success, error, unsuccessfulObjects.size)
 }

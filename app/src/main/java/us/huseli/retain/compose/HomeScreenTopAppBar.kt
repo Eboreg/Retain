@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import us.huseli.retain.BuildConfig
 import us.huseli.retain.Enums.HomeScreenViewType
 import us.huseli.retain.R
 
@@ -91,11 +92,13 @@ fun HomeScreenTopAppBar(
                     }
                 }
             }
-            IconButton(onClick = onDebugClick) {
-                Icon(
-                    imageVector = Icons.Sharp.BugReport,
-                    contentDescription = stringResource(R.string.debug),
-                )
+            if (BuildConfig.DEBUG) {
+                IconButton(onClick = onDebugClick) {
+                    Icon(
+                        imageVector = Icons.Sharp.BugReport,
+                        contentDescription = stringResource(R.string.debug),
+                    )
+                }
             }
             IconButton(onClick = onSettingsClick) {
                 Icon(

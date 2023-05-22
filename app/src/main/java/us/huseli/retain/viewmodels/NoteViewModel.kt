@@ -16,7 +16,6 @@ import us.huseli.retain.data.entities.BitmapImage
 import us.huseli.retain.data.entities.ChecklistItem
 import us.huseli.retain.data.entities.Image
 import us.huseli.retain.data.entities.Note
-import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
@@ -24,15 +23,15 @@ class NoteViewModel @Inject constructor(
     private val repository: NoteRepository,
     override val logger: Logger
 ) : ViewModel(), LogInterface {
-    private val _selectedNoteIds = MutableStateFlow<Set<UUID>>(emptySet())
+    private val _selectedNotes = MutableStateFlow<Set<Note>>(emptySet())
     private val _notes = MutableStateFlow<List<Note>>(emptyList())
 
     val notes = _notes.asStateFlow()
     val checklistItems: Flow<List<ChecklistItem>> = repository.checklistItems
     val bitmapImages: Flow<List<BitmapImage>> = repository.bitmapImages
 
-    val selectedNoteIds: Flow<Set<UUID>> = combine(notes, _selectedNoteIds) { notes, selectedIds ->
-        selectedIds.intersect(notes.map { it.id }.toSet()).also { log("selectedNoteIds=$it") }
+    val selectedNotes: Flow<Set<Note>> = combine(notes, _selectedNotes) { notes, selectedNotes ->
+        selectedNotes.intersect(notes.toSet())
     }
 
     init {
@@ -43,25 +42,27 @@ class NoteViewModel @Inject constructor(
         }
     }
 
-    val deleteNotes = { ids: Collection<UUID> ->
+    val trashNotes = { notes: Collection<Note> ->
         viewModelScope.launch {
-            log("deleteNotes: $ids")
-            repository.deleteNotes(ids)
+            log("trashNotes: $notes")
+            notes.forEach { note ->
+                repository.upsertNote(note.copy(isDeleted = true))
+            }
         }
     }
 
     val selectNote = { note: Note ->
-        _selectedNoteIds.value += note.id
-        log("selectNote: note=$note, _selectedNoteIds.value=${_selectedNoteIds.value}")
+        _selectedNotes.value += note
+        log("selectNote: note=$note, _selectedNotes.value=${_selectedNotes.value}")
     }
 
     val deselectNote = { note: Note ->
-        _selectedNoteIds.value -= note.id
-        log("deselectNote: note=$note, _selectedNoteIds.value=${_selectedNoteIds.value}")
+        _selectedNotes.value -= note
+        log("deselectNote: note=$note, _selectedNotes.value=${_selectedNotes.value}")
     }
 
     val deselectAllNotes = {
-        _selectedNoteIds.value = emptySet()
+        _selectedNotes.value = emptySet()
     }
 
     val saveTextNote: (Boolean, Note, Collection<Image>) -> Unit =

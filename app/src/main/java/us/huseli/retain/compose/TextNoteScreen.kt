@@ -48,7 +48,7 @@ fun TextNoteScreen(
     DisposableEffect(Unit) {
         onDispose {
             onSave?.invoke(
-                viewModel.shouldSave,
+                viewModel.isDirty,
                 viewModel.note.value,
                 viewModel.bitmapImages.value.map { it.image },
             )
