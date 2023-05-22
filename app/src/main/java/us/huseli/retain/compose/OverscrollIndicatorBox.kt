@@ -1,8 +1,7 @@
 package us.huseli.retain.compose
 
-import androidx.annotation.FloatRange
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -13,7 +12,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.RoundRect
@@ -58,19 +56,18 @@ fun OverscrollIndicator(
     scope: BoxScope,
     side: Side,
     isVisible: Boolean,
-    width: Dp,
+    maxWidth: Dp,
     color: Color,
-    @FloatRange(from = 0.0, to = 1.0) maxAlpha: Float,
-    fadeDuration: Int,
+    animationDuration: Int,
 ) {
     val shape = when (side) {
         Side.LEFT -> OverscrollIndicatorLeftShape
         Side.RIGHT -> OverscrollIndicatorRightShape
     }
 
-    val alpha by animateFloatAsState(
-        targetValue = if (isVisible) maxAlpha else 0f,
-        animationSpec = tween(durationMillis = fadeDuration, easing = LinearEasing),
+    val width by animateDpAsState(
+        targetValue = if (isVisible) maxWidth else 0.dp,
+        animationSpec = tween(durationMillis = animationDuration, easing = LinearEasing),
     )
 
     with(scope) {
@@ -78,8 +75,7 @@ fun OverscrollIndicator(
             modifier = modifier
                 .width(width)
                 .align(if (side == Side.LEFT) AbsoluteAlignment.CenterLeft else AbsoluteAlignment.CenterRight)
-                .background(color = color.copy(alpha = alpha), shape = shape)
-                .alpha(alpha)
+                .background(color = color, shape = shape)
                 .fillMaxHeight()
                 .drawWithContent {
                     drawContent()
@@ -91,7 +87,7 @@ fun OverscrollIndicator(
                         ),
                         color = color,
                         style = Stroke(pathEffect = PathEffect.cornerPathEffect(10f)),
-                        alpha = alpha,
+                        alpha = color.alpha,
                     )
                 }
         )
@@ -102,32 +98,29 @@ fun OverscrollIndicator(
 fun OverscrollIndicatorBox(
     modifier: Modifier = Modifier,
     indicatorWidth: Dp = 16.dp,
-    indicatorColor: Color = Color.LightGray,
+    indicatorColor: Color = Color.LightGray.copy(alpha = 0.3f),
     leftIndicatorVisible: Boolean = false,
     rightIndicatorVisible: Boolean = false,
-    fadeDuration: Int = 100,
-    alpha: Float = 0.3f,
-    content: @Composable BoxScope.() -> Unit,
+    animationDuration: Int = 50,
+    content: @Composable (BoxScope.() -> Unit),
 ) {
     Box(modifier = modifier) {
         content()
         OverscrollIndicator(
             scope = this,
-            width = indicatorWidth,
-            color = indicatorColor,
             side = Side.LEFT,
             isVisible = leftIndicatorVisible,
-            fadeDuration = fadeDuration,
-            maxAlpha = alpha,
+            maxWidth = indicatorWidth,
+            color = indicatorColor,
+            animationDuration = animationDuration,
         )
         OverscrollIndicator(
             scope = this,
-            width = indicatorWidth,
-            color = indicatorColor,
             side = Side.RIGHT,
             isVisible = rightIndicatorVisible,
-            fadeDuration = fadeDuration,
-            maxAlpha = alpha,
+            maxWidth = indicatorWidth,
+            color = indicatorColor,
+            animationDuration = animationDuration,
         )
     }
 }

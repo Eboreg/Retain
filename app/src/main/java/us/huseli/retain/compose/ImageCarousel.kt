@@ -144,8 +144,8 @@ fun ImageCarousel(
                 .clickable(interactionSource = interactionSource, indication = null) { onClose() }
         ) {
             OverscrollIndicatorBox(
-                leftIndicatorVisible = overScroll > 0f,
-                rightIndicatorVisible = overScroll < 0f,
+                leftIndicatorVisible = overScroll > 100f,
+                rightIndicatorVisible = overScroll < -100f,
             ) {
                 Image(
                     bitmap = bitmapImage.imageBitmap,
