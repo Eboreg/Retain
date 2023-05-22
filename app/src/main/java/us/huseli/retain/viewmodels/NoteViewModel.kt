@@ -5,8 +5,10 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import org.burnoutcrew.reorderable.ItemPosition
 import us.huseli.retain.LogInterface
 import us.huseli.retain.Logger
 import us.huseli.retain.data.NoteRepository
@@ -23,13 +25,22 @@ class NoteViewModel @Inject constructor(
     override val logger: Logger
 ) : ViewModel(), LogInterface {
     private val _selectedNoteIds = MutableStateFlow<Set<UUID>>(emptySet())
+    private val _notes = MutableStateFlow<List<Note>>(emptyList())
 
-    val notes: Flow<List<Note>> = repository.notes
+    val notes = _notes.asStateFlow()
     val checklistItems: Flow<List<ChecklistItem>> = repository.checklistItems
     val bitmapImages: Flow<List<BitmapImage>> = repository.bitmapImages
 
     val selectedNoteIds: Flow<Set<UUID>> = combine(notes, _selectedNoteIds) { notes, selectedIds ->
         selectedIds.intersect(notes.map { it.id }.toSet()).also { log("selectedNoteIds=$it") }
+    }
+
+    init {
+        viewModelScope.launch {
+            repository.notes.collect { notes ->
+                _notes.value = notes
+            }
+        }
     }
 
     val deleteNotes = { ids: Collection<UUID> ->
@@ -70,4 +81,16 @@ class NoteViewModel @Inject constructor(
                 }
             }
         }
+
+    fun switchNotePositions(from: ItemPosition, to: ItemPosition) {
+        _notes.value = _notes.value.toMutableList().apply { add(to.index, removeAt(from.index)) }
+    }
+
+    fun saveNotePositions() = viewModelScope.launch {
+        repository.updateNotePositions(
+            _notes.value.mapIndexedNotNull { index, note ->
+                if (note.position != index) note.copy(position = index) else null
+            }
+        )
+    }
 }

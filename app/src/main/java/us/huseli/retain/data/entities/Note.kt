@@ -47,6 +47,7 @@ open class Note(
         text: String? = null,
         showChecked: Boolean? = null,
         colorIdx: Int? = null,
+        position: Int? = null,
     ): Note {
         return Note(
             id = id,
@@ -54,7 +55,7 @@ open class Note(
             text = text ?: this.text,
             created = created,
             updated = Instant.now(),
-            position = position,
+            position = position ?: this.position,
             type = type,
             showChecked = showChecked ?: this.showChecked,
             colorIdx = colorIdx ?: this.colorIdx,

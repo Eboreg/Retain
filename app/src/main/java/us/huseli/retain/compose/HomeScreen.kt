@@ -1,6 +1,7 @@
 package us.huseli.retain.compose
 
 import android.content.res.Configuration.UI_MODE_NIGHT_YES
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -11,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
@@ -25,12 +28,19 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.burnoutcrew.reorderable.ItemPosition
+import org.burnoutcrew.reorderable.ReorderableItem
+import org.burnoutcrew.reorderable.detectReorder
+import org.burnoutcrew.reorderable.rememberReorderableLazyListState
+import org.burnoutcrew.reorderable.reorderable
 import us.huseli.retain.Enums
+import us.huseli.retain.Enums.HomeScreenViewType
 import us.huseli.retain.data.entities.BitmapImage
 import us.huseli.retain.data.entities.ChecklistItem
 import us.huseli.retain.data.entities.Note
@@ -72,6 +82,8 @@ fun HomeScreen(
         onDeselectNote = viewModel.deselectNote,
         onSettingsClick = onSettingsClick,
         onDebugClick = onDebugClick,
+        onSwitchPositions = { from, to -> viewModel.switchNotePositions(from, to) },
+        onReordered = { viewModel.saveNotePositions() },
     )
 }
 
@@ -95,12 +107,19 @@ fun HomeScreenImpl(
     onDeselectNote: (Note) -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onDebugClick: () -> Unit = {},
+    onSwitchPositions: (ItemPosition, ItemPosition) -> Unit = { _, _ -> },
+    onReordered: () -> Unit = {},
 ) {
     val isSelectEnabled = selectedNoteIds.isNotEmpty()
     var isFABExpanded by rememberSaveable { mutableStateOf(false) }
     var deleteDialogOpen by rememberSaveable { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
     val minColumnWidth by settingsViewModel.minColumnWidth.collectAsStateWithLifecycle()
+    var viewType by rememberSaveable { mutableStateOf(HomeScreenViewType.GRID) }
+    val reorderableState = rememberReorderableLazyListState(
+        onMove = { from, to -> onSwitchPositions(from, to) },
+        onDragEnd = { _, _ -> onReordered() }
+    )
 
     Scaffold(
         topBar = {
@@ -109,8 +128,10 @@ fun HomeScreenImpl(
                 onCloseClick = onEndSelectModeClick,
                 onTrashClick = { deleteDialogOpen = true },
             ) else HomeScreenTopAppBar(
+                viewType = viewType,
                 onSettingsClick = onSettingsClick,
                 onDebugClick = onDebugClick,
+                onViewTypeClick = { viewType = it }
             )
         },
         snackbarHost = {
@@ -146,34 +167,57 @@ fun HomeScreenImpl(
             )
         }
 
-        LazyVerticalStaggeredGrid(
-            columns = StaggeredGridCells.Adaptive(minSize = minColumnWidth.dp),
-            contentPadding = PaddingValues(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalItemSpacing = 8.dp,
-            modifier = modifier
-                .clickable(interactionSource = interactionSource, indication = null) { isFABExpanded = false }
-                .fillMaxHeight()
-                .padding(innerPadding)
-        ) {
-            items(notes, key = { it.id }) { note ->
-                NoteCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    note = note,
-                    checklistItems = checklistItems.filter { it.noteId == note.id },
-                    bitmapImages = bitmapImages.filter { it.image.noteId == note.id },
-                    onClick = {
-                        if (isSelectEnabled) {
-                            if (selectedNoteIds.contains(note.id)) onDeselectNote(note)
-                            else onSelectNote(note)
-                        } else onCardClick(note)
-                    },
-                    onLongClick = {
-                        if (!isSelectEnabled) onSelectNote(note)
-                        else onDeselectNote(note)
-                    },
-                    isSelected = selectedNoteIds.contains(note.id),
-                )
+        val lazyModifier = modifier
+            .clickable(interactionSource = interactionSource, indication = null) { isFABExpanded = false }
+            .fillMaxHeight()
+            .padding(innerPadding)
+
+        val lazyContent: @Composable (Note, Modifier) -> Unit = { note, modifier ->
+            NoteCard(
+                modifier = modifier.fillMaxWidth(),
+                note = note,
+                checklistItems = checklistItems.filter { it.noteId == note.id },
+                bitmapImages = bitmapImages.filter { it.image.noteId == note.id },
+                onClick = {
+                    if (isSelectEnabled) {
+                        if (selectedNoteIds.contains(note.id)) onDeselectNote(note)
+                        else onSelectNote(note)
+                    } else onCardClick(note)
+                },
+                onLongClick = {
+                    if (!isSelectEnabled) onSelectNote(note)
+                    else onDeselectNote(note)
+                },
+                isSelected = selectedNoteIds.contains(note.id),
+                showDragHandle = viewType == HomeScreenViewType.LIST,
+                reorderableState = reorderableState,
+            )
+        }
+
+        if (viewType == HomeScreenViewType.GRID) {
+            LazyVerticalStaggeredGrid(
+                modifier = lazyModifier,
+                columns = StaggeredGridCells.Adaptive(minSize = minColumnWidth.dp),
+                contentPadding = PaddingValues(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalItemSpacing = 8.dp,
+            ) {
+                items(notes, key = { it.id }) { note -> lazyContent(note, Modifier) }
+            }
+        } else {
+            LazyColumn(
+                modifier = lazyModifier.reorderable(reorderableState).detectReorder(reorderableState),
+                state = reorderableState.listState,
+                contentPadding = PaddingValues(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(notes, key = { it.id }) { note ->
+                    ReorderableItem(reorderableState, key = note.id) { isDragging ->
+                        val elevation by animateDpAsState(if (isDragging) 16.dp else 0.dp)
+
+                        lazyContent(note, Modifier.shadow(elevation))
+                    }
+                }
             }
         }
     }

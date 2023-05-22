@@ -22,7 +22,6 @@ abstract class BaseEditNoteViewModel(
     type: NoteType
 ) : ViewModel() {
     protected val _note = MutableStateFlow(Note(type = type))
-    private var _position = 0
     private val _bitmapImages = MutableStateFlow<List<BitmapImage>>(emptyList())
     protected var _isDirty = true
 
@@ -42,7 +41,6 @@ abstract class BaseEditNoteViewModel(
                 _note.value = note
                 _isDirty = false
             }
-            _position = repository.getMaxNotePosition() + 1
         }
     }
 

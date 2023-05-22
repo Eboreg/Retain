@@ -166,8 +166,6 @@ class NoteRepository @Inject constructor(
         RemoveImagesTask(nextCloudEngine, images).run()
     }
 
-    suspend fun getMaxNotePosition(): Int = noteDao.getMaxPosition()
-
     suspend fun getNote(id: UUID): Note? = noteDao.get(id)
 
     suspend fun listChecklistItems(noteId: UUID): List<ChecklistItem> = checklistItemDao.listByNoteId(noteId)
@@ -278,6 +276,10 @@ class NoteRepository @Inject constructor(
         nextCloudEngine.testClient(uri, username, password, baseDir) { result -> onResult(result) }
     }
 
+    suspend fun updateNotePositions(notes: Collection<Note>) {
+        noteDao.updatePositions(notes)
+        // notes.forEach { noteDao.updatePosition(it.id, it.position) }
+    }
 
     suspend fun upsertNote(note: Note, images: Collection<Image>) = upsertNote(note, emptyList(), images)
 

@@ -4,9 +4,9 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Checklist
-import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.sharp.Add
+import androidx.compose.material.icons.sharp.Checklist
+import androidx.compose.material.icons.sharp.EditNote
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -38,7 +38,7 @@ fun FAB(
             text = { Text(stringResource(R.string.add_text_note)) },
             icon = {
                 Icon(
-                    imageVector = Icons.Filled.EditNote,
+                    imageVector = Icons.Sharp.EditNote,
                     contentDescription = null,
                 )
             },
@@ -53,7 +53,7 @@ fun FAB(
             text = { Text(stringResource(R.string.add_checklist)) },
             icon = {
                 Icon(
-                    imageVector = Icons.Filled.Checklist,
+                    imageVector = Icons.Sharp.Checklist,
                     contentDescription = null,
                 )
             },
@@ -68,7 +68,7 @@ fun FAB(
         val rotation by animateFloatAsState(if (expanded) 45f else 0f)
 
         Icon(
-            imageVector = Icons.Default.Add,
+            imageVector = Icons.Sharp.Add,
             contentDescription = null,
             modifier = Modifier.rotate(rotation),
         )

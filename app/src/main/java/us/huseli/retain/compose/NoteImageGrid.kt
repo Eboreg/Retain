@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.sharp.Close
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
@@ -94,7 +94,7 @@ fun NoteImageGrid(
                             modifier = Modifier.scale(0.5f).align(Alignment.TopEnd)
                         ) {
                             Icon(
-                                imageVector = Icons.Filled.Close,
+                                imageVector = Icons.Sharp.Close,
                                 contentDescription = stringResource(R.string.delete_image),
                                 tint = Color.LightGray.copy(alpha = 0.75f),
                             )

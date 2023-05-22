@@ -14,12 +14,12 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.sharp.ArrowBack
+import androidx.compose.material.icons.sharp.Check
+import androidx.compose.material.icons.sharp.Error
+import androidx.compose.material.icons.sharp.ExpandMore
+import androidx.compose.material.icons.sharp.Visibility
+import androidx.compose.material.icons.sharp.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -47,7 +47,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -68,6 +67,7 @@ import us.huseli.retain.Constants.PREF_NEXTCLOUD_USERNAME
 import us.huseli.retain.R
 import us.huseli.retain.cleanUri
 import us.huseli.retain.nextcloud.tasks.TestNextCloudTaskResult
+import us.huseli.retain.ui.theme.RetainColor
 import us.huseli.retain.ui.theme.RetainTheme
 import us.huseli.retain.viewmodels.SettingsViewModel
 import kotlin.math.max
@@ -92,7 +92,7 @@ fun SettingsSection(
             )
             IconButton(onClick = { show = !show }) {
                 Icon(
-                    imageVector = Icons.Filled.ExpandMore,
+                    imageVector = Icons.Sharp.ExpandMore,
                     contentDescription = null,
                     modifier = Modifier.rotate(showIconRotation),
                 )
@@ -145,16 +145,16 @@ fun NextCloudSection(
     var isPasswordShown by rememberSaveable { mutableStateOf(false) }
     val workingIcon = @Composable {
         Icon(
-            imageVector = Icons.Filled.Check,
+            imageVector = Icons.Sharp.Check,
             contentDescription = null,
-            tint = Color.Green
+            tint = RetainColor.Green,
         )
     }
     val failIcon = @Composable {
         Icon(
-            imageVector = Icons.Filled.Error,
+            imageVector = Icons.Sharp.Error,
             contentDescription = null,
-            tint = Color.Red
+            tint = RetainColor.Red,
         )
     }
 
@@ -223,14 +223,14 @@ fun NextCloudSection(
                     if (isPasswordFieldFocused && isPasswordShown)
                         IconButton(onClick = { isPasswordShown = false }) {
                             Icon(
-                                imageVector = Icons.Filled.VisibilityOff,
+                                imageVector = Icons.Sharp.VisibilityOff,
                                 contentDescription = stringResource(R.string.hide_password),
                             )
                         }
                     else if (isPasswordFieldFocused)
                         IconButton(onClick = { isPasswordShown = true }) {
                             Icon(
-                                imageVector = Icons.Filled.Visibility,
+                                imageVector = Icons.Sharp.Visibility,
                                 contentDescription = stringResource(R.string.show_password),
                             )
                         }
@@ -322,7 +322,7 @@ fun SettingsTopAppBar(
         navigationIcon = {
             IconButton(onClick = onClose) {
                 Icon(
-                    imageVector = Icons.Filled.ArrowBack,
+                    imageVector = Icons.Sharp.ArrowBack,
                     contentDescription = stringResource(R.string.close)
                 )
             }

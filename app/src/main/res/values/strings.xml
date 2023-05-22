@@ -37,6 +37,9 @@
     <string name="hide_password">Hide password</string>
     <string name="show_password">Show password</string>
     <string name="nextcloud_base_path">Nextcloud base path</string>
+    <string name="list_view">List view</string>
+    <string name="grid_view">Grid view</string>
+    <string name="move_card">Move card</string>
     <plurals name="plus_x_items">
         <item quantity="one">+ 1 item</item>
         <item quantity="other">+ %1$d items</item>

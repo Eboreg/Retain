@@ -15,10 +15,10 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DragIndicator
-import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.sharp.Add
+import androidx.compose.material.icons.sharp.Close
+import androidx.compose.material.icons.sharp.DragIndicator
+import androidx.compose.material.icons.sharp.ExpandMore
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
@@ -122,7 +122,7 @@ fun ChecklistRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            imageVector = Icons.Filled.DragIndicator,
+            imageVector = Icons.Sharp.DragIndicator,
             contentDescription = null,
             modifier = Modifier
                 .padding(start = 8.dp)
@@ -193,7 +193,7 @@ fun ChecklistRow(
         )
         IconButton(onClick = onDeleteClick) {
             Icon(
-                imageVector = Icons.Filled.Close,
+                imageVector = Icons.Sharp.Close,
                 contentDescription = null
             )
         }
@@ -251,7 +251,7 @@ fun Checklist(
                 modifier = Modifier.fillMaxWidth().clickable { onShowCheckedClick() },
             ) {
                 Icon(
-                    imageVector = Icons.Filled.ExpandMore,
+                    imageVector = Icons.Sharp.ExpandMore,
                     contentDescription = null,
                     modifier = Modifier.padding(horizontal = 12.dp).rotate(showCheckedIconRotation),
                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
@@ -385,7 +385,7 @@ fun ChecklistNoteScreen(
                     .fillMaxWidth()
             ) {
                 Icon(
-                    imageVector = Icons.Filled.Add,
+                    imageVector = Icons.Sharp.Add,
                     contentDescription = null,
                     modifier = Modifier.padding(horizontal = 12.dp),
                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),

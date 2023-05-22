@@ -3,10 +3,12 @@ package us.huseli.retain.compose
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.sharp.BugReport
+import androidx.compose.material.icons.sharp.Close
+import androidx.compose.material.icons.sharp.Delete
+import androidx.compose.material.icons.sharp.GridView
+import androidx.compose.material.icons.sharp.Settings
+import androidx.compose.material.icons.sharp.ViewAgenda
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -18,6 +20,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import us.huseli.retain.Enums.HomeScreenViewType
 import us.huseli.retain.R
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -34,7 +37,7 @@ fun SelectionTopAppBar(
         navigationIcon = {
             IconButton(onClick = onCloseClick) {
                 Icon(
-                    imageVector = Icons.Filled.Close,
+                    imageVector = Icons.Sharp.Close,
                     contentDescription = stringResource(R.string.exit_selection_mode)
                 )
             }
@@ -42,7 +45,7 @@ fun SelectionTopAppBar(
         actions = {
             IconButton(onClick = onTrashClick) {
                 Icon(
-                    imageVector = Icons.Filled.Delete,
+                    imageVector = Icons.Sharp.Delete,
                     contentDescription = stringResource(R.string.delete_selected_notes)
                 )
             }
@@ -53,8 +56,10 @@ fun SelectionTopAppBar(
 @Composable
 fun HomeScreenTopAppBar(
     modifier: Modifier = Modifier,
-    onSettingsClick: () -> Unit = {},
-    onDebugClick: () -> Unit = {},
+    viewType: HomeScreenViewType,
+    onSettingsClick: () -> Unit,
+    onDebugClick: () -> Unit,
+    onViewTypeClick: (HomeScreenViewType) -> Unit,
 ) {
     TopAppBar(
         modifier = modifier,
@@ -67,15 +72,34 @@ fun HomeScreenTopAppBar(
             )
         },
         actions = {
+            when (viewType) {
+                HomeScreenViewType.GRID -> {
+                    IconButton(onClick = { onViewTypeClick(HomeScreenViewType.LIST) }) {
+                        Icon(
+                            imageVector = Icons.Sharp.ViewAgenda,
+                            contentDescription = stringResource(R.string.list_view),
+                        )
+                    }
+                }
+
+                HomeScreenViewType.LIST -> {
+                    IconButton(onClick = { onViewTypeClick(HomeScreenViewType.GRID) }) {
+                        Icon(
+                            imageVector = Icons.Sharp.GridView,
+                            contentDescription = stringResource(R.string.grid_view)
+                        )
+                    }
+                }
+            }
             IconButton(onClick = onDebugClick) {
                 Icon(
-                    imageVector = Icons.Filled.BugReport,
+                    imageVector = Icons.Sharp.BugReport,
                     contentDescription = stringResource(R.string.debug),
                 )
             }
             IconButton(onClick = onSettingsClick) {
                 Icon(
-                    imageVector = Icons.Filled.Settings,
+                    imageVector = Icons.Sharp.Settings,
                     contentDescription = stringResource(R.string.app_settings),
                 )
             }

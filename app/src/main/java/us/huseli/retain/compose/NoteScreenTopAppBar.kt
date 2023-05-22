@@ -5,10 +5,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddAPhoto
-import androidx.compose.material.icons.filled.AddPhotoAlternate
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.sharp.AddAPhoto
+import androidx.compose.material.icons.sharp.AddPhotoAlternate
+import androidx.compose.material.icons.sharp.ArrowBack
+import androidx.compose.material.icons.sharp.Palette
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -56,13 +56,13 @@ fun NoteScreenTopAppBar(
         modifier = modifier,
         navigationIcon = {
             IconButton(onClick = onBackClick) {
-                Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = stringResource(R.string.go_back))
+                Icon(imageVector = Icons.Sharp.ArrowBack, contentDescription = stringResource(R.string.go_back))
             }
         },
         actions = {
             IconButton(onClick = { isColorDropdownExpanded = true }) {
                 Icon(
-                    imageVector = Icons.Filled.Palette,
+                    imageVector = Icons.Sharp.Palette,
                     contentDescription = stringResource(R.string.set_colour)
                 )
             }
@@ -77,7 +77,7 @@ fun NoteScreenTopAppBar(
             )
             IconButton(onClick = { photoLauncher.launch(photoUri) }) {
                 Icon(
-                    imageVector = Icons.Filled.AddAPhoto,
+                    imageVector = Icons.Sharp.AddAPhoto,
                     modifier = Modifier.scale(scaleX = -1f, scaleY = 1f),
                     contentDescription = stringResource(R.string.take_picture)
                 )
@@ -88,7 +88,7 @@ fun NoteScreenTopAppBar(
                 }
             ) {
                 Icon(
-                    imageVector = Icons.Filled.AddPhotoAlternate,
+                    imageVector = Icons.Sharp.AddPhotoAlternate,
                     modifier = Modifier.scale(1.1f),
                     contentDescription = stringResource(R.string.add_image)
                 )
