@@ -134,6 +134,7 @@ dependencies {
 
     // Reorder:
     implementation("org.burnoutcrew.composereorderable:reorderable:0.9.6")
+    // implementation("com.github.Eboreg:ComposeReorderable:main-b0729bddae-1")
 
     // To change status bar colour etc:
     implementation("com.google.accompanist:accompanist-systemuicontroller:0.27.0")

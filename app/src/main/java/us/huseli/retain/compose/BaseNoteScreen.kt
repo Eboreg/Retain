@@ -26,7 +26,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -38,13 +37,13 @@ import us.huseli.retain.R
 import us.huseli.retain.data.entities.Image
 import us.huseli.retain.outlinedTextFieldColors
 import us.huseli.retain.ui.theme.getNoteColor
-import us.huseli.retain.viewmodels.EditNoteViewModel
+import us.huseli.retain.viewmodels.BaseEditNoteViewModel
 
 
 @Composable
 fun BaseNoteScreen(
     modifier: Modifier = Modifier,
-    viewModel: EditNoteViewModel,
+    viewModel: BaseEditNoteViewModel,
     snackbarHostState: SnackbarHostState,
     carouselImageId: String? = null,
     reorderableState: ReorderableLazyListState? = null,
@@ -54,10 +53,9 @@ fun BaseNoteScreen(
     onBackgroundClick: (() -> Unit)? = null,
     content: LazyListScope.(Color) -> Unit,
 ) {
-    val title by viewModel.title.collectAsStateWithLifecycle()
-    val colorIdx by viewModel.colorIdx.collectAsStateWithLifecycle()
+    val title by viewModel.title.collectAsStateWithLifecycle("")
+    val colorIdx by viewModel.colorIdx.collectAsStateWithLifecycle(0)
     val noteColor = getNoteColor(colorIdx)
-    val context = LocalContext.current
     val interactionSource = remember { MutableInteractionSource() }
 
     val bitmapImages by viewModel.bitmapImages.collectAsStateWithLifecycle(emptyList())
@@ -69,7 +67,7 @@ fun BaseNoteScreen(
         topBar = {
             NoteScreenTopAppBar(
                 onBackClick = onBackClick,
-                onImagePick = { uri -> viewModel.insertImage(uri, context) },
+                onImagePick = { uri -> viewModel.insertImage(uri) },
                 onColorSelected = { index -> viewModel.setColorIdx(index) }
             )
         },

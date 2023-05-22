@@ -1,62 +1,32 @@
 package us.huseli.retain.data
 
 import androidx.room.Dao
-import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 import us.huseli.retain.data.entities.Image
-import java.time.Instant
 import java.util.UUID
 
 @Dao
 interface ImageDao {
-    @Delete
-    suspend fun delete(image: Image)
+    @Query("UPDATE image SET imageIsDeleted = 1 WHERE imageNoteId=:noteId AND imageFilename NOT IN (:except)")
+    suspend fun deleteByNoteId(noteId: UUID, except: Collection<String> = emptyList())
 
-    @Query("DELETE FROM image WHERE imageNoteId=:noteId")
-    suspend fun deleteByNoteId(noteId: UUID)
-
-    @Query("SELECT * FROM image ORDER BY imageNoteId")
+    @Query("SELECT * FROM image WHERE imageIsDeleted = 0 ORDER BY imageNoteId, imagePosition")
     fun flowList(): Flow<List<Image>>
 
-    @Query("SELECT * FROM image WHERE imageNoteId=:noteId")
-    fun flowList(noteId: UUID): Flow<List<Image>>
-
-    @Query("SELECT * FROM Image WHERE imageFilename=:filename")
-    suspend fun get(filename: String): Image?
-
-    @Query(
-        """
-        INSERT INTO image (imageNoteId, imageFilename, imageMimeType, imageWidth, imageHeight, imageAdded, imageSize)
-        VALUES (:noteId, :filename, :mimeType, :width, :height, :added, :size)
-        """
-    )
-    suspend fun insert(
-        noteId: UUID,
-        filename: String,
-        mimeType: String?,
-        width: Int?,
-        height: Int?,
-        size: Int,
-        added: Instant = Instant.now(),
-    )
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(images: Collection<Image>)
-
-    @Query("SELECT * FROM image WHERE imageNoteId in (:noteIds)")
+    @Query("SELECT * FROM image WHERE imageNoteId IN (:noteIds) AND imageIsDeleted = 0 ORDER BY imagePosition")
     suspend fun list(noteIds: Collection<UUID>): List<Image>
 
-    @Query("SELECT * FROM image WHERE imageNoteId=:noteId")
-    suspend fun list(noteId: UUID): List<Image>
-
-    @Query("SELECT * FROM image")
+    @Query("SELECT * FROM image WHERE imageIsDeleted = 0 ORDER BY imagePosition")
     suspend fun list(): List<Image>
 
     suspend fun replace(noteId: UUID, images: Collection<Image>) {
-        deleteByNoteId(noteId)
-        insert(images)
+        deleteByNoteId(noteId, except = images.map { it.filename })
+        upsert(images)
     }
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(images: Collection<Image>)
 }

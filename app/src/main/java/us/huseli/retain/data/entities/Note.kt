@@ -13,14 +13,15 @@ open class Note(
     @PrimaryKey
     @ColumnInfo(name = "noteId")
     val id: UUID = UUID.randomUUID(),
-    @ColumnInfo(name = "noteTitle") val title: String = "",
-    @ColumnInfo(name = "noteText") val text: String = "",
+    @ColumnInfo(name = "noteTitle", defaultValue = "") val title: String = "",
+    @ColumnInfo(name = "noteText", defaultValue = "") val text: String = "",
     @ColumnInfo(name = "noteCreated") val created: Instant = Instant.now(),
     @ColumnInfo(name = "noteUpdated") val updated: Instant = Instant.now(),
-    @ColumnInfo(name = "notePosition") val position: Int = 0,
+    @ColumnInfo(name = "notePosition", defaultValue = "0") val position: Int = 0,
     @ColumnInfo(name = "noteType") val type: Enums.NoteType,
-    @ColumnInfo(name = "noteShowChecked") val showChecked: Boolean = true,
-    @ColumnInfo(name = "noteColorIdx") val colorIdx: Int = 0,
+    @ColumnInfo(name = "noteShowChecked", defaultValue = "1") val showChecked: Boolean = true,
+    @ColumnInfo(name = "noteColorIdx", defaultValue = "0") val colorIdx: Int = 0,
+    @ColumnInfo(name = "noteIsDeleted", defaultValue = "0") val isDeleted: Boolean = false,
 ) : Comparable<Note> {
     override fun toString() = "<Note: id=$id, title=$title]>"
 
@@ -36,7 +37,28 @@ open class Note(
         other.position == position &&
         other.type == type &&
         other.showChecked == showChecked &&
-        other.colorIdx == colorIdx
+        other.colorIdx == colorIdx &&
+        other.isDeleted == isDeleted
 
     override fun hashCode() = id.hashCode()
+
+    fun copy(
+        title: String? = null,
+        text: String? = null,
+        showChecked: Boolean? = null,
+        colorIdx: Int? = null,
+    ): Note {
+        return Note(
+            id = id,
+            title = title ?: this.title,
+            text = text ?: this.text,
+            created = created,
+            updated = Instant.now(),
+            position = position,
+            type = type,
+            showChecked = showChecked ?: this.showChecked,
+            colorIdx = colorIdx ?: this.colorIdx,
+            isDeleted = isDeleted,
+        )
+    }
 }

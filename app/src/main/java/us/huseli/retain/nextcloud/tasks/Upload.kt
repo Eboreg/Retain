@@ -133,7 +133,7 @@ class UpstreamSyncTaskResult(
 class UpstreamSyncTask(
     engine: NextCloudEngine,
     notes: Collection<NoteCombined>,
-) : ListTask<UpstreamSyncTaskResult, OperationTaskResult, UploadNoteTask, NoteCombined>(engine, notes) {
+) : BaseListTask<UpstreamSyncTaskResult, OperationTaskResult, UploadNoteTask, NoteCombined>(engine, notes) {
     override val failOnUnsuccessfulChildTask = false
     override val startMessageString = "Starting upstream sync of $notes"
 

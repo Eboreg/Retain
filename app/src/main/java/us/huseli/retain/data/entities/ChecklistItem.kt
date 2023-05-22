@@ -21,10 +21,11 @@ class ChecklistItem(
     @PrimaryKey
     @ColumnInfo(name = "checklistItemId")
     val id: UUID = UUID.randomUUID(),
-    @ColumnInfo(name = "checklistItemText") val text: String = "",
+    @ColumnInfo(name = "checklistItemText", defaultValue = "") val text: String = "",
     @ColumnInfo(name = "checklistItemNoteId") val noteId: UUID,
-    @ColumnInfo(name = "checklistItemChecked") val checked: Boolean = false,
-    @ColumnInfo(name = "checklistItemPosition") val position: Int = 0,
+    @ColumnInfo(name = "checklistItemChecked", defaultValue = "0") val checked: Boolean = false,
+    @ColumnInfo(name = "checklistItemPosition", defaultValue = "0") val position: Int = 0,
+    @ColumnInfo(name = "checklistItemIsDeleted", defaultValue = "0") val isDeleted: Boolean = false,
 ) {
     override fun toString() = "<ChecklistItem: $id / $text / $position>"
 
@@ -34,17 +35,24 @@ class ChecklistItem(
         other.text == text &&
         other.noteId == noteId &&
         other.checked == checked &&
-        other.position == position
+        other.position == position &&
+        other.isDeleted == isDeleted
 
     override fun hashCode() = id.hashCode()
 
-    fun copy(text: String? = null, checked: Boolean? = null, position: Int? = null): ChecklistItem {
+    fun copy(
+        text: String? = null,
+        checked: Boolean? = null,
+        position: Int? = null,
+        isDeleted: Boolean? = null
+    ): ChecklistItem {
         return ChecklistItem(
             id = id,
             text = text ?: this.text,
             checked = checked ?: this.checked,
             position = position ?: this.position,
-            noteId = noteId
+            noteId = noteId,
+            isDeleted = isDeleted ?: this.isDeleted,
         )
     }
 }

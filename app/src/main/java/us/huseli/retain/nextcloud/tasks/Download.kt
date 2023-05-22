@@ -67,13 +67,11 @@ open class DownloadFileTask(
 class DownloadMissingImagesTask(
     engine: NextCloudEngine,
     missingImages: Collection<Image>
-) : ListTask<TaskResult, OperationTaskResult, DownloadFileTask, Image>(
+) : ListTask<OperationTaskResult, DownloadFileTask, Image>(
     engine = engine,
     objects = missingImages
 ) {
     override val failOnUnsuccessfulChildTask = false
-
-    override fun getResult() = TaskResult(success, error)
 
     override fun getChildTask(obj: Image) = DownloadFileTask(
         engine = engine,
@@ -88,7 +86,7 @@ class DownloadMissingImagesTask(
 class DownloadNoteImagesTask(
     engine: NextCloudEngine,
     noteCombined: NoteCombined
-) : ListTask<TaskResult, OperationTaskResult, DownloadFileTask, Image>(
+) : ListTask<OperationTaskResult, DownloadFileTask, Image>(
     engine = engine,
     objects = noteCombined.images
 ) {
@@ -101,8 +99,6 @@ class DownloadNoteImagesTask(
         tempDir = engine.tempDirDown,
         localFile = File(File(engine.context.filesDir, "images"), obj.filename),
     )
-
-    override fun getResult() = TaskResult(success, error)
 }
 
 

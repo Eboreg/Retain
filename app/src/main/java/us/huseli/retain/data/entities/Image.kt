@@ -12,7 +12,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Ignore
 import androidx.room.PrimaryKey
-import us.huseli.retain.Constants
+import us.huseli.retain.Constants.IMAGE_SUBDIR
 import java.io.File
 import java.time.Instant
 import java.util.UUID
@@ -36,6 +36,8 @@ data class Image(
     @ColumnInfo(name = "imageNoteId", index = true) val noteId: UUID,
     @ColumnInfo(name = "imageAdded") val added: Instant = Instant.now(),
     @ColumnInfo(name = "imageSize") val size: Int,
+    @ColumnInfo(name = "imageIsDeleted", defaultValue = "0") val isDeleted: Boolean = false,
+    @ColumnInfo(name = "imagePosition", defaultValue = "0") val position: Int = 0,
 ) : Comparable<Image> {
     @Ignore
     var ratio: Float = if (width != null && height != null) width.toFloat() / height.toFloat() else 0f
@@ -48,7 +50,9 @@ data class Image(
         other.height == height &&
         other.noteId == noteId &&
         other.added == added &&
-        other.size == size
+        other.size == size &&
+        other.isDeleted == isDeleted &&
+        other.position == position
 
     override fun hashCode() = filename.hashCode()
 
@@ -56,7 +60,7 @@ data class Image(
 
     @Suppress("SameReturnValue")
     fun toBitmapImage(context: Context): BitmapImage? {
-        val imageDir = File(context.filesDir, Constants.IMAGE_SUBDIR).apply { mkdirs() }
+        val imageDir = File(context.filesDir, IMAGE_SUBDIR).apply { mkdirs() }
         val imageFile = File(imageDir, filename)
 
         if (imageFile.isFile) {
@@ -75,5 +79,5 @@ data class Image(
 }
 
 data class BitmapImage(val image: Image, val imageBitmap: ImageBitmap) {
-    override fun toString() = image.filename
+    override fun toString() = "<BitmapImage ${image.filename}>"
 }

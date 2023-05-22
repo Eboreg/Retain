@@ -22,24 +22,20 @@ class RemoveImageTask(engine: NextCloudEngine, image: Image) :
 
 /** Remove: 0..n note JSON file */
 class RemoveNotesTask(engine: NextCloudEngine, noteIds: Collection<UUID>) :
-    ListTask<TaskResult, OperationTaskResult, RemoveFileTask, UUID>(engine = engine, objects = noteIds) {
+    ListTask<OperationTaskResult, RemoveFileTask, UUID>(engine = engine, objects = noteIds) {
     override val failOnUnsuccessfulChildTask = false
 
     override fun getChildTask(obj: UUID) =
         RemoveFileTask(engine = engine, remotePath = engine.getAbsolutePath(NEXTCLOUD_JSON_SUBDIR, "note-$obj.json"))
-
-    override fun getResult() = TaskResult(success, error)
 }
 
 
 /** Remove: 0..n image files */
 class RemoveImagesTask(engine: NextCloudEngine, images: Collection<Image>) :
-    ListTask<TaskResult, OperationTaskResult, RemoveImageTask, Image>(engine = engine, objects = images) {
+    ListTask<OperationTaskResult, RemoveImageTask, Image>(engine = engine, objects = images) {
     override val failOnUnsuccessfulChildTask = false
 
     override fun getChildTask(obj: Image) = RemoveImageTask(engine = engine, image = obj)
-
-    override fun getResult() = TaskResult(success, error)
 }
 
 

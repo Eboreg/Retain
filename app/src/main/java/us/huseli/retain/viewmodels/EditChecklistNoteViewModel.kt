@@ -20,13 +20,14 @@ class EditChecklistNoteViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     repository: NoteRepository,
     override val logger: Logger,
-) : EditNoteViewModel(savedStateHandle, repository), LogInterface {
+) : BaseEditNoteViewModel(savedStateHandle, repository, NoteType.CHECKLIST), LogInterface {
     private val _checklistItems = MutableStateFlow<List<ChecklistItem>>(emptyList())
-    override var _type = NoteType.CHECKLIST
     val checklistItems = _checklistItems.asStateFlow()
 
     init {
-        loadItems()
+        viewModelScope.launch {
+            _checklistItems.value = repository.listChecklistItems(noteId)
+        }
     }
 
     fun deleteItem(item: ChecklistItem) = viewModelScope.launch {
@@ -49,12 +50,8 @@ class EditChecklistNoteViewModel @Inject constructor(
         _isDirty = true
     }
 
-    private fun loadItems() = viewModelScope.launch {
-        _checklistItems.value = repository.listChecklistItems(noteId)
-    }
-
     fun toggleShowChecked() {
-        _showChecked.value = !_showChecked.value
+        updateNote(showChecked = !_note.value.showChecked)
         _isDirty = true
     }
 

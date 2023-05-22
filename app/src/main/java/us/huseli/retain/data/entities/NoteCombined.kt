@@ -2,8 +2,8 @@ package us.huseli.retain.data.entities
 
 class NoteCombined(
     note: Note,
-    val checklistItems: List<ChecklistItem> = emptyList(),
-    val images: List<Image> = emptyList(),
+    val checklistItems: Collection<ChecklistItem> = emptyList(),
+    val images: Collection<Image> = emptyList(),
     @Suppress("unused") val databaseVersion: Int,
 ) : Note(
     id = note.id,
@@ -14,7 +14,8 @@ class NoteCombined(
     position = note.position,
     type = note.type,
     showChecked = note.showChecked,
-    colorIdx = note.colorIdx
+    colorIdx = note.colorIdx,
+    isDeleted = note.isDeleted,
 ) {
     override fun equals(other: Any?) =
         other is NoteCombined &&

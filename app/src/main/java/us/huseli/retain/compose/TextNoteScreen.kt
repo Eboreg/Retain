@@ -23,10 +23,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import us.huseli.retain.R
 import us.huseli.retain.data.entities.Image
+import us.huseli.retain.data.entities.Note
 import us.huseli.retain.outlinedTextFieldColors
 import us.huseli.retain.ui.theme.RetainTheme
 import us.huseli.retain.viewmodels.EditNoteViewModel
-import java.util.UUID
 
 @Composable
 fun TextNoteScreen(
@@ -34,11 +34,11 @@ fun TextNoteScreen(
     viewModel: EditNoteViewModel = hiltViewModel(),
     snackbarHostState: SnackbarHostState,
     imageCarouselCurrentId: String? = null,
-    onSave: ((shouldSave: Boolean, id: UUID, title: String, text: String, colorIdx: Int) -> Unit)? = null,
+    onSave: ((shouldSave: Boolean, note: Note, images: Collection<Image>) -> Unit)? = null,
     onBackClick: (() -> Unit)? = null,
     onImageClick: ((Image) -> Unit)? = null,
 ) {
-    val text by viewModel.text.collectAsStateWithLifecycle()
+    val text by viewModel.text.collectAsStateWithLifecycle("")
     val focusRequester = remember { FocusRequester() }
     var selection by remember { mutableStateOf(TextRange(0)) }
     val textFieldValue by remember(text, selection) {
@@ -49,10 +49,8 @@ fun TextNoteScreen(
         onDispose {
             onSave?.invoke(
                 viewModel.shouldSave,
-                viewModel.noteId,
-                viewModel.title.value,
-                viewModel.text.value,
-                viewModel.colorIdx.value
+                viewModel.note.value,
+                viewModel.bitmapImages.value.map { it.image },
             )
         }
     }

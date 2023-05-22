@@ -62,6 +62,7 @@ import org.burnoutcrew.reorderable.rememberReorderableLazyListState
 import us.huseli.retain.R
 import us.huseli.retain.data.entities.ChecklistItem
 import us.huseli.retain.data.entities.Image
+import us.huseli.retain.data.entities.Note
 import us.huseli.retain.viewmodels.EditChecklistNoteViewModel
 import java.util.UUID
 import kotlin.math.max
@@ -297,11 +298,11 @@ fun ChecklistNoteScreen(
     viewModel: EditChecklistNoteViewModel = hiltViewModel(),
     snackbarHostState: SnackbarHostState,
     imageCarouselCurrentId: String? = null,
-    onSave: (Boolean, UUID, String, Boolean, Int, Collection<ChecklistItem>) -> Unit,
+    onSave: (Boolean, Note, Collection<Image>, Collection<ChecklistItem>) -> Unit,
     onBackClick: () -> Unit,
     onImageClick: ((Image) -> Unit)? = null,
 ) {
-    val showChecked by viewModel.showChecked.collectAsStateWithLifecycle()
+    val showChecked by viewModel.showChecked.collectAsStateWithLifecycle(true)
     val checklistItems by viewModel.checklistItems.collectAsStateWithLifecycle(emptyList())
     var focusedItemIndex by rememberSaveable { mutableStateOf<Int?>(null) }
     val itemSelectionStarts = remember { mutableStateMapOf<UUID, Int>() }
@@ -313,10 +314,8 @@ fun ChecklistNoteScreen(
         onDispose {
             onSave(
                 viewModel.shouldSave,
-                viewModel.noteId,
-                viewModel.title.value,
-                showChecked,
-                viewModel.colorIdx.value,
+                viewModel.note.value,
+                viewModel.bitmapImages.value.map { it.image },
                 viewModel.checklistItems.value
             )
         }

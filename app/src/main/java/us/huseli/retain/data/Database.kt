@@ -20,7 +20,7 @@ import java.util.concurrent.Executors
 @androidx.room.Database(
     entities = [Note::class, ChecklistItem::class, Image::class],
     exportSchema = false,
-    version = 10,
+    version = 11,
 )
 @TypeConverters(Converters::class)
 abstract class Database : RoomDatabase() {

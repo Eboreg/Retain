@@ -68,20 +68,20 @@ fun ImageCarousel(
     LaunchedEffect(slideFrom, bitmapImage) {
         if (slideFrom == Side.LEFT) {
             offset.snapTo(-screenWidth)
-            offset.animateTo(0f, animationSpec = tween(easing = LinearEasing))
+            offset.animateTo(0f, animationSpec = tween(easing = LinearEasing, durationMillis = 100))
         } else if (slideFrom == Side.RIGHT) {
             offset.snapTo(screenWidth)
-            offset.animateTo(0f, animationSpec = tween(easing = LinearEasing))
+            offset.animateTo(0f, animationSpec = tween(easing = LinearEasing, durationMillis = 100))
         }
     }
 
     LaunchedEffect(slideTo, bitmapImage) {
         if (slideTo == Side.LEFT) {
-            offset.animateTo(-screenWidth, animationSpec = tween(easing = LinearEasing))
+            offset.animateTo(-screenWidth, animationSpec = tween(easing = LinearEasing, durationMillis = 100))
             slideFrom = Side.RIGHT
             onSwipeLeft()
         } else if (slideTo == Side.RIGHT) {
-            offset.animateTo(screenWidth, animationSpec = tween(easing = LinearEasing))
+            offset.animateTo(screenWidth, animationSpec = tween(easing = LinearEasing, durationMillis = 100))
             slideFrom = Side.LEFT
             onSwipeRight()
         }

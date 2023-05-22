@@ -2,18 +2,28 @@ package us.huseli.retain.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.graphics.Bitmap
+import android.graphics.ImageDecoder
 import android.net.Uri
+import android.os.Build
+import android.provider.MediaStore
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.core.graphics.scale
 import androidx.preference.PreferenceManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import us.huseli.retain.Constants
 import us.huseli.retain.Constants.IMAGE_SUBDIR
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_BASE_DIR
 import us.huseli.retain.Enums.NoteType
 import us.huseli.retain.LogInterface
 import us.huseli.retain.Logger
+import us.huseli.retain.copyFileToLocal
 import us.huseli.retain.data.entities.BitmapImage
 import us.huseli.retain.data.entities.ChecklistItem
 import us.huseli.retain.data.entities.Image
@@ -23,19 +33,20 @@ import us.huseli.retain.nextcloud.NextCloudEngine
 import us.huseli.retain.nextcloud.tasks.DownloadMissingImagesTask
 import us.huseli.retain.nextcloud.tasks.DownloadNoteImagesTask
 import us.huseli.retain.nextcloud.tasks.DownstreamSyncTask
-import us.huseli.retain.nextcloud.tasks.RemoveImageTask
 import us.huseli.retain.nextcloud.tasks.RemoveImagesTask
 import us.huseli.retain.nextcloud.tasks.RemoveNotesTask
 import us.huseli.retain.nextcloud.tasks.RemoveOrphanImagesTask
 import us.huseli.retain.nextcloud.tasks.TestNextCloudTaskResult
-import us.huseli.retain.nextcloud.tasks.UploadImageTask
 import us.huseli.retain.nextcloud.tasks.UploadMissingImagesTask
 import us.huseli.retain.nextcloud.tasks.UploadNoteTask
 import us.huseli.retain.nextcloud.tasks.UpstreamSyncTask
 import java.io.File
+import java.io.FileOutputStream
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.max
+import kotlin.math.roundToInt
 
 @Singleton
 class NoteRepository @Inject constructor(
@@ -49,7 +60,7 @@ class NoteRepository @Inject constructor(
     private val database: Database,
 ) : LogInterface, SharedPreferences.OnSharedPreferenceChangeListener {
     private val preferences = PreferenceManager.getDefaultSharedPreferences(context)
-    val imageDir = File(context.filesDir, IMAGE_SUBDIR).apply { mkdirs() }
+    private val imageDir = File(context.filesDir, IMAGE_SUBDIR).apply { mkdirs() }
     val notes: Flow<List<Note>> = noteDao.flowList()
     val checklistItems: Flow<List<ChecklistItem>> = checklistItemDao.flowList()
     val nextCloudNeedsTesting = MutableStateFlow(true)
@@ -80,6 +91,61 @@ class NoteRepository @Inject constructor(
         }
     }
 
+    suspend fun uriToBitmapImage(uri: Uri, noteId: UUID): BitmapImage? {
+        val basename: String
+        val mimeType: String?
+        val imageFile: File
+
+        val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, uri))
+        } else {
+            @Suppress("DEPRECATION")
+            MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
+        }
+
+        if (
+            bitmap != null &&
+            (bitmap.width > Constants.DEFAULT_MAX_IMAGE_DIMEN || bitmap.height > Constants.DEFAULT_MAX_IMAGE_DIMEN)
+        ) {
+            val factor = Constants.DEFAULT_MAX_IMAGE_DIMEN.toFloat() / max(bitmap.width, bitmap.height)
+            val width = (bitmap.width * factor).roundToInt()
+            val height = (bitmap.height * factor).roundToInt()
+            basename = "${UUID.randomUUID()}.png"
+            mimeType = "image/png"
+            val resized = bitmap.scale(width = width, height = height)
+            imageFile = File(imageDir, basename)
+
+            withContext(Dispatchers.IO) {
+                FileOutputStream(imageFile).use { outputStream ->
+                    resized.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+                }
+            }
+        } else {
+            val extension = context.contentResolver.getType(uri)?.split("/")?.last()
+            basename = UUID.randomUUID().toString() + if (extension != null) ".$extension" else ""
+            mimeType = context.contentResolver.getType(uri)
+            imageFile = File(imageDir, basename)
+            copyFileToLocal(context, uri, imageFile)
+        }
+
+        if (bitmap != null) {
+            val image = Image(
+                filename = basename,
+                mimeType = mimeType,
+                width = bitmap.width,
+                height = bitmap.height,
+                size = imageFile.length().toInt(),
+                noteId = noteId,
+                position = bitmapImages.value
+                               .filter { it.image.noteId == noteId }
+                               .maxOfOrNull { it.image.position } ?: 0,
+            )
+            return BitmapImage(image, bitmap.asImageBitmap())
+        }
+
+        return null
+    }
+
     private fun addDownloadedImage(image: Image) {
         image.toBitmapImage(context)?.let {
             val newBitmapImages = bitmapImages.value.toMutableList()
@@ -87,13 +153,6 @@ class NoteRepository @Inject constructor(
             newBitmapImages.add(it)
             bitmapImages.value = newBitmapImages
         }
-    }
-
-    suspend fun deleteImage(image: Image) {
-        imageDao.delete(image)
-        noteDao.touch(image.noteId)
-        File(imageDir, image.filename).delete()
-        RemoveImageTask(nextCloudEngine, image).run()
     }
 
     suspend fun deleteNotes(ids: Collection<UUID>) {
@@ -107,17 +166,9 @@ class NoteRepository @Inject constructor(
         RemoveImagesTask(nextCloudEngine, images).run()
     }
 
-    fun flowNote(id: UUID): Flow<Note?> = noteDao.flow(id)
+    suspend fun getMaxNotePosition(): Int = noteDao.getMaxPosition()
 
-    suspend fun insertImage(noteId: UUID, filename: String, mimeType: String?, width: Int?, height: Int?, size: Int) {
-        imageDao.insert(noteId, filename, mimeType, width, height, size)
-        noteDao.touch(noteId)
-        imageDao.get(filename)?.let { image ->
-            UploadImageTask(nextCloudEngine, image).run { result ->
-                if (!result.success) logError("Failed to upload image to Nextcloud", result.error)
-            }
-        }
-    }
+    suspend fun getNote(id: UUID): Note? = noteDao.get(id)
 
     suspend fun listChecklistItems(noteId: UUID): List<ChecklistItem> = checklistItemDao.listByNoteId(noteId)
 
@@ -227,23 +278,23 @@ class NoteRepository @Inject constructor(
         nextCloudEngine.testClient(uri, username, password, baseDir) { result -> onResult(result) }
     }
 
-    suspend fun replaceChecklistItems(noteId: UUID, items: Collection<ChecklistItem>) =
-        checklistItemDao.replace(noteId, items)
 
-    suspend fun upsertNote(id: UUID, type: NoteType, title: String, text: String, showChecked: Boolean, colorIdx: Int) {
-        noteDao.upsert(id, type, title, text, showChecked, colorIdx)
-        noteDao.get(id)?.let { note ->
-            UploadNoteTask(
-                nextCloudEngine,
-                noteCombined = NoteCombined(
-                    note = note,
-                    checklistItems = checklistItemDao.listByNoteId(id),
-                    images = imageDao.list(id),
-                    databaseVersion = database.openHelper.readableDatabase.version
-                )
-            ).run { result ->
-                if (!result.success) logError("Failed to upload note to Nextcloud", result.error)
-            }
+    suspend fun upsertNote(note: Note, images: Collection<Image>) = upsertNote(note, emptyList(), images)
+
+    suspend fun upsertNote(note: Note, checklistItems: Collection<ChecklistItem>, images: Collection<Image>) {
+        noteDao.upsert(note)
+        if (note.type == NoteType.CHECKLIST) checklistItemDao.replace(note.id, checklistItems)
+        imageDao.replace(note.id, images)
+        UploadNoteTask(
+            nextCloudEngine,
+            noteCombined = NoteCombined(
+                note = note,
+                checklistItems = checklistItems,
+                images = images,
+                databaseVersion = database.openHelper.readableDatabase.version
+            )
+        ).run { result ->
+            if (!result.success) logError("Failed to upload note to Nextcloud", result.error)
         }
     }
 

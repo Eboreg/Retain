@@ -45,7 +45,7 @@ class TestNextCloudTaskResult(
 
 
 class TestNextCloudTask(engine: NextCloudEngine) :
-    ListTask<TestNextCloudTaskResult, OperationTaskResult, CreateDirTask, String>(
+    BaseListTask<TestNextCloudTaskResult, OperationTaskResult, CreateDirTask, String>(
         engine = engine,
         objects = listOf(engine.getAbsolutePath(NEXTCLOUD_IMAGE_SUBDIR), engine.getAbsolutePath(NEXTCLOUD_JSON_SUBDIR))
     ) {

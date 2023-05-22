@@ -10,16 +10,16 @@ import java.util.UUID
 
 @Dao
 interface ChecklistItemDao {
-    @Query("DELETE FROM checklistitem WHERE checklistItemNoteId=:noteId AND checklistItemId NOT IN (:except)")
+    @Query("UPDATE checklistitem SET checklistItemIsDeleted = 1 WHERE checklistItemNoteId=:noteId AND checklistItemId NOT IN (:except)")
     suspend fun deleteByNoteId(noteId: UUID, except: Collection<UUID> = emptyList())
 
-    @Query("SELECT * FROM checklistitem ORDER BY checklistItemChecked, checklistItemPosition")
+    @Query("SELECT * FROM checklistitem WHERE checklistItemIsDeleted = 0 ORDER BY checklistItemChecked, checklistItemPosition")
     fun flowList(): Flow<List<ChecklistItem>>
 
-    @Query("SELECT * FROM checklistitem ORDER BY checklistItemNoteId, checklistItemChecked, checklistItemPosition")
+    @Query("SELECT * FROM checklistitem WHERE checklistItemIsDeleted = 0 ORDER BY checklistItemNoteId, checklistItemChecked, checklistItemPosition")
     suspend fun list(): List<ChecklistItem>
 
-    @Query("SELECT * FROM checklistitem WHERE checklistItemNoteId = :noteId ORDER BY checklistItemChecked, checklistItemPosition")
+    @Query("SELECT * FROM checklistitem WHERE checklistItemNoteId = :noteId AND checklistItemIsDeleted = 0 ORDER BY checklistItemChecked, checklistItemPosition")
     suspend fun listByNoteId(noteId: UUID): List<ChecklistItem>
 
     suspend fun replace(noteId: UUID, items: Collection<ChecklistItem>) {

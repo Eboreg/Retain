@@ -9,7 +9,7 @@ import us.huseli.retain.nextcloud.NextCloudEngine
  * By default, this.error will be the same as the error from the latest failed
  * child task, which is not super optimal, but I guess we can live with it.
  */
-abstract class ListTask<RT : TaskResult, CRT : TaskResult, CT : BaseTask<CRT>, LT>(
+abstract class BaseListTask<RT : TaskResult, CRT : TaskResult, CT : BaseTask<CRT>, LT>(
     engine: NextCloudEngine,
     private val objects: Collection<LT>,
 ) : BaseTask<RT>(engine) {
@@ -51,4 +51,10 @@ abstract class ListTask<RT : TaskResult, CRT : TaskResult, CT : BaseTask<CRT>, L
         }
         notifyIfReady()
     }
+}
+
+
+abstract class ListTask<CRT : TaskResult, CT : BaseTask<CRT>, LT>(engine: NextCloudEngine, objects: Collection<LT>) :
+    BaseListTask<TaskResult, CRT, CT, LT>(engine, objects) {
+    override fun getResult() = TaskResult(success, error)
 }

@@ -1,8 +1,9 @@
 package us.huseli.retain.compose
 
 import androidx.annotation.FloatRange
-import androidx.compose.animation.core.TweenSpec
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -69,7 +70,7 @@ fun OverscrollIndicator(
 
     val alpha by animateFloatAsState(
         targetValue = if (isVisible) maxAlpha else 0f,
-        animationSpec = TweenSpec(fadeDuration),
+        animationSpec = tween(durationMillis = fadeDuration, easing = LinearEasing),
     )
 
     with(scope) {
@@ -105,6 +106,7 @@ fun OverscrollIndicatorBox(
     leftIndicatorVisible: Boolean = false,
     rightIndicatorVisible: Boolean = false,
     fadeDuration: Int = 100,
+    alpha: Float = 0.3f,
     content: @Composable BoxScope.() -> Unit,
 ) {
     Box(modifier = modifier) {
@@ -116,7 +118,7 @@ fun OverscrollIndicatorBox(
             side = Side.LEFT,
             isVisible = leftIndicatorVisible,
             fadeDuration = fadeDuration,
-            maxAlpha = 0.5f,
+            maxAlpha = alpha,
         )
         OverscrollIndicator(
             scope = this,
@@ -125,7 +127,7 @@ fun OverscrollIndicatorBox(
             side = Side.RIGHT,
             isVisible = rightIndicatorVisible,
             fadeDuration = fadeDuration,
-            maxAlpha = 0.5f,
+            maxAlpha = alpha,
         )
     }
 }

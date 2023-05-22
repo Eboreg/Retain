@@ -55,8 +55,11 @@ abstract class ListFilesListTask<RT : ListFilesTaskResult, CRT : TaskResult, CT 
     open fun processChildTaskResult(remoteFile: RemoteFile, result: CRT) {}
 
     override fun isReady() =
-        (successfulRemoteFiles.size + unsuccessfulRemoteFiles.size == remoteFiles.size) ||
-        (failOnUnsuccessfulChildTask && !success)
+        super.isReady() &&
+        (
+            (successfulRemoteFiles.size + unsuccessfulRemoteFiles.size == remoteFiles.size) ||
+            (failOnUnsuccessfulChildTask && !success)
+        )
 
     @Suppress("unused")
     fun run(

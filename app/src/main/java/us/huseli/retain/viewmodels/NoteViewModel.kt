@@ -7,12 +7,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
-import us.huseli.retain.Enums.NoteType
 import us.huseli.retain.LogInterface
 import us.huseli.retain.Logger
 import us.huseli.retain.data.NoteRepository
 import us.huseli.retain.data.entities.BitmapImage
 import us.huseli.retain.data.entities.ChecklistItem
+import us.huseli.retain.data.entities.Image
 import us.huseli.retain.data.entities.Note
 import java.util.UUID
 import javax.inject.Inject
@@ -53,21 +53,20 @@ class NoteViewModel @Inject constructor(
         _selectedNoteIds.value = emptySet()
     }
 
-    val saveTextNote: (Boolean, UUID, String, String, Int) -> Unit =
-        { shouldSave, id, title, text, colorIdx ->
+    val saveTextNote: (Boolean, Note, Collection<Image>) -> Unit =
+        { shouldSave, note, images ->
             if (shouldSave) {
                 viewModelScope.launch {
-                    repository.upsertNote(id, NoteType.TEXT, title, text, true, colorIdx)
+                    repository.upsertNote(note, images)
                 }
             }
         }
 
-    val saveChecklistNote: (Boolean, UUID, String, Boolean, Int, Collection<ChecklistItem>) -> Unit =
-        { shouldSave, noteId, title, showChecked, colorIdx, checklistItems ->
+    val saveChecklistNote: (Boolean, Note, Collection<Image>, Collection<ChecklistItem>) -> Unit =
+        { shouldSave, note, images, checklistItems ->
             if (shouldSave) {
                 viewModelScope.launch {
-                    repository.upsertNote(noteId, NoteType.CHECKLIST, title, "", showChecked, colorIdx)
-                    repository.replaceChecklistItems(noteId, checklistItems)
+                    repository.upsertNote(note, checklistItems, images)
                 }
             }
         }
