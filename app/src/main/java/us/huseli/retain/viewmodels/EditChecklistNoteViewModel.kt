@@ -37,7 +37,17 @@ class EditChecklistNoteViewModel @Inject constructor(
         _trashedItems.value = emptyList()
     }
 
-    fun deleteItem(item: ChecklistItem) = viewModelScope.launch {
+    fun deleteCheckedItems() {
+        _trashedItems.value = _items.value.mapIndexedNotNull { index, item ->
+            if (item.checked) Pair(index, item) else null
+        }
+        if (_trashedItems.value.isNotEmpty()) {
+            _items.value = _items.value.filter { !it.checked }
+            _isDirty = true
+        }
+    }
+
+    fun deleteItem(item: ChecklistItem) {
         _items.value = _items.value.toMutableList().apply {
             val index = indexOf(item)
 
@@ -49,7 +59,7 @@ class EditChecklistNoteViewModel @Inject constructor(
         }
     }
 
-    fun insertItem(text: String, checked: Boolean, index: Int) = viewModelScope.launch {
+    fun insertItem(text: String, checked: Boolean, index: Int) {
         val item = ChecklistItem(text = text, checked = checked, noteId = noteId, position = index)
 
         log("insertItem($text, $checked, $index): inserting $item")
@@ -57,6 +67,8 @@ class EditChecklistNoteViewModel @Inject constructor(
         updatePositions()
         _isDirty = true
     }
+
+    override fun isEmpty() = super.isEmpty() && _items.value.isEmpty()
 
     fun switchItemPositions(from: ItemPosition, to: ItemPosition) {
         /**
@@ -76,8 +88,15 @@ class EditChecklistNoteViewModel @Inject constructor(
     }
 
     fun toggleShowChecked() {
-        updateNote(showChecked = !_note.value.showChecked)
+        _note.value = _note.value.copy(showChecked = !_note.value.showChecked)
         _isDirty = true
+    }
+
+    fun uncheckAllItems() {
+        if (_items.value.any { it.checked }) {
+            _items.value = _items.value.map { if (it.checked) it.copy(checked = false) else it }
+            _isDirty = true
+        }
     }
 
     fun undoTrashItems() = viewModelScope.launch {
@@ -93,7 +112,7 @@ class EditChecklistNoteViewModel @Inject constructor(
 
             log("updateItem($id, $text, $checked): updating item $item")
             _items.value = _items.value.toMutableList().apply {
-                add(index, removeAt(index).copy(text = text, checked = checked))
+                add(index, removeAt(index).copy(text = text ?: item.text, checked = checked ?: item.checked))
             }
             _isDirty = true
         }

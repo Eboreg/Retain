@@ -4,6 +4,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,8 +20,11 @@ import androidx.compose.material.icons.sharp.Add
 import androidx.compose.material.icons.sharp.Close
 import androidx.compose.material.icons.sharp.DragIndicator
 import androidx.compose.material.icons.sharp.ExpandMore
+import androidx.compose.material.icons.sharp.MoreVert
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -70,6 +74,44 @@ import us.huseli.retain.data.entities.Note
 import us.huseli.retain.viewmodels.EditChecklistNoteViewModel
 import java.util.UUID
 import kotlin.math.max
+
+@Composable
+fun ChecklistNoteContextMenu(
+    modifier: Modifier = Modifier,
+    onUncheckAllClick: () -> Unit,
+    onDeleteCheckedClick: () -> Unit,
+) {
+    var isExpanded by remember { mutableStateOf(false) }
+
+    Box {
+        IconButton(onClick = { isExpanded = true }) {
+            Icon(
+                imageVector = Icons.Sharp.MoreVert,
+                contentDescription = null,
+            )
+        }
+        DropdownMenu(
+            modifier = modifier,
+            expanded = isExpanded,
+            onDismissRequest = { isExpanded = false },
+        ) {
+            DropdownMenuItem(
+                onClick = {
+                    onUncheckAllClick()
+                    isExpanded = false
+                },
+                text = { Text(stringResource(R.string.uncheck_all)) },
+            )
+            DropdownMenuItem(
+                onClick = {
+                    onDeleteCheckedClick()
+                    isExpanded = false
+                },
+                text = { Text(stringResource(R.string.delete_checked)) },
+            )
+        }
+    }
+}
 
 /**
  * A row with a checkbox and a textfield. Multiple rows of these emulate
@@ -336,7 +378,7 @@ fun ChecklistNoteScreen(
     DisposableEffect(Unit) {
         onDispose {
             onSave(
-                viewModel.isDirty,
+                viewModel.shouldSave,
                 viewModel.note.value,
                 viewModel.bitmapImages.value.map { it.image },
                 viewModel.items.value
@@ -357,7 +399,13 @@ fun ChecklistNoteScreen(
             }
         },
         onBackClick = onBackClick,
-        onImageClick = { onImageClick?.invoke(it) }
+        onImageClick = { onImageClick?.invoke(it) },
+        contextMenu = {
+            ChecklistNoteContextMenu(
+                onDeleteCheckedClick = { viewModel.deleteCheckedItems() },
+                onUncheckAllClick = { viewModel.uncheckAllItems() },
+            )
+        }
     ) { backgroundColor ->
         Checklist(
             scope = this,

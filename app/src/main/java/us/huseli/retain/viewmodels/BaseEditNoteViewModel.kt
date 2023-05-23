@@ -23,7 +23,8 @@ abstract class BaseEditNoteViewModel(
     private val _bitmapImages = MutableStateFlow<List<BitmapImage>>(emptyList())
     private val _trashedBitmapImages = MutableStateFlow<List<BitmapImage>>(emptyList())
     protected val _note = MutableStateFlow(Note(type = type))
-    protected var _isDirty = true
+    protected var _isDirty = false
+    private var _isNew = true
 
     val noteId: UUID = UUID.fromString(savedStateHandle.get<String>(Constants.NAV_ARG_NOTE_ID)!!)
     val note = _note.asStateFlow()
@@ -34,8 +35,8 @@ abstract class BaseEditNoteViewModel(
     val bitmapImages = _bitmapImages.asStateFlow()
     val trashedBitmapImages = _trashedBitmapImages.asStateFlow()
 
-    val isDirty: Boolean
-        get() = _isDirty
+    val shouldSave: Boolean
+        get() = _isDirty && (!_isNew || isEmpty())
 
     init {
         _bitmapImages.value = repository.bitmapImages.value.filter { it.image.noteId == noteId }
@@ -43,6 +44,7 @@ abstract class BaseEditNoteViewModel(
         viewModelScope.launch {
             repository.getNote(noteId)?.let { note ->
                 _note.value = note
+                _isNew = false
                 _isDirty = false
             }
         }
@@ -70,23 +72,26 @@ abstract class BaseEditNoteViewModel(
         }
     }
 
+    open fun isEmpty(): Boolean =
+        _note.value.text.isBlank() && _note.value.title.isBlank() && _bitmapImages.value.isEmpty()
+
     fun setColorIdx(value: Int) {
         if (value != _note.value.colorIdx) {
-            updateNote(colorIdx = value)
+            _note.value = _note.value.copy(colorIdx = value)
             _isDirty = true
         }
     }
 
     fun setText(value: String) {
         if (value != _note.value.text) {
-            updateNote(text = value)
+            _note.value = _note.value.copy(text = value)
             _isDirty = true
         }
     }
 
     fun setTitle(value: String) {
         if (value != _note.value.title) {
-            updateNote(title = value)
+            _note.value = _note.value.copy(title = value)
             _isDirty = true
         }
     }
@@ -97,14 +102,5 @@ abstract class BaseEditNoteViewModel(
             sortBy { it.image.position }
         }
         clearTrashBitmapImages()
-    }
-
-    protected fun updateNote(
-        title: String? = null,
-        text: String? = null,
-        colorIdx: Int? = null,
-        showChecked: Boolean? = null
-    ) {
-        _note.value = _note.value.copy(title, text, showChecked, colorIdx)
     }
 }

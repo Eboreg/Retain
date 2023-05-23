@@ -1,6 +1,7 @@
 package us.huseli.retain.compose
 
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -19,6 +20,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import kotlinx.coroutines.launch
 import us.huseli.retain.LogMessage
 import us.huseli.retain.R
@@ -40,6 +42,10 @@ fun RetainScaffold(
     val snackbarMessage by viewModel.logger.snackbarMessage.collectAsStateWithLifecycle(null)
     val scope = rememberCoroutineScope()
     val trashedNotes by viewModel.trashedNotes.collectAsStateWithLifecycle()
+    val systemUiController = rememberSystemUiController()
+
+    systemUiController.setStatusBarColor(MaterialTheme.colorScheme.surface)
+    systemUiController.setNavigationBarColor(MaterialTheme.colorScheme.background)
 
     LaunchedEffect(snackbarMessage) {
         if (snackbarMessage != lastSnackbarMessage) {

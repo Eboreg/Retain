@@ -41,6 +41,9 @@
     <string name="move_card">Move card</string>
     <string name="send_to_trash">Send to trash</string>
     <string name="undo">Undo</string>
+    <string name="empty_note_not_saving">Empty note; not saving.</string>
+    <string name="uncheck_all">Uncheck all</string>
+    <string name="delete_checked">Delete checked</string>
     <plurals name="plus_x_items">
         <item quantity="one">+ 1 item</item>
         <item quantity="other">+ %1$d items</item>

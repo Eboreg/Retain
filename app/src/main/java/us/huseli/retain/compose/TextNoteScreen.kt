@@ -3,6 +3,7 @@ package us.huseli.retain.compose
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -42,11 +43,12 @@ fun TextNoteScreen(
     val textFieldValue by remember(text, selection) {
         mutableStateOf(TextFieldValue(text = text, selection = selection))
     }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     DisposableEffect(Unit) {
         onDispose {
             onSave?.invoke(
-                viewModel.isDirty,
+                viewModel.shouldSave,
                 viewModel.note.value,
                 viewModel.bitmapImages.value.map { it.image },
             )
@@ -57,6 +59,7 @@ fun TextNoteScreen(
         modifier = modifier,
         viewModel = viewModel,
         carouselImageId = imageCarouselCurrentId,
+        snackbarHostState = snackbarHostState,
         onTitleFieldNext = null,
         onBackClick = { onBackClick?.invoke() },
         onImageClick = { onImageClick?.invoke(it) },

@@ -3,6 +3,7 @@ package us.huseli.retain.compose
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -33,6 +35,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import org.burnoutcrew.reorderable.ReorderableLazyListState
 import org.burnoutcrew.reorderable.reorderable
 import us.huseli.retain.R
@@ -40,6 +43,7 @@ import us.huseli.retain.data.entities.Image
 import us.huseli.retain.outlinedTextFieldColors
 import us.huseli.retain.ui.theme.getNoteColor
 import us.huseli.retain.viewmodels.BaseEditNoteViewModel
+import kotlin.math.max
 
 @Composable
 fun BaseNoteScreen(
@@ -52,6 +56,7 @@ fun BaseNoteScreen(
     onImageClick: (Image) -> Unit,
     onBackgroundClick: (() -> Unit)? = null,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    contextMenu: (@Composable () -> Unit)? = null,
     content: LazyListScope.(Color) -> Unit,
 ) {
     val bitmapImages by viewModel.bitmapImages.collectAsStateWithLifecycle(emptyList())
@@ -61,9 +66,20 @@ fun BaseNoteScreen(
     val currentCarouselImage = bitmapImages.find { it.image.filename == currentCarouselImageId }
     val currentCarouselImageIdx = bitmapImages.indexOf(currentCarouselImage)
     val interactionSource = remember { MutableInteractionSource() }
-    val noteColor = getNoteColor(colorIdx)
     val title by viewModel.title.collectAsStateWithLifecycle("")
     val trashedBitmapImages by viewModel.trashedBitmapImages.collectAsStateWithLifecycle()
+    val systemUiController = rememberSystemUiController()
+    val noteColor = getNoteColor(colorIdx)
+    val appBarColor = noteColor.copy(
+        red = max(noteColor.red - 0.05f, 0f),
+        green = max(noteColor.green - 0.05f, 0f),
+        blue = max(noteColor.blue - 0.05f, 0f),
+    )
+
+    if (colorIdx > 0) {
+        systemUiController.setStatusBarColor(appBarColor)
+        systemUiController.setNavigationBarColor(noteColor)
+    }
 
     LaunchedEffect(trashedBitmapImages) {
         if (trashedBitmapImages.isNotEmpty()) {
@@ -88,6 +104,7 @@ fun BaseNoteScreen(
         snackbarHostState = snackbarHostState,
         topBar = {
             NoteScreenTopAppBar(
+                backgroundColor = appBarColor,
                 onBackClick = onBackClick,
                 onImagePick = { uri -> viewModel.insertImage(uri) },
                 onColorSelected = { index -> viewModel.setColorIdx(index) }
@@ -117,14 +134,18 @@ fun BaseNoteScreen(
                 )
             }
             item {
-                NoteTitleField(
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    value = title,
-                    onValueChange = {
-                        viewModel.setTitle(it)
-                    },
-                    onNext = onTitleFieldNext,
-                )
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    NoteTitleField(
+                        modifier = Modifier.weight(1f),
+                        value = title,
+                        onValueChange = { viewModel.setTitle(it) },
+                        onNext = onTitleFieldNext,
+                    )
+                    contextMenu?.invoke()
+                }
                 Spacer(Modifier.height(4.dp))
             }
             content(noteColor)

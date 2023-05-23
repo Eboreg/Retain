@@ -41,18 +41,18 @@ class ChecklistItem(
     override fun hashCode() = id.hashCode()
 
     fun copy(
-        text: String? = null,
-        checked: Boolean? = null,
-        position: Int? = null,
-        isDeleted: Boolean? = null
+        text: String = this.text,
+        checked: Boolean = this.checked,
+        position: Int = this.position,
+        isDeleted: Boolean = this.isDeleted,
     ): ChecklistItem {
         return ChecklistItem(
             id = id,
-            text = text ?: this.text,
-            checked = checked ?: this.checked,
-            position = position ?: this.position,
+            text = text,
+            checked = checked,
+            position = position,
             noteId = noteId,
-            isDeleted = isDeleted ?: this.isDeleted,
+            isDeleted = isDeleted,
         )
     }
 }

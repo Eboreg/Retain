@@ -43,24 +43,24 @@ open class Note(
     override fun hashCode() = id.hashCode()
 
     fun copy(
-        title: String? = null,
-        text: String? = null,
-        showChecked: Boolean? = null,
-        colorIdx: Int? = null,
-        position: Int? = null,
-        isDeleted: Boolean? = null,
+        title: String = this.title,
+        text: String = this.text,
+        showChecked: Boolean = this.showChecked,
+        colorIdx: Int = this.colorIdx,
+        position: Int = this.position,
+        isDeleted: Boolean = this.isDeleted,
     ): Note {
         return Note(
             id = id,
-            title = title ?: this.title,
-            text = text ?: this.text,
+            title = title,
+            text = text,
             created = created,
             updated = Instant.now(),
-            position = position ?: this.position,
+            position = position,
             type = type,
-            showChecked = showChecked ?: this.showChecked,
-            colorIdx = colorIdx ?: this.colorIdx,
-            isDeleted = isDeleted ?: this.isDeleted,
+            showChecked = showChecked,
+            colorIdx = colorIdx,
+            isDeleted = isDeleted,
         )
     }
 }

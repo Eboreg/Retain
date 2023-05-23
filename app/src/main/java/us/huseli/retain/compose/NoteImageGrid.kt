@@ -85,6 +85,7 @@ fun NoteImageGrid(
                         contentDescription = null,
                         modifier = imageModifier,
                     )
+
                     if (showDeleteButton) {
                         FilledTonalIconButton(
                             onClick = { onDeleteButtonClick?.invoke(bitmapImage) },

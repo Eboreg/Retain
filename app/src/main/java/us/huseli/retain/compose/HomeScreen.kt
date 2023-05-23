@@ -105,7 +105,6 @@ fun HomeScreenImpl(
 ) {
     val isSelectEnabled = selectedNotes.isNotEmpty()
     var isFABExpanded by rememberSaveable { mutableStateOf(false) }
-    var trashDialogOpen by rememberSaveable { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
     val minColumnWidth by settingsViewModel.minColumnWidth.collectAsStateWithLifecycle()
     var viewType by rememberSaveable { mutableStateOf(HomeScreenViewType.GRID) }
@@ -119,7 +118,7 @@ fun HomeScreenImpl(
             if (isSelectEnabled) SelectionTopAppBar(
                 selectedCount = selectedNotes.size,
                 onCloseClick = onEndSelectModeClick,
-                onTrashClick = { trashDialogOpen = true },
+                onTrashClick = { onTrashNotesClick(selectedNotes) },
             ) else HomeScreenTopAppBar(
                 viewType = viewType,
                 onSettingsClick = onSettingsClick,
@@ -143,14 +142,6 @@ fun HomeScreenImpl(
                 onAddChecklistClick = onAddChecklistClick,
                 onExpandedChange = { isFABExpanded = it },
                 onClose = { isFABExpanded = false },
-            )
-        }
-
-        if (trashDialogOpen) {
-            TrashNotesDialog(
-                selectedNotes = selectedNotes,
-                onTrash = onTrashNotesClick,
-                onClose = { trashDialogOpen = false },
             )
         }
 
@@ -201,7 +192,6 @@ fun HomeScreenImpl(
                 items(notes, key = { it.id }) { note ->
                     ReorderableItem(reorderableState, key = note.id) { isDragging ->
                         val elevation by animateDpAsState(if (isDragging) 16.dp else 0.dp)
-
                         lazyContent(note, Modifier.shadow(elevation))
                     }
                 }
