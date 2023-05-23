@@ -135,10 +135,7 @@ fun NoteCard(
 
 
 @Composable
-fun NoteCardChecklist(
-    note: Note,
-    checklistItems: List<ChecklistItem>,
-) {
+fun NoteCardChecklist(note: Note, checklistItems: List<ChecklistItem>) {
     val filteredItems = if (!note.showChecked) checklistItems.filter { !it.checked } else checklistItems
     val shownItems = checklistItems.subList(0, min(filteredItems.size, 5))
     val hiddenItemCount = checklistItems.size - shownItems.size

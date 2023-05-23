@@ -15,17 +15,19 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -39,31 +41,51 @@ import us.huseli.retain.outlinedTextFieldColors
 import us.huseli.retain.ui.theme.getNoteColor
 import us.huseli.retain.viewmodels.BaseEditNoteViewModel
 
-
 @Composable
 fun BaseNoteScreen(
     modifier: Modifier = Modifier,
     viewModel: BaseEditNoteViewModel,
-    snackbarHostState: SnackbarHostState,
     carouselImageId: String? = null,
     reorderableState: ReorderableLazyListState? = null,
     onTitleFieldNext: (() -> Unit)?,
     onBackClick: () -> Unit,
     onImageClick: (Image) -> Unit,
     onBackgroundClick: (() -> Unit)? = null,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     content: LazyListScope.(Color) -> Unit,
 ) {
-    val title by viewModel.title.collectAsStateWithLifecycle("")
-    val colorIdx by viewModel.colorIdx.collectAsStateWithLifecycle(0)
-    val noteColor = getNoteColor(colorIdx)
-    val interactionSource = remember { MutableInteractionSource() }
-
     val bitmapImages by viewModel.bitmapImages.collectAsStateWithLifecycle(emptyList())
+    val colorIdx by viewModel.colorIdx.collectAsStateWithLifecycle(0)
+    val context = LocalContext.current
     var currentCarouselImageId by remember { mutableStateOf(carouselImageId) }
     val currentCarouselImage = bitmapImages.find { it.image.filename == currentCarouselImageId }
     val currentCarouselImageIdx = bitmapImages.indexOf(currentCarouselImage)
+    val interactionSource = remember { MutableInteractionSource() }
+    val noteColor = getNoteColor(colorIdx)
+    val title by viewModel.title.collectAsStateWithLifecycle("")
+    val trashedBitmapImages by viewModel.trashedBitmapImages.collectAsStateWithLifecycle()
 
-    Scaffold(
+    LaunchedEffect(trashedBitmapImages) {
+        if (trashedBitmapImages.isNotEmpty()) {
+            val message = context.resources.getQuantityString(
+                R.plurals.x_images_trashed,
+                trashedBitmapImages.size,
+                trashedBitmapImages.size
+            )
+            val result = snackbarHostState.showSnackbar(
+                message = message,
+                actionLabel = context.resources.getString(R.string.undo).uppercase(),
+                duration = SnackbarDuration.Long,
+            )
+            when (result) {
+                SnackbarResult.ActionPerformed -> viewModel.undoTrashBitmapImages()
+                SnackbarResult.Dismissed -> viewModel.clearTrashBitmapImages()
+            }
+        }
+    }
+
+    RetainScaffold(
+        snackbarHostState = snackbarHostState,
         topBar = {
             NoteScreenTopAppBar(
                 onBackClick = onBackClick,
@@ -71,7 +93,6 @@ fun BaseNoteScreen(
                 onColorSelected = { index -> viewModel.setColorIdx(index) }
             )
         },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     ) { innerPadding ->
         var columnModifier = modifier
             .fillMaxSize()
@@ -91,7 +112,7 @@ fun BaseNoteScreen(
                     bitmapImages = bitmapImages,
                     showDeleteButton = true,
                     onImageClick = { onImageClick(it.image) },
-                    onDeleteButtonClick = { viewModel.deleteImage(it.image) },
+                    onDeleteButtonClick = { viewModel.deleteImage(it) },
                     secondaryRowHeight = 200.dp,
                 )
             }

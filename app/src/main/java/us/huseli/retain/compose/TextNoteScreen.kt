@@ -3,7 +3,6 @@ package us.huseli.retain.compose
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -32,7 +31,6 @@ import us.huseli.retain.viewmodels.EditNoteViewModel
 fun TextNoteScreen(
     modifier: Modifier = Modifier,
     viewModel: EditNoteViewModel = hiltViewModel(),
-    snackbarHostState: SnackbarHostState,
     imageCarouselCurrentId: String? = null,
     onSave: ((shouldSave: Boolean, note: Note, images: Collection<Image>) -> Unit)? = null,
     onBackClick: (() -> Unit)? = null,
@@ -58,7 +56,6 @@ fun TextNoteScreen(
     BaseNoteScreen(
         modifier = modifier,
         viewModel = viewModel,
-        snackbarHostState = snackbarHostState,
         carouselImageId = imageCarouselCurrentId,
         onTitleFieldNext = null,
         onBackClick = { onBackClick?.invoke() },
@@ -90,9 +87,5 @@ fun TextNoteScreen(
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun TextNotePreview() {
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    RetainTheme {
-        TextNoteScreen(snackbarHostState = snackbarHostState)
-    }
+    RetainTheme { TextNoteScreen() }
 }

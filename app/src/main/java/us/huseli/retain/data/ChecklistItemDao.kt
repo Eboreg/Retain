@@ -16,11 +16,14 @@ interface ChecklistItemDao {
     @Query("SELECT * FROM checklistitem WHERE checklistItemIsDeleted = 0 ORDER BY checklistItemChecked, checklistItemPosition")
     fun flowList(): Flow<List<ChecklistItem>>
 
-    @Query("SELECT * FROM checklistitem WHERE checklistItemIsDeleted = 0 ORDER BY checklistItemNoteId, checklistItemChecked, checklistItemPosition")
-    suspend fun list(): List<ChecklistItem>
+    @Query("SELECT * FROM checklistitem ORDER BY checklistItemNoteId, checklistItemChecked, checklistItemPosition")
+    suspend fun listAll(): List<ChecklistItem>
 
     @Query("SELECT * FROM checklistitem WHERE checklistItemNoteId = :noteId AND checklistItemIsDeleted = 0 ORDER BY checklistItemChecked, checklistItemPosition")
     suspend fun listByNoteId(noteId: UUID): List<ChecklistItem>
+
+    @Query("SELECT * FROM checklistitem WHERE checklistItemNoteId IN (:noteIds) AND checklistItemIsDeleted = 0 ORDER BY checklistItemChecked, checklistItemPosition")
+    suspend fun listByNoteIds(noteIds: Collection<UUID>): List<ChecklistItem>
 
     suspend fun replace(noteId: UUID, items: Collection<ChecklistItem>) {
         deleteByNoteId(noteId, except = items.map { it.id })

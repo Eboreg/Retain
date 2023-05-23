@@ -25,10 +25,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ShapeDefaults
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -44,6 +47,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
@@ -106,7 +110,6 @@ fun ChecklistRow(
     var textFieldValue by remember(item.text) {
         mutableStateOf(TextFieldValue(text = text, selection = selection))
     }
-    // Log.i("ChecklistNoteScreen", "text=$text, textFieldValue.text=${textFieldValue.text}, item.text=${item.text}, selection=$selection, selectionStart=$selectionStart, textFieldValue.selection=${textFieldValue.selection}")
 
     val realModifier =
         if (isDragging) modifier
@@ -154,7 +157,6 @@ fun ChecklistRow(
                  * row: just re-insert the null character move the selection
                  * start to after it.
                  */
-                // Log.i("ChecklistNoteScreen", "it.text=${it.text}, text=$text, textFieldValue.text=${textFieldValue.text}, it.selection=${it.selection}, textValue.selection=${textFieldValue.selection}")
                 if ((it.text.isEmpty() || it.text[0] != Char.MIN_VALUE)) {
                     if (it.text != textFieldValue.text) onPrevious(stripNullChar(it.text))
                 } else {
@@ -296,19 +298,40 @@ fun Checklist(
 fun ChecklistNoteScreen(
     modifier: Modifier = Modifier,
     viewModel: EditChecklistNoteViewModel = hiltViewModel(),
-    snackbarHostState: SnackbarHostState,
     imageCarouselCurrentId: String? = null,
     onSave: (Boolean, Note, Collection<Image>, Collection<ChecklistItem>) -> Unit,
     onBackClick: () -> Unit,
     onImageClick: ((Image) -> Unit)? = null,
 ) {
+    val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
     val showChecked by viewModel.showChecked.collectAsStateWithLifecycle(true)
-    val checklistItems by viewModel.checklistItems.collectAsStateWithLifecycle(emptyList())
+    val checklistItems by viewModel.items.collectAsStateWithLifecycle(emptyList())
+    val trashedChecklistItems by viewModel.trashedItems.collectAsStateWithLifecycle()
     var focusedItemIndex by rememberSaveable { mutableStateOf<Int?>(null) }
     val itemSelectionStarts = remember { mutableStateMapOf<UUID, Int>() }
     val reorderableState = rememberReorderableLazyListState(
         onMove = { from, to -> viewModel.switchItemPositions(from, to) },
     )
+
+    LaunchedEffect(trashedChecklistItems) {
+        if (trashedChecklistItems.isNotEmpty()) {
+            val message = context.resources.getQuantityString(
+                R.plurals.x_checklistitems_trashed,
+                trashedChecklistItems.size,
+                trashedChecklistItems.size
+            )
+            val result = snackbarHostState.showSnackbar(
+                message = message,
+                actionLabel = context.resources.getString(R.string.undo).uppercase(),
+                duration = SnackbarDuration.Long,
+            )
+            when (result) {
+                SnackbarResult.ActionPerformed -> viewModel.undoTrashItems()
+                SnackbarResult.Dismissed -> viewModel.clearTrashItems()
+            }
+        }
+    }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -316,7 +339,7 @@ fun ChecklistNoteScreen(
                 viewModel.isDirty,
                 viewModel.note.value,
                 viewModel.bitmapImages.value.map { it.image },
-                viewModel.checklistItems.value
+                viewModel.items.value
             )
         }
     }
@@ -324,9 +347,9 @@ fun ChecklistNoteScreen(
     BaseNoteScreen(
         modifier = modifier,
         viewModel = viewModel,
-        snackbarHostState = snackbarHostState,
         reorderableState = reorderableState,
         carouselImageId = imageCarouselCurrentId,
+        snackbarHostState = snackbarHostState,
         onTitleFieldNext = {
             if (checklistItems.isEmpty()) {
                 viewModel.insertItem(text = "", checked = false, index = 0)

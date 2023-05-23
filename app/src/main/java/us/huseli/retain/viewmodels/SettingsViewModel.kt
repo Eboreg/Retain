@@ -18,6 +18,7 @@ import us.huseli.retain.Constants.PREF_NEXTCLOUD_BASE_DIR
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_PASSWORD
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_URI
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_USERNAME
+import us.huseli.retain.data.NextCloudRepository
 import us.huseli.retain.data.NoteRepository
 import us.huseli.retain.nextcloud.tasks.TestNextCloudTaskResult
 import javax.inject.Inject
@@ -25,7 +26,8 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     @ApplicationContext context: Context,
-    private val repository: NoteRepository
+    private val repository: NoteRepository,
+    private val nextCloudRepository: NextCloudRepository,
 ) : ViewModel(), SharedPreferences.OnSharedPreferenceChangeListener {
     private val preferences = PreferenceManager.getDefaultSharedPreferences(context)
 
@@ -43,7 +45,7 @@ class SettingsViewModel @Inject constructor(
     fun testNextCloud(onResult: (TestNextCloudTaskResult) -> Unit) = viewModelScope.launch {
         repository.nextCloudNeedsTesting.value = false
         isNextCloudTesting.value = true
-        repository.testNextcloud(
+        nextCloudRepository.test(
             Uri.parse(nextCloudUri.value),
             nextCloudUsername.value,
             nextCloudPassword.value,

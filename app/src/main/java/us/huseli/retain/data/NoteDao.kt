@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 import us.huseli.retain.data.entities.Note
 import java.time.Instant
@@ -24,8 +25,8 @@ interface NoteDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(note: Note)
 
-    @Query("SELECT * FROM note WHERE noteIsDeleted = 0")
-    suspend fun list(): List<Note>
+    @Query("SELECT * FROM note")
+    suspend fun listAll(): List<Note>
 
     @Query(
         """
@@ -34,6 +35,9 @@ interface NoteDao {
         """
     )
     suspend fun makePlaceFor(id: UUID, position: Int)
+
+    @Update
+    suspend fun update(notes: Collection<Note>)
 
     @Query("UPDATE note SET notePosition = :position WHERE noteId = :id")
     suspend fun updatePosition(id: UUID, position: Int)

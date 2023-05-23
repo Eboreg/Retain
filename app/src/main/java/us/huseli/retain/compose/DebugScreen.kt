@@ -15,9 +15,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -98,12 +95,7 @@ fun DebugTopAppBar(
 
 
 @Composable
-fun DebugScreen(
-    modifier: Modifier = Modifier,
-    logger: Logger,
-    snackbarHostState: SnackbarHostState,
-    onClose: () -> Unit,
-) {
+fun DebugScreen(modifier: Modifier = Modifier, logger: Logger, onClose: () -> Unit) {
     val timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS").withZone(ZoneId.systemDefault())
     var logLevel by rememberSaveable { mutableStateOf(Log.INFO) }
     val listState = rememberLazyListState()
@@ -123,7 +115,7 @@ fun DebugScreen(
         )
     }
 
-    Scaffold(
+    RetainScaffold(
         topBar = {
             DebugTopAppBar(
                 logLevel = logLevel,
@@ -131,7 +123,6 @@ fun DebugScreen(
                 onLogLevelChange = { logLevel = it },
             )
         },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     ) { innerPadding ->
         LazyColumn(
             modifier = modifier.padding(innerPadding).padding(horizontal = 8.dp),

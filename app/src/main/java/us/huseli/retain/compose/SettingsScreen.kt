@@ -28,10 +28,8 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ShapeDefaults
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -340,7 +338,6 @@ fun SettingsScreenImpl(
     nextCloudPassword: String,
     nextCloudBaseDir: String,
     minColumnWidth: Int,
-    snackbarHostState: SnackbarHostState,
     isNextCloudTesting: Boolean = false,
     isNextCloudWorking: Boolean? = null,
     isNextCloudUrlFail: Boolean = false,
@@ -349,9 +346,8 @@ fun SettingsScreenImpl(
     onNextCloudTestClick: () -> Unit,
     onChange: (field: String, value: Any) -> Unit = { _, _ -> },
 ) {
-    Scaffold(
+    RetainScaffold(
         topBar = { SettingsTopAppBar(onClose = onSave) },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     ) { innerPadding ->
         LazyVerticalStaggeredGrid(
             contentPadding = PaddingValues(8.dp),
@@ -430,7 +426,6 @@ fun SettingsScreen(
         nextCloudPassword = nextCloudPassword,
         nextCloudBaseDir = nextCloudBaseDir,
         minColumnWidth = minColumnWidth,
-        snackbarHostState = snackbarHostState,
         isNextCloudTesting = isNextCloudTesting,
         onSave = {
             viewModel.save()
@@ -450,8 +445,6 @@ fun SettingsScreen(
 @Composable
 @Preview(showBackground = true, showSystemUi = true)
 fun SettingsScreenPreview() {
-    val snackbarHostState = remember { SnackbarHostState() }
-
     RetainTheme {
         SettingsScreenImpl(
             nextCloudUri = "https://apan.ap",
@@ -459,7 +452,6 @@ fun SettingsScreenPreview() {
             nextCloudPassword = "apeliapanap",
             nextCloudBaseDir = NEXTCLOUD_BASE_DIR,
             minColumnWidth = 180,
-            snackbarHostState = snackbarHostState,
             onNextCloudTestClick = {},
         )
     }

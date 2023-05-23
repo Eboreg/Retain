@@ -25,10 +25,12 @@ class NoteViewModel @Inject constructor(
 ) : ViewModel(), LogInterface {
     private val _selectedNotes = MutableStateFlow<Set<Note>>(emptySet())
     private val _notes = MutableStateFlow<List<Note>>(emptyList())
+    private val _trashedNotes = MutableStateFlow<List<Note>>(emptyList())
 
     val notes = _notes.asStateFlow()
     val checklistItems: Flow<List<ChecklistItem>> = repository.checklistItems
     val bitmapImages: Flow<List<BitmapImage>> = repository.bitmapImages
+    val trashedNotes = _trashedNotes.asStateFlow()
 
     val selectedNotes: Flow<Set<Note>> = combine(notes, _selectedNotes) { notes, selectedNotes ->
         selectedNotes.intersect(notes.toSet())
@@ -42,50 +44,25 @@ class NoteViewModel @Inject constructor(
         }
     }
 
-    val trashNotes = { notes: Collection<Note> ->
-        viewModelScope.launch {
-            log("trashNotes: $notes")
-            notes.forEach { note ->
-                repository.upsertNote(note.copy(isDeleted = true))
-            }
-        }
+    fun clearTrashNotes() {
+        _trashedNotes.value = emptyList()
     }
 
-    val selectNote = { note: Note ->
-        _selectedNotes.value += note
-        log("selectNote: note=$note, _selectedNotes.value=${_selectedNotes.value}")
+    fun deselectAllNotes() {
+        _selectedNotes.value = emptySet()
     }
 
-    val deselectNote = { note: Note ->
+    fun deselectNote(note: Note) {
         _selectedNotes.value -= note
         log("deselectNote: note=$note, _selectedNotes.value=${_selectedNotes.value}")
     }
 
-    val deselectAllNotes = {
-        _selectedNotes.value = emptySet()
-    }
+    fun saveNote(note: Note, images: Collection<Image>) = saveNote(note, images, emptyList())
 
-    val saveTextNote: (Boolean, Note, Collection<Image>) -> Unit =
-        { shouldSave, note, images ->
-            if (shouldSave) {
-                viewModelScope.launch {
-                    repository.upsertNote(note, images)
-                }
-            }
+    fun saveNote(note: Note, images: Collection<Image>, checklistItems: Collection<ChecklistItem>) =
+        viewModelScope.launch {
+            repository.upsertNote(note, checklistItems, images)
         }
-
-    val saveChecklistNote: (Boolean, Note, Collection<Image>, Collection<ChecklistItem>) -> Unit =
-        { shouldSave, note, images, checklistItems ->
-            if (shouldSave) {
-                viewModelScope.launch {
-                    repository.upsertNote(note, checklistItems, images)
-                }
-            }
-        }
-
-    fun switchNotePositions(from: ItemPosition, to: ItemPosition) {
-        _notes.value = _notes.value.toMutableList().apply { add(to.index, removeAt(from.index)) }
-    }
 
     fun saveNotePositions() = viewModelScope.launch {
         repository.updateNotePositions(
@@ -93,5 +70,27 @@ class NoteViewModel @Inject constructor(
                 if (note.position != index) note.copy(position = index) else null
             }
         )
+    }
+
+    fun selectNote(note: Note) {
+        _selectedNotes.value += note
+        log("selectNote: note=$note, _selectedNotes.value=${_selectedNotes.value}")
+    }
+
+    fun switchNotePositions(from: ItemPosition, to: ItemPosition) {
+        _notes.value = _notes.value.toMutableList().apply { add(to.index, removeAt(from.index)) }
+    }
+
+    fun trashNotes(notes: Collection<Note>) {
+        log("trashNotes: $notes")
+        _trashedNotes.value = notes.toList()
+        viewModelScope.launch {
+            repository.trashNotes(notes)
+        }
+    }
+
+    fun undoTrashNotes() = viewModelScope.launch {
+        repository.upsertNotes(_trashedNotes.value)
+        clearTrashNotes()
     }
 }

@@ -17,9 +17,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,7 +50,6 @@ import us.huseli.retain.viewmodels.SettingsViewModel
 fun HomeScreen(
     modifier: Modifier = Modifier,
     viewModel: NoteViewModel = hiltViewModel(),
-    snackbarHostState: SnackbarHostState,
     onAddTextNoteClick: () -> Unit,
     onAddChecklistClick: () -> Unit,
     onCardClick: (Note) -> Unit,
@@ -68,17 +64,16 @@ fun HomeScreen(
     HomeScreenImpl(
         modifier = modifier,
         notes = notes,
-        snackbarHostState = snackbarHostState,
         checklistItems = checklistItems,
         bitmapImages = bitmapImages,
         selectedNotes = selectedNotes,
         onAddTextNoteClick = onAddTextNoteClick,
         onAddChecklistClick = onAddChecklistClick,
         onCardClick = onCardClick,
-        onEndSelectModeClick = viewModel.deselectAllNotes,
+        onEndSelectModeClick = { viewModel.deselectAllNotes() },
         onTrashNotesClick = { viewModel.trashNotes(it) },
-        onSelectNote = viewModel.selectNote,
-        onDeselectNote = viewModel.deselectNote,
+        onSelectNote = { viewModel.selectNote(it) },
+        onDeselectNote = { viewModel.deselectNote(it) },
         onSettingsClick = onSettingsClick,
         onDebugClick = onDebugClick,
         onSwitchPositions = { from, to -> viewModel.switchNotePositions(from, to) },
@@ -91,7 +86,6 @@ fun HomeScreen(
 @Composable
 fun HomeScreenImpl(
     modifier: Modifier = Modifier,
-    snackbarHostState: SnackbarHostState,
     settingsViewModel: SettingsViewModel = hiltViewModel(),
     notes: List<Note>,
     checklistItems: List<ChecklistItem>,
@@ -120,7 +114,7 @@ fun HomeScreenImpl(
         onDragEnd = { _, _ -> onReordered() }
     )
 
-    Scaffold(
+    RetainScaffold(
         topBar = {
             if (isSelectEnabled) SelectionTopAppBar(
                 selectedCount = selectedNotes.size,
@@ -131,12 +125,6 @@ fun HomeScreenImpl(
                 onSettingsClick = onSettingsClick,
                 onDebugClick = onDebugClick,
                 onViewTypeClick = { viewType = it }
-            )
-        },
-        snackbarHost = {
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier.zIndex(2f),
             )
         },
     ) { innerPadding ->
@@ -257,7 +245,6 @@ fun getPreviewChecklistItems(notes: List<Note>): List<ChecklistItem> {
 fun HomeScreenPreview() {
     val notes = getPreviewNotes()
     val checklistItems = getPreviewChecklistItems(notes)
-    val snackbarHostState = remember { SnackbarHostState() }
 
     RetainTheme {
         HomeScreenImpl(
@@ -265,7 +252,6 @@ fun HomeScreenPreview() {
             checklistItems = checklistItems,
             selectedNotes = emptyList(),
             bitmapImages = emptyList(),
-            snackbarHostState = snackbarHostState,
         )
     }
 }
@@ -275,7 +261,6 @@ fun HomeScreenPreview() {
 fun HomeScreenPreviewDark() {
     val notes = getPreviewNotes()
     val checklistItems = getPreviewChecklistItems(notes)
-    val snackbarHostState = remember { SnackbarHostState() }
 
     RetainTheme {
         HomeScreenImpl(
@@ -283,7 +268,6 @@ fun HomeScreenPreviewDark() {
             checklistItems = checklistItems,
             selectedNotes = emptyList(),
             bitmapImages = emptyList(),
-            snackbarHostState = snackbarHostState,
         )
     }
 }
