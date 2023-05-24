@@ -13,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import us.huseli.retain.Constants
@@ -22,9 +23,9 @@ import us.huseli.retain.LogInterface
 import us.huseli.retain.Logger
 import us.huseli.retain.copyFileToLocal
 import us.huseli.retain.data.entities.BitmapImage
-import us.huseli.retain.data.entities.ChecklistItem
 import us.huseli.retain.data.entities.Image
 import us.huseli.retain.data.entities.Note
+import us.huseli.retain.data.entities.NoteCombo
 import java.io.File
 import java.io.FileOutputStream
 import java.util.UUID
@@ -45,8 +46,9 @@ class NoteRepository @Inject constructor(
 ) : LogInterface {
     private val imageDir = File(context.filesDir, IMAGE_SUBDIR).apply { mkdirs() }
 
-    val notes: Flow<List<Note>> = noteDao.flowList()
-    val checklistItems: Flow<List<ChecklistItem>> = checklistItemDao.flowList()
+    val combos: Flow<List<NoteCombo>> = noteDao.flowListCombos().map { combos ->
+        combos.map { combo -> combo.copy(checklistItems = combo.checklistItems.sortedBy { it.position }) }
+    }
     val nextCloudNeedsTesting = MutableStateFlow(true)
     val bitmapImages = MutableStateFlow<List<BitmapImage>>(emptyList())
 
@@ -89,28 +91,27 @@ class NoteRepository @Inject constructor(
         nextCloudRepository.deleteNotes(ids, images)
     }
 
-    suspend fun getNote(id: UUID): Note? = noteDao.get(id)
+    suspend fun getCombo(id: UUID): NoteCombo? = noteDao.getCombo(id)
 
-    suspend fun listChecklistItems(noteId: UUID): List<ChecklistItem> = checklistItemDao.listByNoteId(noteId)
+    suspend fun trashNotes(combos: Collection<NoteCombo>) {
+        val trashedCombos = combos.map { it.copy(note = it.note.copy(isDeleted = true)) }
 
-    suspend fun trashNotes(notes: Collection<Note>) {
-        val trashedNotes = notes.map { it.copy(isDeleted = true) }
-        noteDao.update(trashedNotes)
-        nextCloudRepository.upload(trashedNotes)
+        noteDao.update(trashedCombos.map { it.note })
+        nextCloudRepository.upload(trashedCombos)
     }
 
     suspend fun updateNotePositions(notes: Collection<Note>) = noteDao.updatePositions(notes)
 
-    suspend fun upsertNote(note: Note, checklistItems: Collection<ChecklistItem>, images: Collection<Image>) {
-        noteDao.upsert(note)
-        if (note.type == NoteType.CHECKLIST) checklistItemDao.replace(note.id, checklistItems)
-        imageDao.replace(note.id, images)
-        nextCloudRepository.upload(note, checklistItems, images)
+    suspend fun upsertNoteCombo(combo: NoteCombo) {
+        noteDao.upsert(combo.note)
+        if (combo.note.type == NoteType.CHECKLIST) checklistItemDao.replace(combo.note.id, combo.checklistItems)
+        imageDao.replace(combo.note.id, combo.images)
+        nextCloudRepository.upload(combo)
     }
 
-    suspend fun upsertNotes(notes: Collection<Note>) {
-        noteDao.update(notes)
-        nextCloudRepository.upload(notes)
+    suspend fun upsertNotes(combos: Collection<NoteCombo>) {
+        noteDao.update(combos.map { it.note })
+        nextCloudRepository.upload(combos)
     }
 
     suspend fun uriToBitmapImage(uri: Uri, noteId: UUID): BitmapImage? {

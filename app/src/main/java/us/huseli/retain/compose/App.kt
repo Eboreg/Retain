@@ -8,8 +8,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import us.huseli.retain.ChecklistNoteDestination
-import us.huseli.retain.Constants.NAV_ARG_IMAGE_CAROUSEL_CURRENT_ID
-import us.huseli.retain.Constants.NAV_ARG_NOTE_ID
 import us.huseli.retain.DebugDestination
 import us.huseli.retain.Enums
 import us.huseli.retain.HomeDestination
@@ -73,36 +71,20 @@ fun App(logger: Logger, viewModel: NoteViewModel = hiltViewModel()) {
                 route = TextNoteDestination.routeTemplate,
                 arguments = TextNoteDestination.arguments,
             ) {
-                val noteId: UUID = UUID.fromString(it.arguments?.getString(NAV_ARG_NOTE_ID))
-                val imageCarouselCurrentId = it.arguments?.getString(NAV_ARG_IMAGE_CAROUSEL_CURRENT_ID)
-
-                @Suppress("Destructure")
                 TextNoteScreen(
-                    imageCarouselCurrentId = imageCarouselCurrentId,
-                    onSave = { shouldSave, note, images -> if (shouldSave) viewModel.saveNote(note, images) },
+                    onSave = { shouldSave, combo -> if (shouldSave) viewModel.saveCombo(combo) },
                     onBackClick = onClose,
-                ) { image ->
-                    navController.navigate(TextNoteDestination.routeForNoteId(noteId, image.filename))
-                }
+                )
             }
 
             composable(
                 route = ChecklistNoteDestination.routeTemplate,
                 arguments = ChecklistNoteDestination.arguments,
             ) {
-                val noteId: UUID = UUID.fromString(it.arguments?.getString(NAV_ARG_NOTE_ID))
-                val imageCarouselCurrentId = it.arguments?.getString(NAV_ARG_IMAGE_CAROUSEL_CURRENT_ID)
-
-                @Suppress("Destructure")
                 ChecklistNoteScreen(
-                    imageCarouselCurrentId = imageCarouselCurrentId,
-                    onSave = { shouldSave, note, images, checklistItems ->
-                        if (shouldSave) viewModel.saveNote(note, images, checklistItems)
-                    },
-                    onBackClick = onClose
-                ) { image ->
-                    navController.navigate(ChecklistNoteDestination.routeForNoteId(noteId, image.filename))
-                }
+                    onSave = { shouldSave, combo -> if (shouldSave) viewModel.saveCombo(combo) },
+                    onBackClick = onClose,
+                )
             }
         }
     }

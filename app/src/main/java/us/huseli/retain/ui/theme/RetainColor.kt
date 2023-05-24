@@ -2,6 +2,8 @@
 
 package us.huseli.retain.ui.theme
 
+import android.content.Context
+import android.content.res.Configuration
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -142,6 +144,13 @@ val noteColorsLight = listOf(
     Color(0xffe9e3d4),
     Color(0xffefeff1),
 )
+
+fun getNoteColors(context: Context): List<Color> =
+    if (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES)
+        noteColorsDark
+    else noteColorsLight
+
+fun getNoteColor(context: Context, index: Int): Color = getNoteColors(context)[index]
 
 @Composable
 fun getNoteColors(): List<Color> = if (isSystemInDarkTheme()) noteColorsDark else noteColorsLight

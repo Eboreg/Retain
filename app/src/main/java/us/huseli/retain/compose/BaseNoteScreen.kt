@@ -23,9 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -34,51 +32,45 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import org.burnoutcrew.reorderable.ReorderableLazyListState
 import org.burnoutcrew.reorderable.reorderable
 import us.huseli.retain.R
-import us.huseli.retain.data.entities.Image
 import us.huseli.retain.outlinedTextFieldColors
-import us.huseli.retain.ui.theme.getNoteColor
 import us.huseli.retain.viewmodels.BaseEditNoteViewModel
-import kotlin.math.max
+import us.huseli.retain.viewmodels.SettingsViewModel
 
 @Composable
 fun BaseNoteScreen(
     modifier: Modifier = Modifier,
     viewModel: BaseEditNoteViewModel,
-    carouselImageId: String? = null,
+    settingsViewModel: SettingsViewModel = hiltViewModel(),
     reorderableState: ReorderableLazyListState? = null,
     onTitleFieldNext: (() -> Unit)?,
     onBackClick: () -> Unit,
-    onImageClick: (Image) -> Unit,
     onBackgroundClick: (() -> Unit)? = null,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
-    contextMenu: (@Composable () -> Unit)? = null,
+    contextMenu: @Composable (() -> Unit)? = null,
     content: LazyListScope.(Color) -> Unit,
 ) {
     val bitmapImages by viewModel.bitmapImages.collectAsStateWithLifecycle(emptyList())
     val colorIdx by viewModel.colorIdx.collectAsStateWithLifecycle(0)
     val context = LocalContext.current
-    var currentCarouselImageId by remember { mutableStateOf(carouselImageId) }
-    val currentCarouselImage = bitmapImages.find { it.image.filename == currentCarouselImageId }
-    val currentCarouselImageIdx = bitmapImages.indexOf(currentCarouselImage)
+    val currentCarouselImage by viewModel.currentCarouselImage.collectAsStateWithLifecycle(null)
     val interactionSource = remember { MutableInteractionSource() }
     val title by viewModel.title.collectAsStateWithLifecycle("")
     val trashedBitmapImages by viewModel.trashedBitmapImages.collectAsStateWithLifecycle()
-    val systemUiController = rememberSystemUiController()
-    val noteColor = getNoteColor(colorIdx)
-    val appBarColor = noteColor.copy(
-        red = max(noteColor.red - 0.05f, 0f),
-        green = max(noteColor.green - 0.05f, 0f),
-        blue = max(noteColor.blue - 0.05f, 0f),
-    )
+    val noteColor by viewModel.noteColor.collectAsStateWithLifecycle(MaterialTheme.colorScheme.background)
+    val appBarColor by viewModel.appBarColor.collectAsStateWithLifecycle(MaterialTheme.colorScheme.surface)
 
-    if (colorIdx > 0) {
-        systemUiController.setStatusBarColor(appBarColor)
-        systemUiController.setNavigationBarColor(noteColor)
+    LaunchedEffect(colorIdx) {
+        if (colorIdx > 0) {
+            settingsViewModel.setSystemBarColors(
+                statusBar = appBarColor,
+                navigationBar = noteColor
+            )
+        }
     }
 
     LaunchedEffect(trashedBitmapImages) {
@@ -128,7 +120,7 @@ fun BaseNoteScreen(
                 NoteImageGrid(
                     bitmapImages = bitmapImages,
                     showDeleteButton = true,
-                    onImageClick = { onImageClick(it.image) },
+                    onImageClick = { viewModel.setCarouselImage(it.image) },
                     onDeleteButtonClick = { viewModel.deleteImage(it) },
                     secondaryRowHeight = 200.dp,
                 )
@@ -155,17 +147,12 @@ fun BaseNoteScreen(
             ImageCarousel(
                 bitmapImage = it,
                 multiple = bitmapImages.size > 1,
-                onClose = onBackClick,
-                onSwipeLeft = {
-                    currentCarouselImageId =
-                        if (currentCarouselImage != bitmapImages.last()) bitmapImages[currentCarouselImageIdx + 1].image.filename
-                        else bitmapImages[0].image.filename
+                onClose = {
+                    viewModel.unsetCarouselImage()
+                    onBackClick()
                 },
-                onSwipeRight = {
-                    currentCarouselImageId =
-                        if (currentCarouselImageIdx > 0) bitmapImages[currentCarouselImageIdx - 1].image.filename
-                        else bitmapImages.last().image.filename
-                },
+                onSwipeLeft = { viewModel.gotoNextCarouselImage() },
+                onSwipeRight = { viewModel.gotoPreviousCarouselImage() },
             )
         }
     }

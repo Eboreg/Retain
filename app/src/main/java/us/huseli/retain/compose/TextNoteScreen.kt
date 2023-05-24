@@ -22,8 +22,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import us.huseli.retain.R
-import us.huseli.retain.data.entities.Image
-import us.huseli.retain.data.entities.Note
+import us.huseli.retain.data.entities.NoteCombo
 import us.huseli.retain.outlinedTextFieldColors
 import us.huseli.retain.ui.theme.RetainTheme
 import us.huseli.retain.viewmodels.EditNoteViewModel
@@ -32,47 +31,40 @@ import us.huseli.retain.viewmodels.EditNoteViewModel
 fun TextNoteScreen(
     modifier: Modifier = Modifier,
     viewModel: EditNoteViewModel = hiltViewModel(),
-    imageCarouselCurrentId: String? = null,
-    onSave: ((shouldSave: Boolean, note: Note, images: Collection<Image>) -> Unit)? = null,
+    onSave: ((shouldSave: Boolean, combo: NoteCombo) -> Unit)? = null,
     onBackClick: (() -> Unit)? = null,
-    onImageClick: ((Image) -> Unit)? = null,
 ) {
     val text by viewModel.text.collectAsStateWithLifecycle("")
     val focusRequester = remember { FocusRequester() }
     var selection by remember { mutableStateOf(TextRange(0)) }
-    val textFieldValue by remember(text, selection) {
+    var textFieldValue by remember(text) {
         mutableStateOf(TextFieldValue(text = text, selection = selection))
     }
     val snackbarHostState = remember { SnackbarHostState() }
 
     DisposableEffect(Unit) {
         onDispose {
-            onSave?.invoke(
-                viewModel.shouldSave,
-                viewModel.note.value,
-                viewModel.bitmapImages.value.map { it.image },
-            )
+            onSave?.invoke(viewModel.shouldSave, viewModel.combo)
         }
     }
 
     BaseNoteScreen(
         modifier = modifier,
         viewModel = viewModel,
-        carouselImageId = imageCarouselCurrentId,
-        snackbarHostState = snackbarHostState,
         onTitleFieldNext = null,
         onBackClick = { onBackClick?.invoke() },
-        onImageClick = { onImageClick?.invoke(it) },
         onBackgroundClick = {
             selection = TextRange(text.length)
             focusRequester.requestFocus()
         },
+        snackbarHostState = snackbarHostState,
     ) {
         item {
             OutlinedTextField(
                 value = textFieldValue,
                 onValueChange = {
                     selection = it.selection
+                    textFieldValue = it
                     viewModel.setText(it.text)
                 },
                 modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),

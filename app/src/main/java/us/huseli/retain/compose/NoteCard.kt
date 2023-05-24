@@ -37,8 +37,7 @@ import org.burnoutcrew.reorderable.detectReorder
 import us.huseli.retain.Enums
 import us.huseli.retain.R
 import us.huseli.retain.data.entities.BitmapImage
-import us.huseli.retain.data.entities.ChecklistItem
-import us.huseli.retain.data.entities.Note
+import us.huseli.retain.data.entities.NoteCombo
 import us.huseli.retain.ui.theme.getNoteColor
 import kotlin.math.min
 
@@ -49,14 +48,13 @@ fun NoteCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
-    note: Note,
-    checklistItems: List<ChecklistItem>,
+    combo: NoteCombo,
     bitmapImages: List<BitmapImage>,
     isSelected: Boolean,
     reorderableState: ReorderableLazyListState? = null,
     showDragHandle: Boolean = false,
 ) {
-    val noteColor = getNoteColor(note.colorIdx)
+    val noteColor = getNoteColor(combo.note.colorIdx)
     val border =
         if (isSelected) BorderStroke(3.dp, MaterialTheme.colorScheme.primary)
         else BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f))
@@ -82,22 +80,22 @@ fun NoteCard(
                 )
 
                 Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
-                    if (note.title.isNotBlank()) {
+                    if (combo.note.title.isNotBlank()) {
                         Text(
                             modifier = if (showDragHandle) Modifier.padding(end = 24.dp) else Modifier,
-                            text = note.title,
+                            text = combo.note.title,
                             style = MaterialTheme.typography.bodyLarge,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
 
-                    when (note.type) {
+                    when (combo.note.type) {
                         Enums.NoteType.TEXT -> {
-                            if (note.text.isNotBlank()) {
-                                if (note.title.isNotBlank()) Spacer(modifier = Modifier.height(8.dp))
+                            if (combo.note.text.isNotBlank()) {
+                                if (combo.note.title.isNotBlank()) Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = note.text,
+                                    text = combo.note.text,
                                     overflow = TextOverflow.Ellipsis,
                                     maxLines = 6,
                                     style = MaterialTheme.typography.bodyMedium,
@@ -107,7 +105,7 @@ fun NoteCard(
                         }
 
                         Enums.NoteType.CHECKLIST -> {
-                            NoteCardChecklist(note = note, checklistItems = checklistItems)
+                            NoteCardChecklist(combo = combo)
                         }
                     }
                 }
@@ -135,12 +133,14 @@ fun NoteCard(
 
 
 @Composable
-fun NoteCardChecklist(note: Note, checklistItems: List<ChecklistItem>) {
-    val filteredItems = if (!note.showChecked) checklistItems.filter { !it.checked } else checklistItems
-    val shownItems = checklistItems.subList(0, min(filteredItems.size, 5))
-    val hiddenItemCount = checklistItems.size - shownItems.size
+fun NoteCardChecklist(combo: NoteCombo) {
+    val filteredItems =
+        if (!combo.note.showChecked) combo.checklistItems.filter { !it.checked }
+        else combo.checklistItems
+    val shownItems = combo.checklistItems.subList(0, min(filteredItems.size, 5))
+    val hiddenItemCount = combo.checklistItems.size - shownItems.size
 
-    if (note.title.isNotBlank() && checklistItems.isNotEmpty()) {
+    if (combo.note.title.isNotBlank() && combo.checklistItems.isNotEmpty()) {
         Spacer(modifier = Modifier.height(8.dp))
     }
 
@@ -166,7 +166,7 @@ fun NoteCardChecklist(note: Note, checklistItems: List<ChecklistItem>) {
         // "+ X items"
         if (hiddenItemCount > 0) {
             val text = pluralStringResource(
-                if (checklistItems.minus(shownItems.toSet()).all { it.checked }) R.plurals.plus_x_checked_items
+                if (combo.checklistItems.minus(shownItems.toSet()).all { it.checked }) R.plurals.plus_x_checked_items
                 else R.plurals.plus_x_items,
                 hiddenItemCount,
                 hiddenItemCount,

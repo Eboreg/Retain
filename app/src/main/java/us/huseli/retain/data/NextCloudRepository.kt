@@ -12,10 +12,8 @@ import us.huseli.retain.Constants
 import us.huseli.retain.LogInterface
 import us.huseli.retain.Logger
 import us.huseli.retain.data.entities.BitmapImage
-import us.huseli.retain.data.entities.ChecklistItem
 import us.huseli.retain.data.entities.Image
-import us.huseli.retain.data.entities.Note
-import us.huseli.retain.data.entities.NoteCombined
+import us.huseli.retain.data.entities.NoteCombo
 import us.huseli.retain.nextcloud.NextCloudEngine
 import us.huseli.retain.nextcloud.tasks.DownloadMissingImagesTask
 import us.huseli.retain.nextcloud.tasks.DownloadNoteImagesTask
@@ -103,36 +101,30 @@ class NextCloudRepository @Inject constructor(
 
             // Remote files have been fetched and parsed; now update DB where needed.
             ioScope.launch {
-                val remoteNotesMap = downTaskResult.remoteNotesCombined.associateBy { it.id }
-                val notes = noteDao.listAll()
-                val checklistItems = checklistItemDao.listAll()
-                val images = imageDao.listAll()
+                val remoteCombosMap = downTaskResult.remoteNoteCombos.associateBy { it.note.id }
 
-                val localNotesMap = notes.map { note ->
-                    NoteCombined(
-                        note = note,
-                        checklistItems = checklistItems.filter { it.noteId == note.id },
-                        images = images.filter { it.noteId == note.id },
-                        databaseVersion = database.openHelper.readableDatabase.version,
-                    )
-                }.associateBy { it.id }
+                val localCombosMap = noteDao.listAllCombos()
+                    .map { it.copy(databaseVersion = database.openHelper.readableDatabase.version) }
+                    .associateBy { it.note.id }
 
                 // All notes on remote that either don't exist locally, or
                 // have a newer timestamp than their local counterparts:
-                val remoteUpdated = remoteNotesMap.filter { (id, remote) ->
-                    localNotesMap[id]?.let { local -> local < remote } ?: true
+                @Suppress("destructure")
+                val remoteUpdated = remoteCombosMap.filter { (id, remote) ->
+                    localCombosMap[id]?.let { local -> local.note < remote.note } ?: true
                 }.values
 
                 // All local notes that either don't exist on remote, or
                 // have a newer timestamp than their remote counterparts:
-                val localUpdated = localNotesMap.filter { (id, local) ->
-                    remoteNotesMap[id]?.let { remote -> remote < local } ?: true
+                @Suppress("destructure")
+                val localUpdated = localCombosMap.filter { (id, local) ->
+                    remoteCombosMap[id]?.let { remote -> remote.note < local.note } ?: true
                 }.values
 
                 remoteUpdated.forEach {
-                    noteDao.upsert(it)
-                    checklistItemDao.replace(it.id, it.checklistItems)
-                    imageDao.replace(it.id, it.images)
+                    noteDao.upsert(it.note)
+                    checklistItemDao.replace(it.note.id, it.checklistItems)
+                    imageDao.replace(it.note.id, it.images)
                     DownloadNoteImagesTask(nextCloudEngine, it).run(
                         onEachCallback = { image, result ->
                             if (result.success) addDownloadedImage(image)
@@ -173,29 +165,14 @@ class NextCloudRepository @Inject constructor(
         nextCloudEngine.testClient(uri, username, password, baseDir) { result -> onResult(result) }
     }
 
-    fun upload(note: Note, checklistItems: Collection<ChecklistItem>, images: Collection<Image>) {
+    fun upload(combo: NoteCombo) {
         UploadNoteCombinedTask(
             nextCloudEngine,
-            NoteCombined(
-                note = note,
-                checklistItems = checklistItems,
-                images = images,
-                databaseVersion = database.openHelper.readableDatabase.version,
-            )
+            combo.copy(databaseVersion = database.openHelper.readableDatabase.version)
         ).run { result ->
             if (!result.success) logError("Failed to upload note to Nextcloud", result.error)
         }
     }
 
-    suspend fun upload(notes: Collection<Note>) {
-        val checklistItems = checklistItemDao.listByNoteIds(notes.map { it.id })
-        val images = imageDao.listByNoteIds(notes.map { it.id })
-
-        notes.forEach { note ->
-            upload(
-                note = note,
-                checklistItems = checklistItems.filter { it.noteId == note.id },
-                images = images.filter { it.noteId == note.id })
-        }
-    }
+    fun upload(combos: Collection<NoteCombo>) = combos.forEach { combo -> upload(combo) }
 }

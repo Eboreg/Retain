@@ -13,9 +13,7 @@ import us.huseli.retain.LogInterface
 import us.huseli.retain.Logger
 import us.huseli.retain.data.NoteRepository
 import us.huseli.retain.data.entities.BitmapImage
-import us.huseli.retain.data.entities.ChecklistItem
-import us.huseli.retain.data.entities.Image
-import us.huseli.retain.data.entities.Note
+import us.huseli.retain.data.entities.NoteCombo
 import javax.inject.Inject
 
 @HiltViewModel
@@ -23,74 +21,71 @@ class NoteViewModel @Inject constructor(
     private val repository: NoteRepository,
     override val logger: Logger
 ) : ViewModel(), LogInterface {
-    private val _selectedNotes = MutableStateFlow<Set<Note>>(emptySet())
-    private val _notes = MutableStateFlow<List<Note>>(emptyList())
-    private val _trashedNotes = MutableStateFlow<List<Note>>(emptyList())
+    private val _selectedCombos = MutableStateFlow<Set<NoteCombo>>(emptySet())
+    private val _trashedCombos = MutableStateFlow<List<NoteCombo>>(emptyList())
+    private val _combos = MutableStateFlow<List<NoteCombo>>(emptyList())
 
-    val notes = _notes.asStateFlow()
-    val checklistItems: Flow<List<ChecklistItem>> = repository.checklistItems
+    val combos = _combos.asStateFlow()
     val bitmapImages: Flow<List<BitmapImage>> = repository.bitmapImages
-    val trashedNotes = _trashedNotes.asStateFlow()
+    val trashedNotes = _trashedCombos.asStateFlow()
 
-    val selectedNotes: Flow<Set<Note>> = combine(notes, _selectedNotes) { notes, selectedNotes ->
-        selectedNotes.intersect(notes.toSet())
+    val selectedNotes: Flow<Set<NoteCombo>> = combine(_combos, _selectedCombos) { combos, selectedNotes ->
+        selectedNotes.intersect(combos.toSet())
     }
 
     init {
         viewModelScope.launch {
-            repository.notes.collect { notes ->
-                _notes.value = notes
+            repository.combos.collect { combos ->
+                _combos.value = combos
             }
         }
     }
 
     fun clearTrashNotes() {
-        _trashedNotes.value = emptyList()
+        _trashedCombos.value = emptyList()
     }
 
     fun deselectAllNotes() {
-        _selectedNotes.value = emptySet()
+        _selectedCombos.value = emptySet()
     }
 
-    fun deselectNote(note: Note) {
-        _selectedNotes.value -= note
-        log("deselectNote: note=$note, _selectedNotes.value=${_selectedNotes.value}")
+    fun deselectNote(combo: NoteCombo) {
+        _selectedCombos.value -= combo
+        log("deselectNote: note=$combo, _selectedNotes.value=${_selectedCombos.value}")
     }
 
-    fun saveNote(note: Note, images: Collection<Image>) = saveNote(note, images, emptyList())
+    fun saveCombo(combo: NoteCombo) = viewModelScope.launch {
+        repository.upsertNoteCombo(combo)
+    }
 
-    fun saveNote(note: Note, images: Collection<Image>, checklistItems: Collection<ChecklistItem>) =
-        viewModelScope.launch {
-            repository.upsertNote(note, checklistItems, images)
-        }
-
+    @Suppress("Destructure")
     fun saveNotePositions() = viewModelScope.launch {
         repository.updateNotePositions(
-            _notes.value.mapIndexedNotNull { index, note ->
-                if (note.position != index) note.copy(position = index) else null
+            _combos.value.mapIndexedNotNull { index, combo ->
+                if (combo.note.position != index) combo.note.copy(position = index) else null
             }
         )
     }
 
-    fun selectNote(note: Note) {
-        _selectedNotes.value += note
-        log("selectNote: note=$note, _selectedNotes.value=${_selectedNotes.value}")
+    fun selectNote(combo: NoteCombo) {
+        _selectedCombos.value += combo
+        log("selectNote: note=$combo, _selectedNotes.value=${_selectedCombos.value}")
     }
 
     fun switchNotePositions(from: ItemPosition, to: ItemPosition) {
-        _notes.value = _notes.value.toMutableList().apply { add(to.index, removeAt(from.index)) }
+        _combos.value = _combos.value.toMutableList().apply { add(to.index, removeAt(from.index)) }
     }
 
-    fun trashNotes(notes: Collection<Note>) {
+    fun trashNotes(notes: Collection<NoteCombo>) {
         log("trashNotes: $notes")
-        _trashedNotes.value = notes.toList()
+        _trashedCombos.value = notes.toList()
         viewModelScope.launch {
             repository.trashNotes(notes)
         }
     }
 
     fun undoTrashNotes() = viewModelScope.launch {
-        repository.upsertNotes(_trashedNotes.value)
+        repository.upsertNotes(_trashedCombos.value)
         clearTrashNotes()
     }
 }

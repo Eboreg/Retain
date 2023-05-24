@@ -1,6 +1,5 @@
 package us.huseli.retain.compose
 
-import android.content.res.Configuration.UI_MODE_NIGHT_YES
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
@@ -26,7 +25,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -36,15 +34,12 @@ import org.burnoutcrew.reorderable.ReorderableItem
 import org.burnoutcrew.reorderable.detectReorder
 import org.burnoutcrew.reorderable.rememberReorderableLazyListState
 import org.burnoutcrew.reorderable.reorderable
-import us.huseli.retain.Enums
 import us.huseli.retain.Enums.HomeScreenViewType
 import us.huseli.retain.data.entities.BitmapImage
-import us.huseli.retain.data.entities.ChecklistItem
 import us.huseli.retain.data.entities.Note
-import us.huseli.retain.ui.theme.RetainTheme
+import us.huseli.retain.data.entities.NoteCombo
 import us.huseli.retain.viewmodels.NoteViewModel
 import us.huseli.retain.viewmodels.SettingsViewModel
-
 
 @Composable
 fun HomeScreen(
@@ -56,17 +51,15 @@ fun HomeScreen(
     onSettingsClick: () -> Unit,
     onDebugClick: () -> Unit,
 ) {
-    val notes by viewModel.notes.collectAsStateWithLifecycle(emptyList())
+    val combos by viewModel.combos.collectAsStateWithLifecycle()
     val selectedNotes by viewModel.selectedNotes.collectAsStateWithLifecycle(emptySet())
-    val checklistItems by viewModel.checklistItems.collectAsStateWithLifecycle(emptyList())
     val bitmapImages by viewModel.bitmapImages.collectAsStateWithLifecycle(emptyList())
 
     HomeScreenImpl(
         modifier = modifier,
-        notes = notes,
-        checklistItems = checklistItems,
+        combos = combos,
         bitmapImages = bitmapImages,
-        selectedNotes = selectedNotes,
+        selectedCombos = selectedNotes,
         onAddTextNoteClick = onAddTextNoteClick,
         onAddChecklistClick = onAddChecklistClick,
         onCardClick = onCardClick,
@@ -87,23 +80,22 @@ fun HomeScreen(
 fun HomeScreenImpl(
     modifier: Modifier = Modifier,
     settingsViewModel: SettingsViewModel = hiltViewModel(),
-    notes: List<Note>,
-    checklistItems: List<ChecklistItem>,
+    combos: List<NoteCombo>,
     bitmapImages: List<BitmapImage>,
-    selectedNotes: Collection<Note>,
+    selectedCombos: Collection<NoteCombo>,
     onAddTextNoteClick: () -> Unit = {},
     onAddChecklistClick: () -> Unit = {},
     onCardClick: (Note) -> Unit = {},
     onEndSelectModeClick: () -> Unit = {},
-    onTrashNotesClick: (Collection<Note>) -> Unit = {},
-    onSelectNote: (Note) -> Unit = {},
-    onDeselectNote: (Note) -> Unit = {},
+    onTrashNotesClick: (Collection<NoteCombo>) -> Unit = {},
+    onSelectNote: (NoteCombo) -> Unit = {},
+    onDeselectNote: (NoteCombo) -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onDebugClick: () -> Unit = {},
     onSwitchPositions: (ItemPosition, ItemPosition) -> Unit = { _, _ -> },
     onReordered: () -> Unit = {},
 ) {
-    val isSelectEnabled = selectedNotes.isNotEmpty()
+    val isSelectEnabled = selectedCombos.isNotEmpty()
     var isFABExpanded by rememberSaveable { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
     val minColumnWidth by settingsViewModel.minColumnWidth.collectAsStateWithLifecycle()
@@ -116,9 +108,9 @@ fun HomeScreenImpl(
     RetainScaffold(
         topBar = {
             if (isSelectEnabled) SelectionTopAppBar(
-                selectedCount = selectedNotes.size,
+                selectedCount = selectedCombos.size,
                 onCloseClick = onEndSelectModeClick,
-                onTrashClick = { onTrashNotesClick(selectedNotes) },
+                onTrashClick = { onTrashNotesClick(selectedCombos) },
             ) else HomeScreenTopAppBar(
                 viewType = viewType,
                 onSettingsClick = onSettingsClick,
@@ -150,23 +142,22 @@ fun HomeScreenImpl(
             .fillMaxHeight()
             .padding(innerPadding)
 
-        val lazyContent: @Composable (Note, Modifier) -> Unit = { note, modifier ->
+        val lazyContent: @Composable (NoteCombo, Modifier) -> Unit = { combo, modifier ->
             NoteCard(
                 modifier = modifier.fillMaxWidth(),
-                note = note,
-                checklistItems = checklistItems.filter { it.noteId == note.id },
-                bitmapImages = bitmapImages.filter { it.image.noteId == note.id },
+                combo = combo,
+                bitmapImages = bitmapImages.filter { it.image.noteId == combo.note.id },
                 onClick = {
                     if (isSelectEnabled) {
-                        if (selectedNotes.contains(note)) onDeselectNote(note)
-                        else onSelectNote(note)
-                    } else onCardClick(note)
+                        if (selectedCombos.contains(combo)) onDeselectNote(combo)
+                        else onSelectNote(combo)
+                    } else onCardClick(combo.note)
                 },
                 onLongClick = {
-                    if (!isSelectEnabled) onSelectNote(note)
-                    else onDeselectNote(note)
+                    if (!isSelectEnabled) onSelectNote(combo)
+                    else onDeselectNote(combo)
                 },
-                isSelected = selectedNotes.contains(note),
+                isSelected = selectedCombos.contains(combo),
                 showDragHandle = viewType == HomeScreenViewType.LIST,
                 reorderableState = reorderableState,
             )
@@ -180,7 +171,7 @@ fun HomeScreenImpl(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalItemSpacing = 8.dp,
             ) {
-                items(notes, key = { it.id }) { note -> lazyContent(note, Modifier) }
+                items(combos, key = { it.note.id }) { combo -> lazyContent(combo, Modifier) }
             }
         } else {
             LazyColumn(
@@ -189,75 +180,13 @@ fun HomeScreenImpl(
                 contentPadding = PaddingValues(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                items(notes, key = { it.id }) { note ->
-                    ReorderableItem(reorderableState, key = note.id) { isDragging ->
+                items(combos, key = { it.note.id }) { combo ->
+                    ReorderableItem(reorderableState, key = combo.note.id) { isDragging ->
                         val elevation by animateDpAsState(if (isDragging) 16.dp else 0.dp)
-                        lazyContent(note, Modifier.shadow(elevation))
+                        lazyContent(combo, Modifier.shadow(elevation))
                     }
                 }
             }
         }
-    }
-}
-
-
-fun getPreviewNotes(): List<Note> {
-    return listOf(
-        Note(title = "textnote", text = "text of textnote", type = Enums.NoteType.TEXT),
-        Note(title = "checklistnote with long fucking title", type = Enums.NoteType.CHECKLIST),
-        Note(title = "textnote 2", text = "text of textnote 2", type = Enums.NoteType.TEXT),
-        Note(title = "checklistnote 2", type = Enums.NoteType.CHECKLIST),
-        Note(type = Enums.NoteType.CHECKLIST),
-        Note(type = Enums.NoteType.CHECKLIST),
-        Note(title = "empty checklistnote", type = Enums.NoteType.CHECKLIST),
-        Note(title = "empty textnote", type = Enums.NoteType.TEXT),
-        Note(type = Enums.NoteType.TEXT),
-    )
-}
-
-fun getPreviewChecklistItems(notes: List<Note>): List<ChecklistItem> {
-    return listOf(
-        ChecklistItem(text = "item 1", noteId = notes[1].id),
-        ChecklistItem(text = "item 2", noteId = notes[1].id, checked = true),
-        ChecklistItem(text = "item 3", noteId = notes[1].id),
-        ChecklistItem(text = "item 4", noteId = notes[1].id),
-        ChecklistItem(text = "item 5", noteId = notes[1].id),
-        ChecklistItem(text = "item 6", noteId = notes[1].id),
-        ChecklistItem(text = "item 7", noteId = notes[1].id),
-        ChecklistItem(text = "item 8", noteId = notes[3].id),
-        ChecklistItem(text = "item 9", noteId = notes[3].id, checked = true),
-        ChecklistItem(text = "item 10", noteId = notes[4].id),
-    )
-}
-
-@Preview(showBackground = true, showSystemUi = true, widthDp = 395)
-@Composable
-fun HomeScreenPreview() {
-    val notes = getPreviewNotes()
-    val checklistItems = getPreviewChecklistItems(notes)
-
-    RetainTheme {
-        HomeScreenImpl(
-            notes = notes,
-            checklistItems = checklistItems,
-            selectedNotes = emptyList(),
-            bitmapImages = emptyList(),
-        )
-    }
-}
-
-@Preview(showSystemUi = true, showBackground = true, uiMode = UI_MODE_NIGHT_YES, widthDp = 395)
-@Composable
-fun HomeScreenPreviewDark() {
-    val notes = getPreviewNotes()
-    val checklistItems = getPreviewChecklistItems(notes)
-
-    RetainTheme {
-        HomeScreenImpl(
-            notes = notes,
-            checklistItems = checklistItems,
-            selectedNotes = emptyList(),
-            bitmapImages = emptyList(),
-        )
     }
 }

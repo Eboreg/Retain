@@ -69,8 +69,7 @@ import org.burnoutcrew.reorderable.detectReorder
 import org.burnoutcrew.reorderable.rememberReorderableLazyListState
 import us.huseli.retain.R
 import us.huseli.retain.data.entities.ChecklistItem
-import us.huseli.retain.data.entities.Image
-import us.huseli.retain.data.entities.Note
+import us.huseli.retain.data.entities.NoteCombo
 import us.huseli.retain.viewmodels.EditChecklistNoteViewModel
 import java.util.UUID
 import kotlin.math.max
@@ -340,15 +339,13 @@ fun Checklist(
 fun ChecklistNoteScreen(
     modifier: Modifier = Modifier,
     viewModel: EditChecklistNoteViewModel = hiltViewModel(),
-    imageCarouselCurrentId: String? = null,
-    onSave: (Boolean, Note, Collection<Image>, Collection<ChecklistItem>) -> Unit,
+    onSave: (Boolean, NoteCombo) -> Unit,
     onBackClick: () -> Unit,
-    onImageClick: ((Image) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val showChecked by viewModel.showChecked.collectAsStateWithLifecycle(true)
-    val checklistItems by viewModel.items.collectAsStateWithLifecycle(emptyList())
+    val checklistItems by viewModel.items.collectAsStateWithLifecycle()
     val trashedChecklistItems by viewModel.trashedItems.collectAsStateWithLifecycle()
     var focusedItemIndex by rememberSaveable { mutableStateOf<Int?>(null) }
     val itemSelectionStarts = remember { mutableStateMapOf<UUID, Int>() }
@@ -377,12 +374,7 @@ fun ChecklistNoteScreen(
 
     DisposableEffect(Unit) {
         onDispose {
-            onSave(
-                viewModel.shouldSave,
-                viewModel.note.value,
-                viewModel.bitmapImages.value.map { it.image },
-                viewModel.items.value
-            )
+            onSave(viewModel.shouldSave, viewModel.combo)
         }
     }
 
@@ -390,8 +382,6 @@ fun ChecklistNoteScreen(
         modifier = modifier,
         viewModel = viewModel,
         reorderableState = reorderableState,
-        carouselImageId = imageCarouselCurrentId,
-        snackbarHostState = snackbarHostState,
         onTitleFieldNext = {
             if (checklistItems.isEmpty()) {
                 viewModel.insertItem(text = "", checked = false, index = 0)
@@ -399,7 +389,7 @@ fun ChecklistNoteScreen(
             }
         },
         onBackClick = onBackClick,
-        onImageClick = { onImageClick?.invoke(it) },
+        snackbarHostState = snackbarHostState,
         contextMenu = {
             ChecklistNoteContextMenu(
                 onDeleteCheckedClick = { viewModel.deleteCheckedItems() },

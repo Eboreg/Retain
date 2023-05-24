@@ -3,6 +3,7 @@ package us.huseli.retain.viewmodels
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.preference.PreferenceManager
@@ -18,6 +19,8 @@ import us.huseli.retain.Constants.PREF_NEXTCLOUD_BASE_DIR
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_PASSWORD
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_URI
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_USERNAME
+import us.huseli.retain.LogInterface
+import us.huseli.retain.Logger
 import us.huseli.retain.data.NextCloudRepository
 import us.huseli.retain.data.NoteRepository
 import us.huseli.retain.nextcloud.tasks.TestNextCloudTaskResult
@@ -28,8 +31,11 @@ class SettingsViewModel @Inject constructor(
     @ApplicationContext context: Context,
     private val repository: NoteRepository,
     private val nextCloudRepository: NextCloudRepository,
-) : ViewModel(), SharedPreferences.OnSharedPreferenceChangeListener {
+    override val logger: Logger,
+) : ViewModel(), SharedPreferences.OnSharedPreferenceChangeListener, LogInterface {
     private val preferences = PreferenceManager.getDefaultSharedPreferences(context)
+    private val _statusBarColor = MutableStateFlow<Color?>(null)
+    private val _navigationBarColor = MutableStateFlow<Color?>(null)
 
     val nextCloudUri = MutableStateFlow(preferences.getString(PREF_NEXTCLOUD_URI, "") ?: "")
     val nextCloudUsername = MutableStateFlow(preferences.getString(PREF_NEXTCLOUD_USERNAME, "") ?: "")
@@ -41,6 +47,13 @@ class SettingsViewModel @Inject constructor(
     val isNextCloudUrlFail = MutableStateFlow(false)
     val isNextCloudCredentialsFail = MutableStateFlow(false)
     val nextCloudNeedsTesting = repository.nextCloudNeedsTesting.asStateFlow()
+    val statusBarColor = _statusBarColor.asStateFlow()
+    val navigationBarColor = _navigationBarColor.asStateFlow()
+
+    fun setSystemBarColors(statusBar: Color, navigationBar: Color) {
+        _statusBarColor.value = statusBar
+        _navigationBarColor.value = navigationBar
+    }
 
     fun testNextCloud(onResult: (TestNextCloudTaskResult) -> Unit) = viewModelScope.launch {
         repository.nextCloudNeedsTesting.value = false

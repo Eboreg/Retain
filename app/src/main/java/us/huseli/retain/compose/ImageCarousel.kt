@@ -39,15 +39,18 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.hilt.navigation.compose.hiltViewModel
 import us.huseli.retain.Enums.Side
 import us.huseli.retain.R
 import us.huseli.retain.data.entities.BitmapImage
+import us.huseli.retain.viewmodels.SettingsViewModel
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
 @Composable
 fun ImageCarousel(
     modifier: Modifier = Modifier,
+    settingsViewModel: SettingsViewModel = hiltViewModel(),
     bitmapImage: BitmapImage,
     multiple: Boolean,
     onClose: () -> Unit,
@@ -64,6 +67,8 @@ fun ImageCarousel(
     var slideFrom by remember { mutableStateOf<Side?>(null) }
     var slideTo by remember(bitmapImage) { mutableStateOf<Side?>(null) }
     val offset by remember { mutableStateOf(Animatable(0f)) }
+
+    settingsViewModel.setSystemBarColors(statusBar = Color.Black, navigationBar = Color.Black)
 
     LaunchedEffect(slideFrom, bitmapImage) {
         if (slideFrom == Side.LEFT) {

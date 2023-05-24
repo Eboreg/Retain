@@ -11,7 +11,7 @@ import us.huseli.retain.Constants.NEXTCLOUD_IMAGE_SUBDIR
 import us.huseli.retain.Constants.NEXTCLOUD_JSON_SUBDIR
 import us.huseli.retain.LogMessage
 import us.huseli.retain.data.entities.Image
-import us.huseli.retain.data.entities.NoteCombined
+import us.huseli.retain.data.entities.NoteCombo
 import us.huseli.retain.nextcloud.NextCloudEngine
 import java.io.File
 import java.io.FileReader
@@ -85,12 +85,12 @@ class DownloadMissingImagesTask(
 /** Down: 0..n image files */
 class DownloadNoteImagesTask(
     engine: NextCloudEngine,
-    noteCombined: NoteCombined
+    noteCombo: NoteCombo
 ) : ListTask<OperationTaskResult, DownloadFileTask, Image>(
     engine = engine,
-    objects = noteCombined.images
+    objects = noteCombo.images
 ) {
-    override val startMessageString = "Starting download of ${noteCombined.images}"
+    override val startMessageString = "Starting download of ${noteCombo.images}"
     override val failOnUnsuccessfulChildTask = false
 
     override fun getChildTask(obj: Image) = DownloadFileTask(
@@ -106,7 +106,7 @@ class DownloadNoteTaskResult(
     success: Boolean,
     error: LogMessage?,
     remoteOperationResult: RemoteOperationResult<*>?,
-    val remoteNoteCombined: NoteCombined?
+    val remoteNoteCombo: NoteCombo?
 ) : OperationTaskResult(success, error, remoteOperationResult)
 
 /** Down: 1 note JSON file */
@@ -115,10 +115,10 @@ class DownloadNoteTask(engine: NextCloudEngine, remotePath: String) : BaseDownlo
     remotePath = remotePath,
     tempDir = File(engine.context.cacheDir, "down").also { it.mkdir() },
 ) {
-    private var remoteNoteCombined: NoteCombined? = null
+    private var remoteNoteCombo: NoteCombo? = null
 
     override fun getResult() =
-        DownloadNoteTaskResult(success, error, remoteOperationResult, remoteNoteCombined)
+        DownloadNoteTaskResult(success, error, remoteOperationResult, remoteNoteCombo)
 
     override fun handleDownloadedFile() {
         engine.ioScope.launch {
@@ -126,10 +126,10 @@ class DownloadNoteTask(engine: NextCloudEngine, remotePath: String) : BaseDownlo
                 try {
                     val json = FileReader(localTempFile).use { it.readText() }
 
-                    remoteNoteCombined = engine.gson.fromJson(json, NoteCombined::class.java)
-                    if (remoteNoteCombined != null) {
-                        notifyIfReady("Successfully parsed $remoteNoteCombined from Nextcloud")
-                    } else failWithMessage("$remotePath: noteCombined is null")
+                    remoteNoteCombo = engine.gson.fromJson(json, NoteCombo::class.java)
+                    if (remoteNoteCombo != null) {
+                        notifyIfReady("Successfully parsed $remoteNoteCombo from Nextcloud")
+                    } else failWithMessage("$remotePath: NoteCombo is null")
                 } catch (e: Exception) {
                     failWithMessage("$remotePath: $e")
                 } finally {
@@ -146,7 +146,7 @@ class DownstreamSyncTaskResult(
     error: LogMessage?,
     remoteOperationResult: RemoteOperationResult<*>?,
     remoteFiles: List<RemoteFile>,
-    val remoteNotesCombined: List<NoteCombined>,
+    val remoteNoteCombos: List<NoteCombo>,
 ) : ListFilesTaskResult(success, error, remoteOperationResult, remoteFiles)
 
 /** Down: 0..n note JSON files */
@@ -159,14 +159,14 @@ class DownstreamSyncTask(engine: NextCloudEngine) :
             remoteFile.remotePath.split("/").last().startsWith("note-")
         }
     ) {
-    private val remoteNotesCombined = mutableListOf<NoteCombined>()
+    private val remoteNoteCombos = mutableListOf<NoteCombo>()
     override val failOnUnsuccessfulChildTask = false
 
     override fun getChildTask(remoteFile: RemoteFile) = DownloadNoteTask(engine, remoteFile.remotePath)
 
     override fun processChildTaskResult(remoteFile: RemoteFile, result: DownloadNoteTaskResult) {
-        if (result.success && result.remoteNoteCombined != null)
-            remoteNotesCombined.add(result.remoteNoteCombined)
+        if (result.success && result.remoteNoteCombo != null)
+            remoteNoteCombos.add(result.remoteNoteCombo)
     }
 
     override fun getResult() = DownstreamSyncTaskResult(
@@ -174,6 +174,6 @@ class DownstreamSyncTask(engine: NextCloudEngine) :
         error = error,
         remoteOperationResult = remoteOperationResult,
         remoteFiles = remoteFiles.toImmutableList(),
-        remoteNotesCombined = remoteNotesCombined.toImmutableList(),
+        remoteNoteCombos = remoteNoteCombos.toImmutableList(),
     )
 }

@@ -49,18 +49,16 @@ open class Note(
         colorIdx: Int = this.colorIdx,
         position: Int = this.position,
         isDeleted: Boolean = this.isDeleted,
-    ): Note {
-        return Note(
-            id = id,
-            title = title,
-            text = text,
-            created = created,
-            updated = Instant.now(),
-            position = position,
-            type = type,
-            showChecked = showChecked,
-            colorIdx = colorIdx,
-            isDeleted = isDeleted,
-        )
-    }
+    ) = Note(
+        id = id,
+        title = title,
+        text = text,
+        created = created,
+        updated = Instant.now(),
+        position = position,
+        type = type,
+        showChecked = showChecked,
+        colorIdx = colorIdx,
+        isDeleted = isDeleted,
+    )
 }

@@ -8,6 +8,7 @@ import androidx.room.Transaction
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 import us.huseli.retain.data.entities.Note
+import us.huseli.retain.data.entities.NoteCombo
 import java.time.Instant
 import java.util.UUID
 
@@ -16,17 +17,18 @@ interface NoteDao {
     @Query("UPDATE note SET noteIsDeleted=1, noteUpdated=:updated WHERE noteId IN (:ids)")
     suspend fun delete(ids: Collection<UUID>, updated: Instant = Instant.now())
 
+    @Transaction
     @Query("SELECT * FROM note WHERE noteIsDeleted = 0 ORDER BY notePosition")
-    fun flowList(): Flow<List<Note>>
+    fun flowListCombos(): Flow<List<NoteCombo>>
 
     @Query("SELECT * FROM note WHERE noteId = :id AND noteIsDeleted = 0")
-    suspend fun get(id: UUID): Note?
+    suspend fun getCombo(id: UUID): NoteCombo?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(note: Note)
 
     @Query("SELECT * FROM note")
-    suspend fun listAll(): List<Note>
+    suspend fun listAllCombos(): List<NoteCombo>
 
     @Query(
         """

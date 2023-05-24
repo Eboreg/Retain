@@ -43,9 +43,17 @@ fun RetainScaffold(
     val scope = rememberCoroutineScope()
     val trashedNotes by viewModel.trashedNotes.collectAsStateWithLifecycle()
     val systemUiController = rememberSystemUiController()
+    val statusBarColor by settingsViewModel.statusBarColor.collectAsStateWithLifecycle(
+        MaterialTheme.colorScheme.surface
+    )
+    val navigationBarColor by settingsViewModel.navigationBarColor.collectAsStateWithLifecycle(
+        MaterialTheme.colorScheme.background
+    )
 
-    systemUiController.setStatusBarColor(MaterialTheme.colorScheme.surface)
-    systemUiController.setNavigationBarColor(MaterialTheme.colorScheme.background)
+    LaunchedEffect(statusBarColor, navigationBarColor) {
+        statusBarColor?.let { systemUiController.setStatusBarColor(it) }
+        navigationBarColor?.let { systemUiController.setNavigationBarColor(it) }
+    }
 
     LaunchedEffect(snackbarMessage) {
         if (snackbarMessage != lastSnackbarMessage) {

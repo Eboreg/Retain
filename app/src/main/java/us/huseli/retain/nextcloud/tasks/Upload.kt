@@ -9,7 +9,7 @@ import us.huseli.retain.Constants.NEXTCLOUD_IMAGE_SUBDIR
 import us.huseli.retain.Constants.NEXTCLOUD_JSON_SUBDIR
 import us.huseli.retain.LogMessage
 import us.huseli.retain.data.entities.Image
-import us.huseli.retain.data.entities.NoteCombined
+import us.huseli.retain.data.entities.NoteCombo
 import us.huseli.retain.nextcloud.NextCloudEngine
 import java.io.File
 import java.io.FileWriter
@@ -93,12 +93,12 @@ class UploadMissingImagesTask(engine: NextCloudEngine, private val images: Colle
 /** Up: 1 note JSON file */
 class UploadNoteCombinedTask(
     engine: NextCloudEngine,
-    private val noteCombined: NoteCombined
+    private val combo: NoteCombo
 ) : OperationTask(engine) {
-    private val filename = "note-${noteCombined.id}.json"
+    private val filename = "note-${combo.note.id}.json"
     private val remotePath = engine.getAbsolutePath(NEXTCLOUD_JSON_SUBDIR, filename)
     private val localFile = File(engine.tempDirUp, filename).apply { deleteOnExit() }
-    override val successMessageString = "Successfully saved $noteCombined to $remotePath on Nextcloud"
+    override val successMessageString = "Successfully saved $combo to $remotePath on Nextcloud"
     override val startMessageString = "Uploading file $remotePath from $localFile"
 
     override val remoteOperation = UploadFileRemoteOperation(
@@ -112,7 +112,7 @@ class UploadNoteCombinedTask(
         engine.ioScope.launch {
             withContext(Dispatchers.IO) {
                 try {
-                    FileWriter(localFile).use { it.write(engine.gson.toJson(noteCombined)) }
+                    FileWriter(localFile).use { it.write(engine.gson.toJson(combo)) }
                     super.start()
                 } catch (e: Exception) {
                     failWithMessage(e.toString())
@@ -132,12 +132,12 @@ class UpstreamSyncTaskResult(
 /** Up: 0..n note JSON files */
 class UpstreamSyncTask(
     engine: NextCloudEngine,
-    notes: Collection<NoteCombined>,
-) : BaseListTask<UpstreamSyncTaskResult, OperationTaskResult, UploadNoteCombinedTask, NoteCombined>(engine, notes) {
+    combos: Collection<NoteCombo>,
+) : BaseListTask<UpstreamSyncTaskResult, OperationTaskResult, UploadNoteCombinedTask, NoteCombo>(engine, combos) {
     override val failOnUnsuccessfulChildTask = false
-    override val startMessageString = "Starting upstream sync of $notes"
+    override val startMessageString = "Starting upstream sync of $combos"
 
-    override fun getChildTask(obj: NoteCombined) = UploadNoteCombinedTask(engine, obj)
+    override fun getChildTask(obj: NoteCombo) = UploadNoteCombinedTask(engine, obj)
 
     override fun getResult() = UpstreamSyncTaskResult(success, error, unsuccessfulObjects.size)
 }
