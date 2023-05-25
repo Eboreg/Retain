@@ -21,6 +21,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -37,6 +38,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.burnoutcrew.reorderable.ReorderableLazyListState
 import org.burnoutcrew.reorderable.reorderable
 import us.huseli.retain.R
+import us.huseli.retain.data.entities.NoteCombo
 import us.huseli.retain.outlinedTextFieldColors
 import us.huseli.retain.viewmodels.BaseEditNoteViewModel
 import us.huseli.retain.viewmodels.SettingsViewModel
@@ -50,6 +52,7 @@ fun BaseNoteScreen(
     onTitleFieldNext: (() -> Unit)?,
     onBackClick: () -> Unit,
     onBackgroundClick: (() -> Unit)? = null,
+    onSave: (shouldSave: Boolean, combo: NoteCombo) -> Unit,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     contextMenu: @Composable (() -> Unit)? = null,
     content: LazyListScope.(Color) -> Unit,
@@ -89,6 +92,12 @@ fun BaseNoteScreen(
                 SnackbarResult.ActionPerformed -> viewModel.undoTrashBitmapImages()
                 SnackbarResult.Dismissed -> viewModel.clearTrashBitmapImages()
             }
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            onSave(viewModel.shouldSave, viewModel.combo)
         }
     }
 

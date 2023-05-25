@@ -19,7 +19,10 @@ import us.huseli.retain.viewmodels.NoteViewModel
 import java.util.UUID
 
 @Composable
-fun App(logger: Logger, viewModel: NoteViewModel = hiltViewModel()) {
+fun App(
+    logger: Logger,
+    viewModel: NoteViewModel = hiltViewModel(),
+) {
     RetainTheme {
         val navController = rememberNavController()
         val onClose: () -> Unit = { navController.popBackStack() }
@@ -63,7 +66,7 @@ fun App(logger: Logger, viewModel: NoteViewModel = hiltViewModel()) {
             composable(route = SettingsDestination.route) {
                 SettingsScreen(
                     snackbarHostState = snackbarHostState,
-                    onClose = onClose,
+                    onBackClick = onClose,
                 )
             }
 

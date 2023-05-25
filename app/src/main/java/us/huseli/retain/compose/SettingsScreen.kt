@@ -35,6 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -310,7 +311,7 @@ fun GeneralSection(
 @Composable
 fun SettingsTopAppBar(
     modifier: Modifier = Modifier,
-    onClose: () -> Unit = {},
+    onBackClick: () -> Unit = {},
 ) {
     TopAppBar(
         modifier = modifier,
@@ -318,7 +319,7 @@ fun SettingsTopAppBar(
             Text(stringResource(R.string.settings))
         },
         navigationIcon = {
-            IconButton(onClick = onClose) {
+            IconButton(onClick = onBackClick) {
                 Icon(
                     imageVector = Icons.Sharp.ArrowBack,
                     contentDescription = stringResource(R.string.close)
@@ -343,11 +344,18 @@ fun SettingsScreenImpl(
     isNextCloudUrlFail: Boolean = false,
     isNextCloudCredentialsFail: Boolean = false,
     onSave: () -> Unit = {},
-    onNextCloudTestClick: () -> Unit,
+    onBackClick: () -> Unit = {},
+    onNextCloudTestClick: () -> Unit = {},
     onChange: (field: String, value: Any) -> Unit = { _, _ -> },
 ) {
+    DisposableEffect(Unit) {
+        onDispose {
+            onSave()
+        }
+    }
+
     RetainScaffold(
-        topBar = { SettingsTopAppBar(onClose = onSave) },
+        topBar = { SettingsTopAppBar(onBackClick = onBackClick) },
     ) { innerPadding ->
         LazyVerticalStaggeredGrid(
             contentPadding = PaddingValues(8.dp),
@@ -390,7 +398,7 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = hiltViewModel(),
     snackbarHostState: SnackbarHostState,
-    onClose: () -> Unit,
+    onBackClick: () -> Unit,
 ) {
     val nextCloudUri by viewModel.nextCloudUri.collectAsStateWithLifecycle("")
     val nextCloudUsername by viewModel.nextCloudUsername.collectAsStateWithLifecycle("")
@@ -427,10 +435,8 @@ fun SettingsScreen(
         nextCloudBaseDir = nextCloudBaseDir,
         minColumnWidth = minColumnWidth,
         isNextCloudTesting = isNextCloudTesting,
-        onSave = {
-            viewModel.save()
-            onClose()
-        },
+        onBackClick = onBackClick,
+        onSave = { viewModel.save() },
         onNextCloudTestClick = {
             viewModel.testNextCloud { result -> nextCloudTestResult = result }
         },
@@ -452,7 +458,6 @@ fun SettingsScreenPreview() {
             nextCloudPassword = "apeliapanap",
             nextCloudBaseDir = NEXTCLOUD_BASE_DIR,
             minColumnWidth = 180,
-            onNextCloudTestClick = {},
         )
     }
 }
