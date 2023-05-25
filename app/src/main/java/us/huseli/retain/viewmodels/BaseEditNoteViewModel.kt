@@ -12,9 +12,9 @@ import kotlinx.coroutines.launch
 import us.huseli.retain.Constants.NAV_ARG_IMAGE_CAROUSEL_CURRENT_ID
 import us.huseli.retain.Constants.NAV_ARG_NOTE_ID
 import us.huseli.retain.Enums.NoteType
+import us.huseli.retain.LogInterface
 import us.huseli.retain.data.NoteRepository
 import us.huseli.retain.data.entities.BitmapImage
-import us.huseli.retain.data.entities.ChecklistItem
 import us.huseli.retain.data.entities.Image
 import us.huseli.retain.data.entities.Note
 import us.huseli.retain.data.entities.NoteCombo
@@ -27,17 +27,16 @@ abstract class BaseEditNoteViewModel(
     savedStateHandle: SavedStateHandle,
     private val repository: NoteRepository,
     type: NoteType
-) : ViewModel() {
-    private val _bitmapImages = MutableStateFlow<List<BitmapImage>>(emptyList())
+) : ViewModel(), LogInterface {
+    protected val _bitmapImages = MutableStateFlow<List<BitmapImage>>(emptyList())
     private val _trashedBitmapImages = MutableStateFlow<List<BitmapImage>>(emptyList())
-    private var _isNew = true
+    protected var _isNew = true
     private val _currentCarouselId = MutableStateFlow(
         savedStateHandle.get<String?>(NAV_ARG_IMAGE_CAROUSEL_CURRENT_ID)
     )
 
     protected val _noteId: UUID = UUID.fromString(savedStateHandle.get<String>(NAV_ARG_NOTE_ID)!!)
     protected val _note = MutableStateFlow(Note(type = type))
-    protected val _checklistItems = MutableStateFlow<List<ChecklistItem>>(emptyList())
     protected var _isDirty = false
 
     val title = _note.map { it.title }
@@ -58,44 +57,30 @@ abstract class BaseEditNoteViewModel(
         )
     }
 
-    val combo: NoteCombo
-        get() = NoteCombo(_note.value, _checklistItems.value, _bitmapImages.value.map { it.image })
+    open val combo: NoteCombo
+        get() = NoteCombo(_note.value, emptyList(), _bitmapImages.value.map { it.image })
 
     val shouldSave: Boolean
         get() = _isDirty && (!_isNew || isEmpty())
-
-    init {
-        _bitmapImages.value = repository.bitmapImages.value.filter { it.image.noteId == _noteId }
-
-        viewModelScope.launch {
-            @Suppress("Destructure")
-            repository.getCombo(_noteId)?.let { combo ->
-                _note.value = combo.note
-                _checklistItems.value = combo.checklistItems
-                _isNew = false
-                _isDirty = false
-            }
-        }
-    }
 
     fun clearTrashBitmapImages() {
         _trashedBitmapImages.value = emptyList()
     }
 
     fun deleteImage(bitmapImage: BitmapImage) {
-        if (_bitmapImages.value.any { it.image.filename == bitmapImage.image.filename }) {
-            _bitmapImages.value = _bitmapImages.value.toMutableList().apply {
-                if (removeIf { it.image.filename == bitmapImage.image.filename }) {
-                    _isDirty = true
-                    _trashedBitmapImages.value = listOf(bitmapImage)
-                }
-            }
+        val index = _bitmapImages.value.indexOfFirst { it.image.filename == bitmapImage.image.filename }
+
+        if (index > -1) {
+            _bitmapImages.value = _bitmapImages.value.toMutableList().apply { removeAt(index) }
+            _isDirty = true
+            _trashedBitmapImages.value = listOf(bitmapImage)
         }
     }
 
     fun insertImage(uri: Uri) = viewModelScope.launch {
         repository.uriToBitmapImage(uri, _noteId)?.let { bitmapImage ->
             _bitmapImages.value = _bitmapImages.value.toMutableList().apply { add(bitmapImage) }
+            updateImagePositions()
             _isDirty = true
         }
     }
@@ -130,6 +115,12 @@ abstract class BaseEditNoteViewModel(
             sortBy { it.image.position }
         }
         clearTrashBitmapImages()
+    }
+
+    private fun updateImagePositions() {
+        _bitmapImages.value = _bitmapImages.value.mapIndexed { index, bitmapImage ->
+            bitmapImage.copy(image = bitmapImage.image.copy(position = index))
+        }
     }
 
     /** IMAGE CAROUSEL *******************************************************/

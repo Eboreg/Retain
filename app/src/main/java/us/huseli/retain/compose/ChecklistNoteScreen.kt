@@ -18,7 +18,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -34,7 +33,6 @@ import org.burnoutcrew.reorderable.rememberReorderableLazyListState
 import us.huseli.retain.R
 import us.huseli.retain.data.entities.NoteCombo
 import us.huseli.retain.viewmodels.EditChecklistNoteViewModel
-import java.util.UUID
 
 @Composable
 fun ChecklistNoteScreen(
@@ -46,10 +44,11 @@ fun ChecklistNoteScreen(
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val showChecked by viewModel.showChecked.collectAsStateWithLifecycle(true)
-    val checklistItems by viewModel.items.collectAsStateWithLifecycle()
     val trashedChecklistItems by viewModel.trashedItems.collectAsStateWithLifecycle()
+    val checkedItems by viewModel.checkedItems.collectAsStateWithLifecycle(emptyList())
+    val uncheckedItems by viewModel.uncheckedItems.collectAsStateWithLifecycle(emptyList())
+    val focusedItemId by viewModel.focusedItemId.collectAsStateWithLifecycle()
     var focusedItemIndex by rememberSaveable { mutableStateOf<Int?>(null) }
-    val itemSelectionStarts = remember { mutableStateMapOf<UUID, Int>() }
     val reorderableState = rememberReorderableLazyListState(
         onMove = { from, to -> viewModel.switchItemPositions(from, to) },
     )
@@ -84,7 +83,7 @@ fun ChecklistNoteScreen(
         viewModel = viewModel,
         reorderableState = reorderableState,
         onTitleFieldNext = {
-            if (checklistItems.isEmpty()) {
+            if (checkedItems.isEmpty() && uncheckedItems.isEmpty()) {
                 viewModel.insertItem(text = "", checked = false, index = 0)
                 focusedItemIndex = 0
             }
@@ -101,35 +100,19 @@ fun ChecklistNoteScreen(
         ChecklistNoteChecklist(
             scope = this,
             state = reorderableState,
-            checklistItems = checklistItems,
-            focusedItemIndex = focusedItemIndex,
-            itemSelectionStarts = itemSelectionStarts,
             showChecked = showChecked,
+            uncheckedItems = uncheckedItems,
+            checkedItems = checkedItems,
             onItemDeleteClick = { viewModel.deleteItem(it) },
-            onItemCheckedChange = { item, checked -> viewModel.updateItemChecked(item.id, checked) },
-            onItemTextChange = { item, text -> viewModel.updateItemText(item.id, text) },
-            onItemNext = { index, item, head, tail ->
-                viewModel.insertItem(text = tail, checked = item.checked, index = index + 1)
-                focusedItemIndex = index + 1
-                itemSelectionStarts[item.id] = 0
-                viewModel.updateItemText(item.id, head)
+            onItemCheckedChange = { item, value -> viewModel.updateItemChecked(item, value) },
+            onItemTextFieldValueChange = { item, textFieldValue ->
+                viewModel.onTextFieldValueChange(item, textFieldValue)
             },
-            onItemPrevious = { index, item, text ->
-                if (index > 0) {
-                    val previousItem = checklistItems[index - 1]
-                    focusedItemIndex = index - 1
-                    itemSelectionStarts[previousItem.id] = previousItem.text.length
-                    if (text.isNotEmpty()) viewModel.updateItemText(previousItem.id, previousItem.text + text)
-                    viewModel.deleteItem(item)
-                } else if (text.isEmpty()) {
-                    viewModel.deleteItem(item)
-                }
-            },
-            clearFocusedItemIndex = { focusedItemIndex = null },
-            onShowCheckedClick = {
-                viewModel.toggleShowChecked()
-            },
-            backgroundColor = backgroundColor
+            onNextItem = { item -> viewModel.onNextItem(item) },
+            onShowCheckedClick = { viewModel.toggleShowChecked() },
+            backgroundColor = backgroundColor,
+            focusedItemId = focusedItemId,
+            onItemFocus = { viewModel.onItemFocus(it) }
         )
 
         item {
@@ -139,7 +122,7 @@ fun ChecklistNoteScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .clickable {
-                        val index = checklistItems.filter { !it.checked }.size
+                        val index = uncheckedItems.size
                         viewModel.insertItem(text = "", checked = false, index = index)
                         focusedItemIndex = index
                     }

@@ -147,10 +147,7 @@ fun BaseNoteScreen(
             ImageCarousel(
                 bitmapImage = it,
                 multiple = bitmapImages.size > 1,
-                onClose = {
-                    viewModel.unsetCarouselImage()
-                    onBackClick()
-                },
+                onClose = { viewModel.unsetCarouselImage() },
                 onSwipeLeft = { viewModel.gotoNextCarouselImage() },
                 onSwipeRight = { viewModel.gotoPreviousCarouselImage() },
             )

@@ -29,22 +29,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.burnoutcrew.reorderable.ItemPosition
 import org.burnoutcrew.reorderable.ReorderableItem
 import org.burnoutcrew.reorderable.detectReorder
 import org.burnoutcrew.reorderable.rememberReorderableLazyListState
 import org.burnoutcrew.reorderable.reorderable
 import us.huseli.retain.Enums.HomeScreenViewType
-import us.huseli.retain.data.entities.BitmapImage
 import us.huseli.retain.data.entities.Note
 import us.huseli.retain.data.entities.NoteCombo
 import us.huseli.retain.viewmodels.NoteViewModel
 import us.huseli.retain.viewmodels.SettingsViewModel
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
     viewModel: NoteViewModel = hiltViewModel(),
+    settingsViewModel: SettingsViewModel = hiltViewModel(),
     onAddTextNoteClick: () -> Unit,
     onAddChecklistClick: () -> Unit,
     onCardClick: (Note) -> Unit,
@@ -52,65 +52,23 @@ fun HomeScreen(
     onDebugClick: () -> Unit,
 ) {
     val combos by viewModel.combos.collectAsStateWithLifecycle()
-    val selectedNotes by viewModel.selectedNotes.collectAsStateWithLifecycle(emptySet())
-    val bitmapImages by viewModel.bitmapImages.collectAsStateWithLifecycle(emptyList())
-
-    HomeScreenImpl(
-        modifier = modifier,
-        combos = combos,
-        bitmapImages = bitmapImages,
-        selectedCombos = selectedNotes,
-        onAddTextNoteClick = onAddTextNoteClick,
-        onAddChecklistClick = onAddChecklistClick,
-        onCardClick = onCardClick,
-        onEndSelectModeClick = { viewModel.deselectAllNotes() },
-        onTrashNotesClick = { viewModel.trashNotes(it) },
-        onSelectNote = { viewModel.selectNote(it) },
-        onDeselectNote = { viewModel.deselectNote(it) },
-        onSettingsClick = onSettingsClick,
-        onDebugClick = onDebugClick,
-        onSwitchPositions = { from, to -> viewModel.switchNotePositions(from, to) },
-        onReordered = { viewModel.saveNotePositions() },
-    )
-}
-
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun HomeScreenImpl(
-    modifier: Modifier = Modifier,
-    settingsViewModel: SettingsViewModel = hiltViewModel(),
-    combos: List<NoteCombo>,
-    bitmapImages: List<BitmapImage>,
-    selectedCombos: Collection<NoteCombo>,
-    onAddTextNoteClick: () -> Unit = {},
-    onAddChecklistClick: () -> Unit = {},
-    onCardClick: (Note) -> Unit = {},
-    onEndSelectModeClick: () -> Unit = {},
-    onTrashNotesClick: (Collection<NoteCombo>) -> Unit = {},
-    onSelectNote: (NoteCombo) -> Unit = {},
-    onDeselectNote: (NoteCombo) -> Unit = {},
-    onSettingsClick: () -> Unit = {},
-    onDebugClick: () -> Unit = {},
-    onSwitchPositions: (ItemPosition, ItemPosition) -> Unit = { _, _ -> },
-    onReordered: () -> Unit = {},
-) {
+    val selectedCombos by viewModel.selectedNotes.collectAsStateWithLifecycle(emptySet())
     val isSelectEnabled = selectedCombos.isNotEmpty()
     var isFABExpanded by rememberSaveable { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
     val minColumnWidth by settingsViewModel.minColumnWidth.collectAsStateWithLifecycle()
     var viewType by rememberSaveable { mutableStateOf(HomeScreenViewType.GRID) }
     val reorderableState = rememberReorderableLazyListState(
-        onMove = { from, to -> onSwitchPositions(from, to) },
-        onDragEnd = { _, _ -> onReordered() }
+        onMove = { from, to -> viewModel.switchNotePositions(from, to) },
+        onDragEnd = { _, _ -> viewModel.saveNotePositions() }
     )
 
     RetainScaffold(
         topBar = {
             if (isSelectEnabled) SelectionTopAppBar(
                 selectedCount = selectedCombos.size,
-                onCloseClick = onEndSelectModeClick,
-                onTrashClick = { onTrashNotesClick(selectedCombos) },
+                onCloseClick = { viewModel.deselectAllNotes() },
+                onTrashClick = { viewModel.trashNotes(selectedCombos) },
             ) else HomeScreenTopAppBar(
                 viewType = viewType,
                 onSettingsClick = onSettingsClick,
@@ -143,19 +101,21 @@ fun HomeScreenImpl(
             .padding(innerPadding)
 
         val lazyContent: @Composable (NoteCombo, Modifier) -> Unit = { combo, modifier ->
+            val bitmapImages by viewModel.getNoteBitmapImages(combo.note.id).collectAsStateWithLifecycle(emptyList())
+
             NoteCard(
                 modifier = modifier.fillMaxWidth(),
                 combo = combo,
-                bitmapImages = bitmapImages.filter { it.image.noteId == combo.note.id },
+                bitmapImages = bitmapImages,
                 onClick = {
                     if (isSelectEnabled) {
-                        if (selectedCombos.contains(combo)) onDeselectNote(combo)
-                        else onSelectNote(combo)
+                        if (selectedCombos.contains(combo)) viewModel.deselectNote(combo)
+                        else viewModel.selectNote(combo)
                     } else onCardClick(combo.note)
                 },
                 onLongClick = {
-                    if (!isSelectEnabled) onSelectNote(combo)
-                    else onDeselectNote(combo)
+                    if (!isSelectEnabled) viewModel.selectNote(combo)
+                    else viewModel.deselectNote(combo)
                 },
                 isSelected = selectedCombos.contains(combo),
                 showDragHandle = viewType == HomeScreenViewType.LIST,

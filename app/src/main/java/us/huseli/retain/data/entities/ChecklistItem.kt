@@ -17,7 +17,7 @@ import java.util.UUID
     )],
     indices = [Index("checklistItemNoteId"), Index("checklistItemPosition")],
 )
-class ChecklistItem(
+open class ChecklistItem(
     @PrimaryKey
     @ColumnInfo(name = "checklistItemId")
     val id: UUID = UUID.randomUUID(),
@@ -40,7 +40,7 @@ class ChecklistItem(
 
     override fun hashCode() = id.hashCode()
 
-    fun copy(
+    open fun copy(
         text: String = this.text,
         checked: Boolean = this.checked,
         position: Int = this.position,

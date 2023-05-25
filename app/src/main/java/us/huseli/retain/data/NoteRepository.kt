@@ -47,7 +47,13 @@ class NoteRepository @Inject constructor(
     private val imageDir = File(context.filesDir, IMAGE_SUBDIR).apply { mkdirs() }
 
     val combos: Flow<List<NoteCombo>> = noteDao.flowListCombos().map { combos ->
-        combos.map { combo -> combo.copy(checklistItems = combo.checklistItems.sortedBy { it.position }) }
+        combos.map { combo ->
+            combo.copy(
+                checklistItems = combo.checklistItems.sortedWith(
+                    compareBy({ it.checked }, { it.position })
+                )
+            )
+        }
     }
     val nextCloudNeedsTesting = MutableStateFlow(true)
     val bitmapImages = MutableStateFlow<List<BitmapImage>>(emptyList())

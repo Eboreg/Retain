@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.burnoutcrew.reorderable.ItemPosition
 import us.huseli.retain.LogInterface
@@ -14,6 +15,7 @@ import us.huseli.retain.Logger
 import us.huseli.retain.data.NoteRepository
 import us.huseli.retain.data.entities.BitmapImage
 import us.huseli.retain.data.entities.NoteCombo
+import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
@@ -53,6 +55,9 @@ class NoteViewModel @Inject constructor(
         _selectedCombos.value -= combo
         log("deselectNote: note=$combo, _selectedNotes.value=${_selectedCombos.value}")
     }
+
+    fun getNoteBitmapImages(noteId: UUID): Flow<List<BitmapImage>> =
+        repository.bitmapImages.map { list -> list.filter { it.image.noteId == noteId } }
 
     fun saveCombo(combo: NoteCombo) = viewModelScope.launch {
         repository.upsertNoteCombo(combo)

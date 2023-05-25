@@ -25,12 +25,12 @@ import us.huseli.retain.R
 import us.huseli.retain.data.entities.NoteCombo
 import us.huseli.retain.outlinedTextFieldColors
 import us.huseli.retain.ui.theme.RetainTheme
-import us.huseli.retain.viewmodels.EditNoteViewModel
+import us.huseli.retain.viewmodels.EditTextNoteViewModel
 
 @Composable
 fun TextNoteScreen(
     modifier: Modifier = Modifier,
-    viewModel: EditNoteViewModel = hiltViewModel(),
+    viewModel: EditTextNoteViewModel = hiltViewModel(),
     onSave: ((shouldSave: Boolean, combo: NoteCombo) -> Unit)? = null,
     onBackClick: (() -> Unit)? = null,
 ) {

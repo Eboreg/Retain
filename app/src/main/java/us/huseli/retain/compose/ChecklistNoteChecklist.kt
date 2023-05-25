@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.sharp.ExpandMore
 import androidx.compose.material3.Icon
@@ -21,48 +21,48 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.burnoutcrew.reorderable.ReorderableItem
 import org.burnoutcrew.reorderable.ReorderableLazyListState
 import us.huseli.retain.R
 import us.huseli.retain.data.entities.ChecklistItem
+import us.huseli.retain.viewmodels.ChecklistItemExtended
 import java.util.UUID
 
 fun ChecklistNoteChecklist(
     modifier: Modifier = Modifier,
     scope: LazyListScope,
     state: ReorderableLazyListState,
-    checklistItems: List<ChecklistItem>,
-    focusedItemIndex: Int?,
-    itemSelectionStarts: Map<UUID, Int>,
+    focusedItemId: UUID?,
     showChecked: Boolean,
+    uncheckedItems: List<ChecklistItemExtended>,
+    checkedItems: List<ChecklistItemExtended>,
     onItemDeleteClick: (ChecklistItem) -> Unit,
-    onItemCheckedChange: (ChecklistItem, Boolean) -> Unit,
-    onItemTextChange: (ChecklistItem, String) -> Unit,
-    onItemNext: (Int, ChecklistItem, String, String) -> Unit,
-    onItemPrevious: (Int, ChecklistItem, String) -> Unit,
-    clearFocusedItemIndex: () -> Unit,
+    onItemCheckedChange: (ChecklistItemExtended, Boolean) -> Unit,
+    onItemTextFieldValueChange: (ChecklistItemExtended, TextFieldValue) -> Unit,
+    onNextItem: (ChecklistItemExtended) -> Unit,
+    onItemFocus: (ChecklistItemExtended) -> Unit,
     onShowCheckedClick: () -> Unit,
     backgroundColor: Color,
 ) {
-    val uncheckedItems = checklistItems.filter { !it.checked }
-    val checkedItems = checklistItems.filter { it.checked }
+    scope.items(uncheckedItems, key = { it.id }) { item ->
+        val textFieldValue by item.textFieldValue.collectAsStateWithLifecycle()
 
-    scope.itemsIndexed(uncheckedItems, key = { _, item -> item.id }) { index, item ->
         ReorderableItem(state, key = item.id) { isDragging ->
             ChecklistNoteChecklistRow(
                 modifier = modifier.background(backgroundColor),
                 item = item,
-                isFocused = focusedItemIndex == index,
+                isFocused = focusedItemId == item.id,
                 isDragging = isDragging,
-                selectionStart = itemSelectionStarts[item.id] ?: 0,
+                textFieldValue = textFieldValue,
+                onFocus = { onItemFocus(item) },
                 onDeleteClick = { onItemDeleteClick(item) },
-                onTextChange = { onItemTextChange(item, it) },
                 onCheckedChange = { onItemCheckedChange(item, it) },
-                onNext = { head, tail -> onItemNext(index, item, head, tail) },
-                onPrevious = { text -> onItemPrevious(index, item, text) },
-                onFocus = clearFocusedItemIndex,
+                onNext = { onNextItem(item) },
                 reorderableState = state,
+                onTextFieldValueChange = { onItemTextFieldValueChange(item, it) },
             )
         }
     }
@@ -92,21 +92,22 @@ fun ChecklistNoteChecklist(
         }
 
         if (showChecked) {
-            scope.itemsIndexed(checkedItems, key = { _, item -> item.id }) { index, item ->
+            scope.items(checkedItems, key = { it.id }) { item ->
+                val textFieldValue by item.textFieldValue.collectAsStateWithLifecycle()
+
                 ReorderableItem(state, key = item.id) { isDragging ->
                     ChecklistNoteChecklistRow(
                         modifier = modifier.background(backgroundColor),
                         item = item,
-                        isFocused = focusedItemIndex == index + uncheckedItems.size,
+                        isFocused = focusedItemId == item.id,
                         isDragging = isDragging,
-                        selectionStart = itemSelectionStarts[item.id] ?: 0,
-                        onFocus = clearFocusedItemIndex,
+                        textFieldValue = textFieldValue,
+                        onFocus = { onItemFocus(item) },
                         onDeleteClick = { onItemDeleteClick(item) },
                         onCheckedChange = { onItemCheckedChange(item, it) },
-                        onTextChange = { onItemTextChange(item, it) },
-                        onNext = { head, tail -> onItemNext(index + uncheckedItems.size, item, head, tail) },
-                        onPrevious = { text -> onItemPrevious(index + uncheckedItems.size, item, text) },
+                        onNext = { onNextItem(item) },
                         reorderableState = state,
+                        onTextFieldValueChange = { onItemTextFieldValueChange(item, it) },
                     )
                 }
             }
