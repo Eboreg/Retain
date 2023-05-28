@@ -14,7 +14,7 @@ interface ChecklistItemDao {
     @Query("UPDATE checklistitem SET checklistItemIsDeleted = 1 WHERE checklistItemNoteId=:noteId AND checklistItemId NOT IN (:except)")
     suspend fun deleteByNoteId(noteId: UUID, except: Collection<UUID> = emptyList())
 
-    @Query("SELECT * FROM checklistitem WHERE checklistItemIsDeleted = 0 ORDER BY checklistItemNoteId, checklistItemPosition")
+    @Query("SELECT * FROM checklistitem WHERE checklistItemIsDeleted = 0 ORDER BY checklistItemNoteId, checklistItemChecked, checklistItemPosition")
     fun flowList(): Flow<List<ChecklistItem>>
 
     @Query("SELECT * FROM checklistitem WHERE checklistItemIsDeleted = 0 AND checklistItemNoteId = :noteId ORDER BY checklistItemPosition")
