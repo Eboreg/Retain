@@ -409,9 +409,10 @@ fun SettingsScreen(
     val isNextCloudWorking by viewModel.isNextCloudWorking.collectAsStateWithLifecycle()
     val isNextCloudUrlFail by viewModel.isNextCloudUrlFail.collectAsStateWithLifecycle()
     val isNextCloudCredentialsFail by viewModel.isNextCloudCredentialsFail.collectAsStateWithLifecycle()
-    var nextCloudTestResult by remember { mutableStateOf<TestNextCloudTaskResult?>(null) }
     val nextCloudSuccessMessage = stringResource(R.string.successfully_connected_to_nextcloud)
     val context = LocalContext.current
+
+    var nextCloudTestResult by remember { mutableStateOf<TestNextCloudTaskResult?>(null) }
 
     nextCloudTestResult?.let { result ->
         if (result.success) {

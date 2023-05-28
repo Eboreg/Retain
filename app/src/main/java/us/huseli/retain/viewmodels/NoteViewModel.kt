@@ -6,91 +6,131 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.burnoutcrew.reorderable.ItemPosition
 import us.huseli.retain.LogInterface
 import us.huseli.retain.Logger
+import us.huseli.retain.data.NextCloudRepository
 import us.huseli.retain.data.NoteRepository
-import us.huseli.retain.data.entities.BitmapImage
+import us.huseli.retain.data.entities.ChecklistItem
+import us.huseli.retain.data.entities.Image
+import us.huseli.retain.data.entities.Note
 import us.huseli.retain.data.entities.NoteCombo
 import java.util.UUID
 import javax.inject.Inject
+import kotlin.math.min
+
+data class NoteCardChecklistData(
+    val noteId: UUID,
+    val shownChecklistItems: List<ChecklistItem>,
+    val hiddenChecklistItemCount: Int,
+    val hiddenChecklistItemAllChecked: Boolean,
+)
 
 @HiltViewModel
 class NoteViewModel @Inject constructor(
     private val repository: NoteRepository,
+    private val nextCloudRepository: NextCloudRepository,
     override val logger: Logger
 ) : ViewModel(), LogInterface {
-    private val _selectedCombos = MutableStateFlow<Set<NoteCombo>>(emptySet())
-    private val _trashedCombos = MutableStateFlow<List<NoteCombo>>(emptyList())
-    private val _combos = MutableStateFlow<List<NoteCombo>>(emptyList())
+    private val _selectedNoteIds = MutableStateFlow<Set<UUID>>(emptySet())
+    private val _trashedNotes = MutableStateFlow<Set<Note>>(emptySet())
+    private val _notes = MutableStateFlow<List<Note>>(emptyList())
 
-    val combos = _combos.asStateFlow()
-    val bitmapImages: Flow<List<BitmapImage>> = repository.bitmapImages
-    val trashedNotes = _trashedCombos.asStateFlow()
+    private val _isSelectEnabled: Boolean
+        get() = _selectedNoteIds.value.isNotEmpty()
 
-    val selectedNotes: Flow<Set<NoteCombo>> = combine(_combos, _selectedCombos) { combos, selectedNotes ->
-        selectedNotes.intersect(combos.toSet())
+    val trashedNoteCount = _trashedNotes.map { it.size }
+    val isSelectEnabled = _selectedNoteIds.map { it.isNotEmpty() }
+    val selectedNoteIds = _selectedNoteIds.asStateFlow()
+    val notes = _notes.asStateFlow()
+    val images: Flow<List<Image>> = repository.images
+    val checklistData = repository.checklistItems.map { items ->
+        items.groupBy { it.noteId }.map { (noteId, noteItems) ->
+            val shownItems = noteItems.subList(0, min(noteItems.size, 5))
+            val hiddenItems = noteItems.minus(shownItems.toSet())
+
+            NoteCardChecklistData(
+                noteId = noteId,
+                shownChecklistItems = shownItems,
+                hiddenChecklistItemCount = hiddenItems.size,
+                hiddenChecklistItemAllChecked = hiddenItems.all { it.checked },
+            )
+        }
     }
 
     init {
         viewModelScope.launch {
-            repository.combos.collect { combos ->
-                _combos.value = combos
+            repository.notes.collect { notes ->
+                _notes.value = notes
             }
         }
     }
 
-    fun clearTrashNotes() {
-        _trashedCombos.value = emptyList()
+    fun reallyTrashNotes() {
+        val trashedNotes = _trashedNotes.value
+
+        _trashedNotes.value = emptySet()
+        viewModelScope.launch {
+            nextCloudRepository.upload(repository.listCombos(trashedNotes.map { it.id }))
+        }
     }
 
     fun deselectAllNotes() {
-        _selectedCombos.value = emptySet()
+        _selectedNoteIds.value = emptySet()
     }
 
-    fun deselectNote(combo: NoteCombo) {
-        _selectedCombos.value -= combo
-        log("deselectNote: note=$combo, _selectedNotes.value=${_selectedCombos.value}")
+    fun deselectNote(noteId: UUID) {
+        _selectedNoteIds.value -= noteId
+        log("deselectNote: noteId=$noteId, _selectedNoteIds.value=${_selectedNoteIds.value}")
     }
 
-    fun getNoteBitmapImages(noteId: UUID): Flow<List<BitmapImage>> =
-        repository.bitmapImages.map { list -> list.filter { it.image.noteId == noteId } }
-
-    fun saveCombo(combo: NoteCombo) = viewModelScope.launch {
-        repository.upsertNoteCombo(combo)
+    fun save(note: Note?, checklistItems: List<ChecklistItem>, images: List<Image>) = viewModelScope.launch {
+        log("save(): note=$note, checklistItems=$checklistItems, images=$images")
+        note?.let { repository.upsertNote(it) }
+        repository.upsertChecklistItems(checklistItems)
+        repository.upsertImages(images)
     }
 
-    @Suppress("Destructure")
     fun saveNotePositions() = viewModelScope.launch {
         repository.updateNotePositions(
-            _combos.value.mapIndexedNotNull { index, combo ->
-                if (combo.note.position != index) combo.note.copy(position = index) else null
+            _notes.value.mapIndexedNotNull { index, note ->
+                if (note.position != index) note.copy(position = index) else null
             }
         )
     }
 
-    fun selectNote(combo: NoteCombo) {
-        _selectedCombos.value += combo
-        log("selectNote: note=$combo, _selectedNotes.value=${_selectedCombos.value}")
+    fun selectNote(noteId: UUID) {
+        _selectedNoteIds.value += noteId
+        log("selectNote: note=$noteId, _selectedNoteIds.value=${_selectedNoteIds.value}")
     }
 
     fun switchNotePositions(from: ItemPosition, to: ItemPosition) {
-        _combos.value = _combos.value.toMutableList().apply { add(to.index, removeAt(from.index)) }
+        _notes.value = _notes.value.toMutableList().apply { add(to.index, removeAt(from.index)) }
     }
 
-    fun trashNotes(notes: Collection<NoteCombo>) {
-        log("trashNotes: $notes")
-        _trashedCombos.value = notes.toList()
+    fun toggleNoteSelected(noteId: UUID) {
+        if (_isSelectEnabled) {
+            if (_selectedNoteIds.value.contains(noteId)) deselectNote(noteId)
+            else selectNote(noteId)
+        }
+    }
+
+    fun trashSelectedNotes() {
+        _trashedNotes.value = _notes.value.filter { _selectedNoteIds.value.contains(it.id) }.toSet()
+        deselectAllNotes()
         viewModelScope.launch {
-            repository.trashNotes(notes)
+            repository.trashNotes(_trashedNotes.value)
         }
     }
 
     fun undoTrashNotes() = viewModelScope.launch {
-        repository.upsertNotes(_trashedCombos.value)
-        clearTrashNotes()
+        repository.upsertNotes(_trashedNotes.value)
+        _trashedNotes.value = emptySet()
+    }
+
+    fun uploadCombo(combo: NoteCombo?) {
+        combo?.let { nextCloudRepository.upload(it) }
     }
 }

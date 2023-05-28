@@ -20,6 +20,9 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import us.huseli.retain.R
+import us.huseli.retain.data.entities.ChecklistItem
+import us.huseli.retain.data.entities.Image
+import us.huseli.retain.data.entities.Note
 import us.huseli.retain.data.entities.NoteCombo
 import us.huseli.retain.outlinedTextFieldColors
 import us.huseli.retain.viewmodels.EditTextNoteViewModel
@@ -28,24 +31,25 @@ import us.huseli.retain.viewmodels.EditTextNoteViewModel
 fun TextNoteScreen(
     modifier: Modifier = Modifier,
     viewModel: EditTextNoteViewModel = hiltViewModel(),
-    onSave: (shouldSave: Boolean, combo: NoteCombo) -> Unit,
+    onSave: (NoteCombo?, Note?, List<ChecklistItem>, List<Image>) -> Unit,
     onBackClick: () -> Unit,
 ) {
-    val text by viewModel.text.collectAsStateWithLifecycle("")
+    val note by viewModel.note.collectAsStateWithLifecycle()
     val focusRequester = remember { FocusRequester() }
     var selection by remember { mutableStateOf(TextRange(0)) }
-    var textFieldValue by remember(text) {
-        mutableStateOf(TextFieldValue(text = text, selection = selection))
+    var textFieldValue by remember(note.text) {
+        mutableStateOf(TextFieldValue(text = note.text, selection = selection))
     }
     val snackbarHostState = remember { SnackbarHostState() }
 
     BaseNoteScreen(
         modifier = modifier,
         viewModel = viewModel,
+        note = note,
         onTitleFieldNext = null,
         onBackClick = onBackClick,
         onBackgroundClick = {
-            selection = TextRange(text.length)
+            selection = TextRange(note.text.length)
             focusRequester.requestFocus()
         },
         onSave = onSave,

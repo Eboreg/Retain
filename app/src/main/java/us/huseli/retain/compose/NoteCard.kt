@@ -36,11 +36,10 @@ import org.burnoutcrew.reorderable.ReorderableLazyListState
 import org.burnoutcrew.reorderable.detectReorder
 import us.huseli.retain.Enums
 import us.huseli.retain.R
-import us.huseli.retain.data.entities.BitmapImage
-import us.huseli.retain.data.entities.NoteCombo
+import us.huseli.retain.data.entities.Image
+import us.huseli.retain.data.entities.Note
 import us.huseli.retain.ui.theme.getNoteColor
-import kotlin.math.min
-
+import us.huseli.retain.viewmodels.NoteCardChecklistData
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -48,13 +47,14 @@ fun NoteCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
-    combo: NoteCombo,
-    bitmapImages: List<BitmapImage>,
+    note: Note,
+    checklistData: NoteCardChecklistData?,
+    images: List<Image>,
     isSelected: Boolean,
     reorderableState: ReorderableLazyListState? = null,
     showDragHandle: Boolean = false,
 ) {
-    val noteColor = getNoteColor(combo.note.colorIdx)
+    val noteColor = getNoteColor(note.colorIdx)
     val border =
         if (isSelected) BorderStroke(3.dp, MaterialTheme.colorScheme.primary)
         else BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f))
@@ -73,29 +73,29 @@ fun NoteCard(
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 NoteImageGrid(
-                    bitmapImages = bitmapImages,
+                    images = images,
                     showDeleteButton = false,
                     maxRows = 2,
                     secondaryRowHeight = 100.dp,
                 )
 
                 Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
-                    if (combo.note.title.isNotBlank()) {
+                    if (note.title.isNotBlank()) {
                         Text(
                             modifier = if (showDragHandle) Modifier.padding(end = 24.dp) else Modifier,
-                            text = combo.note.title,
+                            text = note.title,
                             style = MaterialTheme.typography.bodyLarge,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
 
-                    when (combo.note.type) {
+                    when (note.type) {
                         Enums.NoteType.TEXT -> {
-                            if (combo.note.text.isNotBlank()) {
-                                if (combo.note.title.isNotBlank()) Spacer(modifier = Modifier.height(8.dp))
+                            if (note.text.isNotBlank()) {
+                                if (note.title.isNotBlank()) Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = combo.note.text,
+                                    text = note.text,
                                     overflow = TextOverflow.Ellipsis,
                                     maxLines = 6,
                                     style = MaterialTheme.typography.bodyMedium,
@@ -104,8 +104,11 @@ fun NoteCard(
                             }
                         }
 
-                        Enums.NoteType.CHECKLIST -> {
-                            NoteCardChecklist(combo = combo)
+                        Enums.NoteType.CHECKLIST -> checklistData?.let {
+                            if (note.title.isNotBlank() && it.shownChecklistItems.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+                            NoteCardChecklist(data = it)
                         }
                     }
                 }
@@ -118,7 +121,7 @@ fun NoteCard(
                     .detectReorder(reorderableState)
                     .align(Alignment.TopEnd),
                 colors = IconButtonDefaults.filledTonalIconButtonColors(
-                    containerColor = if (bitmapImages.isEmpty()) noteColor else Color.Transparent
+                    containerColor = if (images.isEmpty()) noteColor else Color.Transparent
                 ),
                 onClick = {},
             ) {
@@ -131,21 +134,10 @@ fun NoteCard(
     }
 }
 
-
 @Composable
-fun NoteCardChecklist(combo: NoteCombo) {
-    val filteredItems =
-        if (!combo.note.showChecked) combo.checklistItems.filter { !it.checked }
-        else combo.checklistItems
-    val shownItems = combo.checklistItems.subList(0, min(filteredItems.size, 5))
-    val hiddenItemCount = combo.checklistItems.size - shownItems.size
-
-    if (combo.note.title.isNotBlank() && combo.checklistItems.isNotEmpty()) {
-        Spacer(modifier = Modifier.height(8.dp))
-    }
-
+fun NoteCardChecklist(data: NoteCardChecklistData) {
     Column {
-        shownItems.forEach { item ->
+        data.shownChecklistItems.forEach { item ->
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
                 Icon(
                     imageVector = if (item.checked) Icons.Sharp.CheckBox else Icons.Sharp.CheckBoxOutlineBlank,
@@ -164,12 +156,12 @@ fun NoteCardChecklist(combo: NoteCombo) {
         }
 
         // "+ X items"
-        if (hiddenItemCount > 0) {
+        if (data.hiddenChecklistItemCount > 0) {
             val text = pluralStringResource(
-                if (combo.checklistItems.minus(shownItems.toSet()).all { it.checked }) R.plurals.plus_x_checked_items
+                if (data.hiddenChecklistItemAllChecked) R.plurals.plus_x_checked_items
                 else R.plurals.plus_x_items,
-                hiddenItemCount,
-                hiddenItemCount,
+                data.hiddenChecklistItemCount,
+                data.hiddenChecklistItemCount,
             )
 
             Text(

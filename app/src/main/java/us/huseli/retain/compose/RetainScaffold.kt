@@ -41,7 +41,7 @@ fun RetainScaffold(
     val nextCloudNeedsTesting by settingsViewModel.nextCloudNeedsTesting.collectAsStateWithLifecycle()
     val snackbarMessage by viewModel.logger.snackbarMessage.collectAsStateWithLifecycle(null)
     val scope = rememberCoroutineScope()
-    val trashedNotes by viewModel.trashedNotes.collectAsStateWithLifecycle()
+    val trashedNoteCount by viewModel.trashedNoteCount.collectAsStateWithLifecycle(0)
     val systemUiController = rememberSystemUiController()
     val statusBarColor by settingsViewModel.statusBarColor.collectAsStateWithLifecycle(
         MaterialTheme.colorScheme.surface
@@ -64,21 +64,22 @@ fun RetainScaffold(
         }
     }
 
-    LaunchedEffect(trashedNotes) {
-        if (trashedNotes.isNotEmpty()) {
+    LaunchedEffect(trashedNoteCount) {
+        if (trashedNoteCount > 0) {
             val message = context.resources.getQuantityString(
                 R.plurals.x_notes_trashed,
-                trashedNotes.size,
-                trashedNotes.size
+                trashedNoteCount,
+                trashedNoteCount
             )
             val result = snackbarHostState.showSnackbar(
                 message = message,
                 actionLabel = context.resources.getString(R.string.undo).uppercase(),
                 duration = SnackbarDuration.Long,
+                withDismissAction = true,
             )
             when (result) {
                 SnackbarResult.ActionPerformed -> viewModel.undoTrashNotes()
-                SnackbarResult.Dismissed -> viewModel.clearTrashNotes()
+                SnackbarResult.Dismissed -> viewModel.reallyTrashNotes()
             }
         }
     }

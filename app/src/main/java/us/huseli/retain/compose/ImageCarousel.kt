@@ -31,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -42,7 +43,7 @@ import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import us.huseli.retain.Enums.Side
 import us.huseli.retain.R
-import us.huseli.retain.data.entities.BitmapImage
+import us.huseli.retain.data.entities.Image
 import us.huseli.retain.viewmodels.SettingsViewModel
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -51,26 +52,36 @@ import kotlin.math.roundToInt
 fun ImageCarousel(
     modifier: Modifier = Modifier,
     settingsViewModel: SettingsViewModel = hiltViewModel(),
-    bitmapImage: BitmapImage,
+    image: Image,
+    imageBitmap: ImageBitmap,
     multiple: Boolean,
     onClose: () -> Unit,
     onSwipeRight: () -> Unit,
     onSwipeLeft: () -> Unit,
 ) {
+    var isTransformable by remember(image) { mutableStateOf(false) }
+    var maxHeightDp by remember { mutableStateOf(0.dp) }
+    var overScroll by remember(image) { mutableStateOf(0f) }
+    var panX by remember(image) { mutableStateOf(0f) }
+    var panY by remember(image) { mutableStateOf(0f) }
+    var scale by remember(image) { mutableStateOf(1f) }
+    var slideFrom by remember { mutableStateOf<Side?>(null) }
+    var slideTo by remember(image) { mutableStateOf<Side?>(null) }
+
     val context = LocalContext.current
     val interactionSource = remember { MutableInteractionSource() }
-    val screenWidth = with(LocalDensity.current) { context.resources.configuration.screenWidthDp.dp.toPx() }
-    var maxHeightDp by remember { mutableStateOf(0.dp) }
     val maxHeight = with(LocalDensity.current) { maxHeightDp.toPx() }
-    val originalImageHeight =
-        bitmapImage.imageBitmap.height * (screenWidth / bitmapImage.imageBitmap.width)
-    var slideFrom by remember { mutableStateOf<Side?>(null) }
-    var slideTo by remember(bitmapImage) { mutableStateOf<Side?>(null) }
     val offset by remember { mutableStateOf(Animatable(0f)) }
+    val screenWidth = with(LocalDensity.current) { context.resources.configuration.screenWidthDp.dp.toPx() }
+
+    val originalImageHeight =
+        imageBitmap.height * (screenWidth / imageBitmap.width)
+    val maxX = abs(screenWidth * (1 - scale) / 2)
+    val maxY = abs((maxHeight / 2) - ((originalImageHeight * scale) / 2))
 
     settingsViewModel.setSystemBarColors(statusBar = Color.Black, navigationBar = Color.Black)
 
-    LaunchedEffect(slideFrom, bitmapImage) {
+    LaunchedEffect(slideFrom, image) {
         if (slideFrom == Side.LEFT) {
             offset.snapTo(-screenWidth)
             offset.animateTo(0f, animationSpec = tween(easing = LinearEasing, durationMillis = 100))
@@ -80,7 +91,7 @@ fun ImageCarousel(
         }
     }
 
-    LaunchedEffect(slideTo, bitmapImage) {
+    LaunchedEffect(slideTo, image) {
         if (slideTo == Side.LEFT) {
             offset.animateTo(-screenWidth, animationSpec = tween(easing = LinearEasing, durationMillis = 100))
             slideFrom = Side.RIGHT
@@ -91,14 +102,6 @@ fun ImageCarousel(
             onSwipeRight()
         }
     }
-
-    var isTransformable by remember(bitmapImage) { mutableStateOf(false) }
-    var overScroll by remember(bitmapImage) { mutableStateOf(0f) }
-    var scale by remember(bitmapImage) { mutableStateOf(1f) }
-    var panX by remember(bitmapImage) { mutableStateOf(0f) }
-    var panY by remember(bitmapImage) { mutableStateOf(0f) }
-    val maxY = abs((maxHeight / 2) - ((originalImageHeight * scale) / 2))
-    val maxX = abs(screenWidth * (1 - scale) / 2)
 
     val transformableState = rememberTransformableState { zoomChange, panChange, _ ->
         if (isTransformable) {
@@ -153,7 +156,7 @@ fun ImageCarousel(
                 rightIndicatorVisible = overScroll < -100f,
             ) {
                 Image(
-                    bitmap = bitmapImage.imageBitmap,
+                    bitmap = imageBitmap,
                     contentDescription = null,
                     contentScale = ContentScale.FillWidth,
                     modifier = Modifier

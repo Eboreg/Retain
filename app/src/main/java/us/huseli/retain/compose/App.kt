@@ -75,7 +75,10 @@ fun App(
                 arguments = TextNoteDestination.arguments,
             ) {
                 TextNoteScreen(
-                    onSave = { shouldSave, combo -> if (shouldSave) viewModel.saveCombo(combo) },
+                    onSave = { dirtyCombo, dirtyNote, dirtyChecklistItems, dirtyImages ->
+                        viewModel.save(dirtyNote, dirtyChecklistItems, dirtyImages)
+                        viewModel.uploadCombo(dirtyCombo)
+                    },
                     onBackClick = onClose,
                 )
             }
@@ -85,7 +88,10 @@ fun App(
                 arguments = ChecklistNoteDestination.arguments,
             ) {
                 ChecklistNoteScreen(
-                    onSave = { shouldSave, combo -> if (shouldSave) viewModel.saveCombo(combo) },
+                    onSave = { dirtyCombo, dirtyNote, dirtyChecklistItems, dirtyImages ->
+                        viewModel.save(dirtyNote, dirtyChecklistItems, dirtyImages)
+                        viewModel.uploadCombo(dirtyCombo)
+                    },
                     onBackClick = onClose,
                 )
             }

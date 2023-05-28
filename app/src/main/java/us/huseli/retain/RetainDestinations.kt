@@ -22,9 +22,6 @@ abstract class NoteDestination : RetainDestination {
         get() = "$route/{$NAV_ARG_NOTE_ID}?$NAV_ARG_IMAGE_CAROUSEL_CURRENT_ID={$NAV_ARG_IMAGE_CAROUSEL_CURRENT_ID}"
 
     fun routeForNoteId(id: UUID) = "$route/$id"
-
-    fun routeForNoteId(id: UUID, imageCarouselCurrentId: String) =
-        routeForNoteId(id) + "?$NAV_ARG_IMAGE_CAROUSEL_CURRENT_ID=$imageCarouselCurrentId"
 }
 
 object HomeDestination : RetainDestination {

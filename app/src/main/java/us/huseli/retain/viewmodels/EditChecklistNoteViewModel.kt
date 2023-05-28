@@ -16,7 +16,6 @@ import us.huseli.retain.Enums.NoteType
 import us.huseli.retain.Logger
 import us.huseli.retain.data.NoteRepository
 import us.huseli.retain.data.entities.ChecklistItem
-import us.huseli.retain.data.entities.NoteCombo
 import java.util.UUID
 import javax.inject.Inject
 import kotlin.math.max
@@ -25,29 +24,6 @@ fun adjustSelection(range: TextRange): TextRange = if (range.start < 1) TextRang
 fun stripNullChar(str: String): String = str.filter { it != Char.MIN_VALUE }
 fun addNullChar(str: String): String = Char.MIN_VALUE + stripNullChar(str)
 
-class ChecklistItemExtended(
-    item: ChecklistItem,
-    val textFieldValue: MutableStateFlow<TextFieldValue> = MutableStateFlow(
-        TextFieldValue(
-            addNullChar(item.text),
-            TextRange(1)
-        )
-    )
-) : ChecklistItem(
-    id = item.id,
-    text = item.text,
-    noteId = item.noteId,
-    checked = item.checked,
-    position = item.position,
-    isDeleted = item.isDeleted
-) {
-    override fun copy(text: String, checked: Boolean, position: Int, isDeleted: Boolean): ChecklistItemExtended {
-        return ChecklistItemExtended(super.copy(text, checked, position, isDeleted), textFieldValue).also {
-            it.textFieldValue.value = it.textFieldValue.value.copy(text = addNullChar(text))
-        }
-    }
-}
-
 @HiltViewModel
 class EditChecklistNoteViewModel @Inject constructor(
     @ApplicationContext context: Context,
@@ -55,75 +31,60 @@ class EditChecklistNoteViewModel @Inject constructor(
     repository: NoteRepository,
     override val logger: Logger,
 ) : BaseEditNoteViewModel(context, savedStateHandle, repository, NoteType.CHECKLIST) {
-    private val _checklistItems = MutableStateFlow<List<ChecklistItemExtended>>(emptyList())
-    private val _trashedItems = MutableStateFlow<Map<Int, ChecklistItem>>(emptyMap())
     private val _focusedItemId = MutableStateFlow<UUID?>(null)
+    private val _trashedItems = MutableStateFlow<List<ChecklistItem>>(emptyList())
 
     val checkedItems = _checklistItems.map { items -> items.filter { item -> item.checked } }
-    val uncheckedItems = _checklistItems.map { items -> items.filter { item -> !item.checked } }
-    val trashedItems = _trashedItems.asStateFlow()
     val focusedItemId = _focusedItemId.asStateFlow()
+    val trashedItems = _trashedItems.asStateFlow()
+    val uncheckedItems = _checklistItems.map { items -> items.filter { item -> !item.checked } }
 
-    override val combo: NoteCombo
-        get() = NoteCombo(_note.value, _checklistItems.value, _bitmapImages.value.map { it.image })
-
-    init {
-        _bitmapImages.value = repository.bitmapImages.value.filter { it.image.noteId == _noteId }
-
-        viewModelScope.launch {
-            @Suppress("Destructure")
-            repository.getCombo(_noteId)?.let { combo ->
-                _note.value = combo.note
-                _checklistItems.value = combo.checklistItems.map { ChecklistItemExtended(it) }
-                _isNew = false
-                _isDirty = false
-            }
-        }
+    private fun addDirtyItem(item: ChecklistItem) {
+        _dirtyChecklistItems.removeIf { it.id == item.id }
+        if (_originalChecklistItems.none { it == item }) _dirtyChecklistItems.add(item)
     }
 
-    fun clearTrashItems() {
-        _trashedItems.value = emptyMap()
+    fun clearTrashedItems() {
+        _trashedItems.value = emptyList()
     }
 
     fun deleteCheckedItems() {
-        _trashedItems.value = _checklistItems.value.mapIndexedNotNull { index, item ->
-            if (item.checked) index to item else null
-        }.associate { it }
-        if (_trashedItems.value.isNotEmpty()) {
-            _checklistItems.value = _checklistItems.value.filter { !it.checked }
-            // _textFieldValues.minusAssign(_trashedItems.value.values.map { it.id }.toSet())
-            _isDirty = true
+        clearTrashedItems()
+        _checklistItems.value = _checklistItems.value.mapNotNull { item ->
+            if (item.checked) {
+                _trashedItems.value = _trashedItems.value.toMutableList().apply { add(item) }
+                addDirtyItem(item.copy(isDeleted = true))
+                null
+            } else item
         }
     }
 
     fun deleteItem(item: ChecklistItem, permanent: Boolean = false) {
         val index = _checklistItems.value.indexOfFirst { it.id == item.id }
+        addDirtyItem(item.copy(isDeleted = true))
 
         if (index > -1) {
             _checklistItems.value = _checklistItems.value.toMutableList().apply {
                 removeAt(index)
                 if (!permanent) {
-                    _trashedItems.value = mapOf(index to item)
-                    // _textFieldValues.minusAssign(item.id)
+                    _trashedItems.value = listOf(item)
                 }
-                _isDirty = true
             }
         }
     }
 
-    fun insertItem(text: String, checked: Boolean, index: Int) {
-        val item = ChecklistItemExtended(
-            ChecklistItem(text = text, checked = checked, noteId = _noteId, position = index)
-        )
+    private fun insertItem(item: ChecklistItem) {
+        val itemExtended = ChecklistItemExtended(item)
 
-        log("insertItem($text, $checked, $index): inserting $item with textFieldValue=${item.textFieldValue.value}")
+        log("insertItem: inserting $itemExtended with textFieldValue=${itemExtended.textFieldValue.value}")
+        _checklistItems.value = _checklistItems.value.toMutableList().apply { add(item.position, itemExtended) }
         _focusedItemId.value = item.id
-        _checklistItems.value = _checklistItems.value.toMutableList().apply { add(index, item) }
+        addDirtyItem(item)
         updatePositions()
-        _isDirty = true
     }
 
-    override fun isEmpty() = super.isEmpty() && _checklistItems.value.isEmpty()
+    fun insertItem(text: String, checked: Boolean, index: Int) =
+        insertItem(ChecklistItem(text = text, checked = checked, noteId = _noteId, position = index))
 
     private fun mergeItemWithPrevious(item: ChecklistItemExtended) {
         val items = _checklistItems.value.filter { it.checked == item.checked }.toMutableList()
@@ -164,8 +125,6 @@ class EditChecklistNoteViewModel @Inject constructor(
          */
         val index = _checklistItems.value.indexOfFirst { it.id == item.id }
 
-        log("onTextFieldValueChange before: item=$item, textFieldValue=$textFieldValue, item.textFieldValue=${item.textFieldValue.value}")
-
         if (
             stripNullChar(textFieldValue.text) != item.textFieldValue.value.text &&
             (textFieldValue.text.isEmpty() || textFieldValue.text[0] != Char.MIN_VALUE)
@@ -179,8 +138,6 @@ class EditChecklistNoteViewModel @Inject constructor(
                 selection = adjustSelection(textFieldValue.selection)
             )
         }
-
-        log("onTextFieldValueChange after: item=$item, item.textFieldValue=${item.textFieldValue.value}")
     }
 
     fun switchItemPositions(from: ItemPosition, to: ItemPosition) {
@@ -196,28 +153,30 @@ class EditChecklistNoteViewModel @Inject constructor(
             _checklistItems.value = _checklistItems.value.toMutableList().apply { add(toIdx, removeAt(fromIdx)) }
             log("switchItemPositions($from, $to) after: ${_checklistItems.value}")
             updatePositions()
-            _isDirty = true
         }
     }
 
     fun toggleShowChecked() {
         _note.value = _note.value.copy(showChecked = !_note.value.showChecked)
-        _isDirty = true
     }
 
     fun uncheckAllItems() {
         if (_checklistItems.value.any { it.checked }) {
-            _checklistItems.value = _checklistItems.value.map { if (it.checked) it.copy(checked = false) else it }
+            _checklistItems.value = _checklistItems.value.map { item ->
+                if (item.checked) {
+                    addDirtyItem(item.copy(checked = false))
+                    item.copy(checked = false)
+                } else item
+            }
             updatePositions()
-            _isDirty = true
         }
     }
 
     fun undoTrashItems() = viewModelScope.launch {
         _checklistItems.value = _checklistItems.value.toMutableList().apply {
-            _trashedItems.value.forEach { (index, item) -> add(index, ChecklistItemExtended(item)) }
+            _trashedItems.value.forEach { insertItem(it) }
         }
-        clearTrashItems()
+        clearTrashedItems()
     }
 
     private fun updateItem(old: ChecklistItemExtended, new: ChecklistItemExtended) {
@@ -225,8 +184,8 @@ class EditChecklistNoteViewModel @Inject constructor(
 
         if (index > -1) {
             log("updateItem: old=$old, new=$new")
+            addDirtyItem(new)
             _checklistItems.value = _checklistItems.value.toMutableList().apply { set(index, new) }
-            _isDirty = true
         }
     }
 
@@ -246,6 +205,10 @@ class EditChecklistNoteViewModel @Inject constructor(
     }
 
     private fun updatePositions() {
-        _checklistItems.value = _checklistItems.value.mapIndexed { index, item -> item.copy(position = index) }
+        _checklistItems.value = _checklistItems.value.mapIndexed { index, item ->
+            if (item.position != index) {
+                item.copy(position = index).also { addDirtyItem(it) }
+            } else item
+        }
     }
 }

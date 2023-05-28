@@ -27,7 +27,8 @@ open class ChecklistItem(
     @ColumnInfo(name = "checklistItemPosition", defaultValue = "0") val position: Int = 0,
     @ColumnInfo(name = "checklistItemIsDeleted", defaultValue = "0") val isDeleted: Boolean = false,
 ) {
-    override fun toString() = "<ChecklistItem: $id / $text / $position>"
+    override fun toString() =
+        "<ChecklistItem: id=$id, text=$text, position=$position, noteId=$noteId, isDeleted=$isDeleted>"
 
     override fun equals(other: Any?) =
         other is ChecklistItem &&

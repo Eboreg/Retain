@@ -27,7 +27,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -38,6 +37,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.burnoutcrew.reorderable.ReorderableLazyListState
 import org.burnoutcrew.reorderable.reorderable
 import us.huseli.retain.R
+import us.huseli.retain.data.entities.ChecklistItem
+import us.huseli.retain.data.entities.Image
+import us.huseli.retain.data.entities.Note
 import us.huseli.retain.data.entities.NoteCombo
 import us.huseli.retain.outlinedTextFieldColors
 import us.huseli.retain.viewmodels.BaseEditNoteViewModel
@@ -48,27 +50,27 @@ fun BaseNoteScreen(
     modifier: Modifier = Modifier,
     viewModel: BaseEditNoteViewModel,
     settingsViewModel: SettingsViewModel = hiltViewModel(),
+    note: Note,
     reorderableState: ReorderableLazyListState? = null,
     onTitleFieldNext: (() -> Unit)?,
     onBackClick: () -> Unit,
     onBackgroundClick: (() -> Unit)? = null,
-    onSave: (shouldSave: Boolean, combo: NoteCombo) -> Unit,
+    onSave: (NoteCombo?, Note?, List<ChecklistItem>, List<Image>) -> Unit,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     contextMenu: @Composable (() -> Unit)? = null,
-    content: LazyListScope.(Color) -> Unit,
+    content: LazyListScope.() -> Unit,
 ) {
-    val bitmapImages by viewModel.bitmapImages.collectAsStateWithLifecycle(emptyList())
-    val colorIdx by viewModel.colorIdx.collectAsStateWithLifecycle(0)
+    val images by viewModel.images.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val currentCarouselImage by viewModel.currentCarouselImage.collectAsStateWithLifecycle(null)
+    val currentCarouselImageBitmap = currentCarouselImage?.imageBitmap?.collectAsStateWithLifecycle(null)
     val interactionSource = remember { MutableInteractionSource() }
-    val title by viewModel.title.collectAsStateWithLifecycle("")
-    val trashedBitmapImages by viewModel.trashedBitmapImages.collectAsStateWithLifecycle()
+    val trashedImageCount by viewModel.trashedImageCount.collectAsStateWithLifecycle(0)
     val noteColor by viewModel.noteColor.collectAsStateWithLifecycle(MaterialTheme.colorScheme.background)
     val appBarColor by viewModel.appBarColor.collectAsStateWithLifecycle(MaterialTheme.colorScheme.surface)
 
-    LaunchedEffect(colorIdx) {
-        if (colorIdx > 0) {
+    LaunchedEffect(note.colorIdx) {
+        if (note.colorIdx > 0) {
             settingsViewModel.setSystemBarColors(
                 statusBar = appBarColor,
                 navigationBar = noteColor
@@ -76,28 +78,29 @@ fun BaseNoteScreen(
         }
     }
 
-    LaunchedEffect(trashedBitmapImages) {
-        if (trashedBitmapImages.isNotEmpty()) {
+    LaunchedEffect(trashedImageCount) {
+        if (trashedImageCount > 0) {
             val message = context.resources.getQuantityString(
                 R.plurals.x_images_trashed,
-                trashedBitmapImages.size,
-                trashedBitmapImages.size
+                trashedImageCount,
+                trashedImageCount
             )
             val result = snackbarHostState.showSnackbar(
                 message = message,
                 actionLabel = context.resources.getString(R.string.undo).uppercase(),
                 duration = SnackbarDuration.Long,
+                withDismissAction = true,
             )
             when (result) {
                 SnackbarResult.ActionPerformed -> viewModel.undoTrashBitmapImages()
-                SnackbarResult.Dismissed -> viewModel.clearTrashBitmapImages()
+                SnackbarResult.Dismissed -> viewModel.clearTrashedImages()
             }
         }
     }
 
     DisposableEffect(Unit) {
         onDispose {
-            onSave(viewModel.shouldSave, viewModel.combo)
+            onSave(viewModel.dirtyNoteCombo, viewModel.dirtyNote, viewModel.dirtyChecklistItems, viewModel.dirtyImages)
         }
     }
 
@@ -127,9 +130,9 @@ fun BaseNoteScreen(
         ) {
             item {
                 NoteImageGrid(
-                    bitmapImages = bitmapImages,
+                    images = images,
                     showDeleteButton = true,
-                    onImageClick = { viewModel.setCarouselImage(it.image) },
+                    onImageClick = { viewModel.setCarouselImage(it) },
                     onDeleteButtonClick = { viewModel.deleteImage(it) },
                     secondaryRowHeight = 200.dp,
                 )
@@ -141,7 +144,7 @@ fun BaseNoteScreen(
                 ) {
                     NoteTitleField(
                         modifier = Modifier.weight(1f),
-                        value = title,
+                        value = note.title,
                         onValueChange = { viewModel.setTitle(it) },
                         onNext = onTitleFieldNext,
                     )
@@ -149,17 +152,20 @@ fun BaseNoteScreen(
                 }
                 Spacer(Modifier.height(4.dp))
             }
-            content(noteColor)
+            content()
         }
 
-        currentCarouselImage?.let {
-            ImageCarousel(
-                bitmapImage = it,
-                multiple = bitmapImages.size > 1,
-                onClose = { viewModel.unsetCarouselImage() },
-                onSwipeLeft = { viewModel.gotoNextCarouselImage() },
-                onSwipeRight = { viewModel.gotoPreviousCarouselImage() },
-            )
+        currentCarouselImage?.let { image ->
+            currentCarouselImageBitmap?.value?.let { imageBitmap ->
+                ImageCarousel(
+                    image = image,
+                    imageBitmap = imageBitmap,
+                    multiple = images.size > 1,
+                    onClose = { viewModel.unsetCarouselImage() },
+                    onSwipeLeft = { viewModel.gotoNextCarouselImage() },
+                    onSwipeRight = { viewModel.gotoPreviousCarouselImage() },
+                )
+            }
         }
     }
 }

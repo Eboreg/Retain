@@ -5,27 +5,27 @@ import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
+import android.os.FileObserver
 import android.provider.MediaStore
-import androidx.compose.ui.graphics.asImageBitmap
+import android.util.Log
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.core.graphics.scale
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import us.huseli.retain.Constants
 import us.huseli.retain.Constants.IMAGE_SUBDIR
-import us.huseli.retain.Enums.NoteType
 import us.huseli.retain.LogInterface
 import us.huseli.retain.Logger
 import us.huseli.retain.copyFileToLocal
-import us.huseli.retain.data.entities.BitmapImage
+import us.huseli.retain.data.entities.ChecklistItem
 import us.huseli.retain.data.entities.Image
 import us.huseli.retain.data.entities.Note
 import us.huseli.retain.data.entities.NoteCombo
+import us.huseli.retain.fileToImageBitmap
 import java.io.File
 import java.io.FileOutputStream
 import java.util.UUID
@@ -40,90 +40,95 @@ class NoteRepository @Inject constructor(
     private val noteDao: NoteDao,
     private val checklistItemDao: ChecklistItemDao,
     private val imageDao: ImageDao,
-    ioScope: CoroutineScope,
     override val logger: Logger,
-    private val nextCloudRepository: NextCloudRepository,
+    private val database: Database,
 ) : LogInterface {
-    private val imageDir = File(context.filesDir, IMAGE_SUBDIR).apply { mkdirs() }
-
-    val combos: Flow<List<NoteCombo>> = noteDao.flowListCombos().map { combos ->
-        combos.map { combo ->
-            combo.copy(
-                checklistItems = combo.checklistItems.sortedWith(
-                    compareBy({ it.checked }, { it.position })
-                )
-            )
+    private val _eventTypeMask = FileObserver.CLOSE_WRITE or FileObserver.MOVED_TO
+    private val _imageDir = File(context.filesDir, IMAGE_SUBDIR).apply { mkdirs() }
+    private val _imageBitmaps = MutableStateFlow<Map<String, ImageBitmap>>(emptyMap())
+    private val _imageDirObserver = object : FileObserver(_imageDir) {
+        override fun onEvent(event: Int, path: String?) {
+            if (event and _eventTypeMask != 0 && path != null) {
+                try {
+                    addImageBitmap(path)
+                } catch (e: Exception) {
+                    val eventType = when (event) {
+                        CLOSE_WRITE -> "CLOSE_WRITE"
+                        MOVED_TO -> "MOVED_TO"
+                        else -> event.toString()
+                    }
+                    log("_imageDirObserver.onEvent($eventType, $path): could not process: $e", level = Log.ERROR)
+                    log(e.stackTraceToString(), level = Log.ERROR)
+                }
+            }
         }
     }
+
     val nextCloudNeedsTesting = MutableStateFlow(true)
-    val bitmapImages = MutableStateFlow<List<BitmapImage>>(emptyList())
+    val checklistItems: Flow<List<ChecklistItem>> = checklistItemDao.flowList()
+    val images: Flow<List<Image>> = imageDao.flowList().map { images ->
+        images.map { it.copy(imageBitmap = getImageBitmap(it.filename)) }
+    }
+    val notes: Flow<List<Note>> = noteDao.flowList()
 
     init {
-        ioScope.launch {
-            nextCloudRepository.bitmapImages.collect { bitmapImages ->
-                this@NoteRepository.bitmapImages.value = bitmapImages
-            }
+        _imageDirObserver.startWatching()
+        _imageDir.listFiles()?.forEach { file -> addImageBitmap(file) }
+    }
+
+    private fun addImageBitmap(file: File) {
+        fileToImageBitmap(file, context)?.let {
+            _imageBitmaps.value = _imageBitmaps.value.toMutableMap().apply { set(file.name, it) }
+        }
+    }
+
+    internal fun addImageBitmap(filename: String) = addImageBitmap(File(_imageDir, filename))
+
+    suspend fun getCombo(noteId: UUID): NoteCombo? =
+        noteDao.getNote(noteId)?.let { note ->
+            NoteCombo(
+                note = note,
+                checklistItems = checklistItemDao.listByNoteId(noteId),
+                images = imageDao.listByNoteIds(listOf(noteId)).map {
+                    it.copy(imageBitmap = getImageBitmap(it.filename))
+                },
+                databaseVersion = database.openHelper.readableDatabase.version,
+            )
         }
 
-        ioScope.launch {
-            imageDao.flowList().collect { images ->
-                val newBitmapImages = bitmapImages.value.toMutableList()
-                val currentImages = newBitmapImages.map { it.image }
+    private fun getImageBitmap(filename: String): Flow<ImageBitmap?> = _imageBitmaps.map { it[filename] }
 
-                images.forEach { image ->
-                    // Match by content (no point in updating if old and new
-                    // contents are identical):
-                    if (!currentImages.contains(image)) {
-                        image.toBitmapImage(context)?.let { bitmapImage ->
-                            newBitmapImages.removeIf { it.image.filename == image.filename }
-                            newBitmapImages.add(bitmapImage)
-                        }
-                    }
+    suspend fun listCombos(noteIds: Collection<UUID>): List<NoteCombo> =
+        noteDao.listCombos(noteIds).map { combo ->
+            combo.copy(
+                images = combo.images.map { image ->
+                    image.copy(imageBitmap = getImageBitmap(image.filename))
                 }
-                newBitmapImages.removeIf { !images.contains(it.image) }
-                bitmapImages.value = newBitmapImages
-            }
+            )
         }
-    }
 
-    @Suppress("unused")
-    suspend fun deleteNotes(ids: Collection<UUID>) {
-        val images = imageDao.listByNoteIds(ids)
-        @Suppress("Destructure")
-        images.forEach { image ->
-            File(imageDir, image.filename).delete()
-        }
-        noteDao.delete(ids)
-        nextCloudRepository.deleteNotes(ids, images)
-    }
-
-    suspend fun getCombo(id: UUID): NoteCombo? = noteDao.getCombo(id)
-
-    suspend fun trashNotes(combos: Collection<NoteCombo>) {
-        val trashedCombos = combos.map { it.copy(note = it.note.copy(isDeleted = true)) }
-
-        noteDao.update(trashedCombos.map { it.note })
-        nextCloudRepository.upload(trashedCombos)
+    suspend fun trashNotes(notes: Collection<Note>) {
+        noteDao.update(notes.map { it.copy(isDeleted = true) })
     }
 
     suspend fun updateNotePositions(notes: Collection<Note>) = noteDao.updatePositions(notes)
 
-    suspend fun upsertNoteCombo(combo: NoteCombo) {
-        noteDao.upsert(combo.note)
-        if (combo.note.type == NoteType.CHECKLIST) checklistItemDao.replace(combo.note.id, combo.checklistItems)
-        imageDao.replace(combo.note.id, combo.images)
-        nextCloudRepository.upload(combo)
+    suspend fun upsertChecklistItems(items: Collection<ChecklistItem>) = checklistItemDao.upsert(items)
+
+    suspend fun upsertImages(images: Collection<Image>) = imageDao.upsert(images)
+
+    suspend fun upsertNote(note: Note) = noteDao.upsert(note)
+
+    suspend fun upsertNotes(notes: Collection<Note>) {
+        noteDao.update(notes)
+        // nextCloudRepository.upload(notes)
     }
 
-    suspend fun upsertNotes(combos: Collection<NoteCombo>) {
-        noteDao.update(combos.map { it.note })
-        nextCloudRepository.upload(combos)
-    }
-
-    suspend fun uriToBitmapImage(uri: Uri, noteId: UUID): BitmapImage? {
+    suspend fun uriToImage(uri: Uri, noteId: UUID): Image? {
         val basename: String
         val mimeType: String?
         val imageFile: File
+        val finalBitmap: Bitmap?
 
         val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, uri))
@@ -141,35 +146,34 @@ class NoteRepository @Inject constructor(
             val height = (bitmap.height * factor).roundToInt()
             basename = "${UUID.randomUUID()}.png"
             mimeType = "image/png"
-            val resized = bitmap.scale(width = width, height = height)
-            imageFile = File(imageDir, basename)
+            finalBitmap = bitmap.scale(width = width, height = height)
+            imageFile = File(_imageDir, basename)
 
             withContext(Dispatchers.IO) {
                 FileOutputStream(imageFile).use { outputStream ->
-                    resized.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+                    finalBitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
                 }
             }
         } else {
             val extension = context.contentResolver.getType(uri)?.split("/")?.last()
             basename = UUID.randomUUID().toString() + if (extension != null) ".$extension" else ""
             mimeType = context.contentResolver.getType(uri)
-            imageFile = File(imageDir, basename)
+            imageFile = File(_imageDir, basename)
             copyFileToLocal(context, uri, imageFile)
+            finalBitmap = bitmap
         }
 
-        if (bitmap != null) {
-            val image = Image(
+        if (finalBitmap != null) {
+            return Image(
                 filename = basename,
                 mimeType = mimeType,
-                width = bitmap.width,
-                height = bitmap.height,
+                width = finalBitmap.width,
+                height = finalBitmap.height,
                 size = imageFile.length().toInt(),
                 noteId = noteId,
-                position = bitmapImages.value
-                               .filter { it.image.noteId == noteId }
-                               .maxOfOrNull { it.image.position } ?: 0,
+                position = imageDao.getMaxPosition(noteId) + 1,
+                imageBitmap = getImageBitmap(basename),
             )
-            return BitmapImage(image, bitmap.asImageBitmap())
         }
         return null
     }

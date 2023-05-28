@@ -35,7 +35,6 @@ import org.burnoutcrew.reorderable.rememberReorderableLazyListState
 import org.burnoutcrew.reorderable.reorderable
 import us.huseli.retain.Enums.HomeScreenViewType
 import us.huseli.retain.data.entities.Note
-import us.huseli.retain.data.entities.NoteCombo
 import us.huseli.retain.viewmodels.NoteViewModel
 import us.huseli.retain.viewmodels.SettingsViewModel
 
@@ -51,24 +50,26 @@ fun HomeScreen(
     onSettingsClick: () -> Unit,
     onDebugClick: () -> Unit,
 ) {
-    val combos by viewModel.combos.collectAsStateWithLifecycle()
-    val selectedCombos by viewModel.selectedNotes.collectAsStateWithLifecycle(emptySet())
-    val isSelectEnabled = selectedCombos.isNotEmpty()
-    var isFABExpanded by rememberSaveable { mutableStateOf(false) }
+    val notes by viewModel.notes.collectAsStateWithLifecycle(emptyList())
+    val images by viewModel.images.collectAsStateWithLifecycle(emptyList())
+    val checklistData by viewModel.checklistData.collectAsStateWithLifecycle(emptyList())
+    val isSelectEnabled by viewModel.isSelectEnabled.collectAsStateWithLifecycle(false)
+    val selectedNoteIds by viewModel.selectedNoteIds.collectAsStateWithLifecycle()
     val interactionSource = remember { MutableInteractionSource() }
     val minColumnWidth by settingsViewModel.minColumnWidth.collectAsStateWithLifecycle()
-    var viewType by rememberSaveable { mutableStateOf(HomeScreenViewType.GRID) }
     val reorderableState = rememberReorderableLazyListState(
         onMove = { from, to -> viewModel.switchNotePositions(from, to) },
         onDragEnd = { _, _ -> viewModel.saveNotePositions() }
     )
+    var isFABExpanded by rememberSaveable { mutableStateOf(false) }
+    var viewType by rememberSaveable { mutableStateOf(HomeScreenViewType.GRID) }
 
     RetainScaffold(
         topBar = {
             if (isSelectEnabled) SelectionTopAppBar(
-                selectedCount = selectedCombos.size,
+                selectedCount = selectedNoteIds.size,
                 onCloseClick = { viewModel.deselectAllNotes() },
-                onTrashClick = { viewModel.trashNotes(selectedCombos) },
+                onTrashClick = { viewModel.trashSelectedNotes() },
             ) else HomeScreenTopAppBar(
                 viewType = viewType,
                 onSettingsClick = onSettingsClick,
@@ -100,24 +101,21 @@ fun HomeScreen(
             .fillMaxHeight()
             .padding(innerPadding)
 
-        val lazyContent: @Composable (NoteCombo, Modifier) -> Unit = { combo, modifier ->
-            val bitmapImages by viewModel.getNoteBitmapImages(combo.note.id).collectAsStateWithLifecycle(emptyList())
-
+        val lazyContent: @Composable (Note, Modifier) -> Unit = { note, modifier ->
             NoteCard(
                 modifier = modifier.fillMaxWidth(),
-                combo = combo,
-                bitmapImages = bitmapImages,
+                note = note,
+                checklistData = checklistData.find { it.noteId == note.id },
+                images = images.filter { it.noteId == note.id },
                 onClick = {
-                    if (isSelectEnabled) {
-                        if (selectedCombos.contains(combo)) viewModel.deselectNote(combo)
-                        else viewModel.selectNote(combo)
-                    } else onCardClick(combo.note)
+                    if (isSelectEnabled) viewModel.toggleNoteSelected(note.id)
+                    else onCardClick(note)
                 },
                 onLongClick = {
-                    if (!isSelectEnabled) viewModel.selectNote(combo)
-                    else viewModel.deselectNote(combo)
+                    if (!isSelectEnabled) viewModel.selectNote(note.id)
+                    else viewModel.deselectNote(note.id)
                 },
-                isSelected = selectedCombos.contains(combo),
+                isSelected = selectedNoteIds.contains(note.id),
                 showDragHandle = viewType == HomeScreenViewType.LIST,
                 reorderableState = reorderableState,
             )
@@ -131,7 +129,7 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalItemSpacing = 8.dp,
             ) {
-                items(combos, key = { it.note.id }) { combo -> lazyContent(combo, Modifier) }
+                items(notes, key = { it.id }) { note -> lazyContent(note, Modifier) }
             }
         } else {
             LazyColumn(
@@ -140,10 +138,10 @@ fun HomeScreen(
                 contentPadding = PaddingValues(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                items(combos, key = { it.note.id }) { combo ->
-                    ReorderableItem(reorderableState, key = combo.note.id) { isDragging ->
+                items(notes, key = { it.id }) { note ->
+                    ReorderableItem(reorderableState, key = note.id) { isDragging ->
                         val elevation by animateDpAsState(if (isDragging) 16.dp else 0.dp)
-                        lazyContent(combo, Modifier.shadow(elevation))
+                        lazyContent(note, Modifier.shadow(elevation))
                     }
                 }
             }

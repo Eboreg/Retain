@@ -5,8 +5,6 @@
     <string name="add_checklist">Add checklist</string>
     <string name="title">Title</string>
     <string name="add_item">Add item</string>
-    <string name="delete">Delete</string>
-    <string name="cancel">Cancel</string>
     <string name="app_settings">App settings</string>
     <string name="exit_selection_mode">Exit selection mode</string>
     <string name="delete_selected_notes">Delete selected notes</string>
@@ -39,9 +37,7 @@
     <string name="list_view">List view</string>
     <string name="grid_view">Grid view</string>
     <string name="move_card">Move card</string>
-    <string name="send_to_trash">Send to trash</string>
     <string name="undo">Undo</string>
-    <string name="empty_note_not_saving">Empty note; not saving.</string>
     <string name="uncheck_all">Uncheck all</string>
     <string name="delete_checked">Delete checked</string>
     <plurals name="plus_x_items">
@@ -51,14 +47,6 @@
     <plurals name="x_checked_items">
         <item quantity="one">1 checked item</item>
         <item quantity="other">%1$d checked items</item>
-    </plurals>
-    <plurals name="send_x_notes_to_trash">
-        <item quantity="one">Send 1 note to trash?</item>
-        <item quantity="other">Send %1$d notes to trash?</item>
-    </plurals>
-    <plurals name="send_notes_to_trash">
-        <item quantity="one">Send note to trash</item>
-        <item quantity="other">Send notes to trash</item>
     </plurals>
     <plurals name="plus_x_checked_items">
         <item quantity="one">+ 1 checked item</item>

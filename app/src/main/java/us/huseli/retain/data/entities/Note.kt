@@ -23,7 +23,7 @@ open class Note(
     @ColumnInfo(name = "noteColorIdx", defaultValue = "0") val colorIdx: Int = 0,
     @ColumnInfo(name = "noteIsDeleted", defaultValue = "0") val isDeleted: Boolean = false,
 ) : Comparable<Note> {
-    override fun toString() = "<Note: id=$id, title=$title]>"
+    override fun toString() = "<Note: id=$id, title=$title, created=$created, updated=$updated, isDeleted=$isDeleted]>"
 
     override fun compareTo(other: Note) = (updated.epochSecond - other.updated.epochSecond).toInt()
 

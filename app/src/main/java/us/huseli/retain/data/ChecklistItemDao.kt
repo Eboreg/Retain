@@ -4,6 +4,8 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
+import kotlinx.coroutines.flow.Flow
 import us.huseli.retain.data.entities.ChecklistItem
 import java.util.UUID
 
@@ -12,6 +14,13 @@ interface ChecklistItemDao {
     @Query("UPDATE checklistitem SET checklistItemIsDeleted = 1 WHERE checklistItemNoteId=:noteId AND checklistItemId NOT IN (:except)")
     suspend fun deleteByNoteId(noteId: UUID, except: Collection<UUID> = emptyList())
 
+    @Query("SELECT * FROM checklistitem WHERE checklistItemIsDeleted = 0 ORDER BY checklistItemNoteId, checklistItemPosition")
+    fun flowList(): Flow<List<ChecklistItem>>
+
+    @Query("SELECT * FROM checklistitem WHERE checklistItemIsDeleted = 0 AND checklistItemNoteId = :noteId ORDER BY checklistItemPosition")
+    suspend fun listByNoteId(noteId: UUID): List<ChecklistItem>
+
+    @Transaction
     suspend fun replace(noteId: UUID, items: Collection<ChecklistItem>) {
         deleteByNoteId(noteId, except = items.map { it.id })
         upsert(items)

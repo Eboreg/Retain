@@ -6,12 +6,10 @@ import android.net.Uri
 import androidx.preference.PreferenceManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import us.huseli.retain.Constants
 import us.huseli.retain.LogInterface
 import us.huseli.retain.Logger
-import us.huseli.retain.data.entities.BitmapImage
 import us.huseli.retain.data.entities.Image
 import us.huseli.retain.data.entities.NoteCombo
 import us.huseli.retain.nextcloud.NextCloudEngine
@@ -43,7 +41,6 @@ class NextCloudRepository @Inject constructor(
 ) : SharedPreferences.OnSharedPreferenceChangeListener, LogInterface {
     private val imageDir = File(context.filesDir, Constants.IMAGE_SUBDIR).apply { mkdirs() }
     private val preferences = PreferenceManager.getDefaultSharedPreferences(context)
-    val bitmapImages = MutableStateFlow<List<BitmapImage>>(emptyList())
 
     init {
         sync()
@@ -54,15 +51,7 @@ class NextCloudRepository @Inject constructor(
         if (key == Constants.PREF_NEXTCLOUD_BASE_DIR) sync()
     }
 
-    private fun addDownloadedImage(image: Image) {
-        image.toBitmapImage(context)?.let {
-            val newBitmapImages = bitmapImages.value.toMutableList()
-
-            newBitmapImages.add(it)
-            bitmapImages.value = newBitmapImages
-        }
-    }
-
+    @Suppress("unused")
     fun deleteNotes(ids: Collection<UUID>, images: Collection<Image>) {
         RemoveNotesTask(nextCloudEngine, ids).run()
         RemoveImagesTask(nextCloudEngine, images).run()
@@ -90,10 +79,7 @@ class NextCloudRepository @Inject constructor(
             val images = imageDao.listAll()
             val missingImages = images.filter { !File(imageDir, it.filename).exists() }
 
-            DownloadMissingImagesTask(nextCloudEngine, missingImages).run(
-                onEachCallback = { image, result -> if (result.success) addDownloadedImage(image) },
-                onReadyCallback = null,
-            )
+            DownloadMissingImagesTask(nextCloudEngine, missingImages).run()
         }
 
         DownstreamSyncTask(nextCloudEngine).run { downTaskResult ->
@@ -126,9 +112,9 @@ class NextCloudRepository @Inject constructor(
                     checklistItemDao.replace(it.note.id, it.checklistItems)
                     imageDao.replace(it.note.id, it.images)
                     DownloadNoteImagesTask(nextCloudEngine, it).run(
-                        onEachCallback = { image, result ->
-                            if (result.success) addDownloadedImage(image)
-                            else logError("Failed to download image from Nextcloud", result.error)
+                        onEachCallback = { _, result ->
+                            if (!result.success)
+                                logError("Failed to download image from Nextcloud", result.error)
                         },
                         onReadyCallback = null
                     )
