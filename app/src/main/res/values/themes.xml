@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Retain" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Retain" parent="android:Theme.Material.NoActionBar" />
+
+    <style name="Theme.Retain.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splashscreen_icon</item>
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="postSplashScreenTheme">@style/Theme.Retain</item>
+    </style>
 </resources>
