@@ -21,9 +21,7 @@ import java.util.UUID
     )]
 )
 data class Image(
-    @PrimaryKey
-    @ColumnInfo(name = "imageFilename")
-    val filename: String,
+    @ColumnInfo(name = "imageFilename") @PrimaryKey val filename: String,
     @ColumnInfo(name = "imageMimeType") val mimeType: String?,
     @ColumnInfo(name = "imageWidth") val width: Int?,
     @ColumnInfo(name = "imageHeight") val height: Int?,
@@ -32,7 +30,7 @@ data class Image(
     @ColumnInfo(name = "imageSize") val size: Int,
     @ColumnInfo(name = "imageIsDeleted", defaultValue = "0") val isDeleted: Boolean = false,
     @ColumnInfo(name = "imagePosition", defaultValue = "0") val position: Int = 0,
-    @Ignore val imageBitmap: Flow<ImageBitmap?> = MutableStateFlow<ImageBitmap?>(null),
+    @Ignore @Transient val imageBitmap: Flow<ImageBitmap?> = MutableStateFlow<ImageBitmap?>(null),
 ) : Comparable<Image> {
     @Ignore
     val ratio: Float = if (width != null && height != null) width.toFloat() / height.toFloat() else 0f

@@ -38,7 +38,7 @@ fun NoteScreenTopAppBar(
     backgroundColor: Color,
     onBackClick: () -> Unit,
     onImagePick: (Uri) -> Unit,
-    onColorSelected: (Int) -> Unit,
+    onColorSelected: (String) -> Unit,
 ) {
     val context = LocalContext.current
     var isColorDropdownExpanded by rememberSaveable { mutableStateOf(false) }

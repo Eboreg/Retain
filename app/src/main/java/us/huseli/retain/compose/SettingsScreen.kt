@@ -1,10 +1,15 @@
 package us.huseli.retain.compose
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -53,6 +58,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -66,7 +72,8 @@ import us.huseli.retain.Constants.PREF_NEXTCLOUD_USERNAME
 import us.huseli.retain.R
 import us.huseli.retain.cleanUri
 import us.huseli.retain.nextcloud.tasks.TestNextCloudTaskResult
-import us.huseli.retain.ui.theme.RetainColor
+import us.huseli.retain.ui.theme.RetainColorDark
+import us.huseli.retain.ui.theme.RetainColorLight
 import us.huseli.retain.ui.theme.RetainTheme
 import us.huseli.retain.viewmodels.SettingsViewModel
 import kotlin.math.max
@@ -77,7 +84,7 @@ fun SettingsSection(
     modifier: Modifier = Modifier,
     title: String,
     subtitle: String? = null,
-    content: @Composable () -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     var show by rememberSaveable { mutableStateOf(true) }
     val showIconRotation by animateFloatAsState(if (show) 0f else 180f)
@@ -126,6 +133,60 @@ fun ErrorDialog(
 
 
 @Composable
+fun KeepImportDialog(
+    modifier: Modifier = Modifier,
+    actionCount: Int,
+    currentAction: String,
+    currentActionIndex: Int,
+    onCancel: () -> Unit
+) {
+    val progress = if (actionCount > 0) (currentActionIndex.toFloat() / actionCount) else 0f
+
+    AlertDialog(
+        modifier = modifier,
+        title = { Text(stringResource(R.string.google_keep_import)) },
+        text = {
+            Column {
+                Text(
+                    stringResource(R.string.importing_from_google_keep_don_t_go_anywhere),
+                    modifier = Modifier.padding(bottom = 20.dp)
+                )
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp), progress = progress)
+                Text(currentAction, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancel) {
+                Text(stringResource(R.string.cancel).uppercase())
+            }
+        },
+        onDismissRequest = {},
+        confirmButton = {},
+    )
+}
+
+@Composable
+fun KeepImportSection(modifier: Modifier = Modifier, onZipFilePick: (Uri) -> Unit) {
+    val zipFilePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) onZipFilePick(uri)
+    }
+
+    SettingsSection(
+        modifier = modifier,
+        title = stringResource(R.string.google_keep_import)
+    ) {
+        Text(stringResource(R.string.google_keep_import_about), modifier = Modifier.padding(bottom = 8.dp))
+        OutlinedButton(
+            onClick = { zipFilePicker.launch(arrayOf("application/zip")) },
+            shape = ShapeDefaults.ExtraSmall,
+        ) {
+            Text(stringResource(R.string.select_zip_file))
+        }
+    }
+}
+
+
+@Composable
 fun NextCloudSection(
     modifier: Modifier = Modifier,
     uri: String,
@@ -142,18 +203,19 @@ fun NextCloudSection(
     var uriState by rememberSaveable(uri) { mutableStateOf(uri) }
     var isPasswordFieldFocused by rememberSaveable { mutableStateOf(false) }
     var isPasswordShown by rememberSaveable { mutableStateOf(false) }
+    val colors = if (isSystemInDarkTheme()) RetainColorDark else RetainColorLight
     val workingIcon = @Composable {
         Icon(
             imageVector = Icons.Sharp.Check,
             contentDescription = null,
-            tint = RetainColor.Green,
+            tint = colors.Green,
         )
     }
     val failIcon = @Composable {
         Icon(
             imageVector = Icons.Sharp.Error,
             contentDescription = null,
-            tint = RetainColor.Red,
+            tint = colors.Red,
         )
     }
 
@@ -347,6 +409,7 @@ fun SettingsScreenImpl(
     onBackClick: () -> Unit = {},
     onNextCloudTestClick: () -> Unit = {},
     onChange: (field: String, value: Any) -> Unit = { _, _ -> },
+    onKeepZipFilePick: (Uri) -> Unit = {},
 ) {
     DisposableEffect(Unit) {
         onDispose {
@@ -388,6 +451,12 @@ fun SettingsScreenImpl(
                     isWorking = isNextCloudWorking,
                 )
             }
+            item {
+                KeepImportSection(
+                    modifier = Modifier.fillMaxWidth(),
+                    onZipFilePick = onKeepZipFilePick,
+                )
+            }
         }
     }
 }
@@ -409,6 +478,10 @@ fun SettingsScreen(
     val isNextCloudWorking by viewModel.isNextCloudWorking.collectAsStateWithLifecycle()
     val isNextCloudUrlFail by viewModel.isNextCloudUrlFail.collectAsStateWithLifecycle()
     val isNextCloudCredentialsFail by viewModel.isNextCloudCredentialsFail.collectAsStateWithLifecycle()
+    val keepImportIsActive by viewModel.keepImportIsActive.collectAsStateWithLifecycle()
+    val keepImportActionCount by viewModel.keepImportActionCount.collectAsStateWithLifecycle()
+    val keepImportCurrentAction by viewModel.keepImportCurrentAction.collectAsStateWithLifecycle()
+    val keepImportCurrentActionIndex by viewModel.keepImportCurrentActionIndex.collectAsStateWithLifecycle()
     val nextCloudSuccessMessage = stringResource(R.string.successfully_connected_to_nextcloud)
     val context = LocalContext.current
 
@@ -428,6 +501,15 @@ fun SettingsScreen(
         }
     }
 
+    if (keepImportIsActive) {
+        KeepImportDialog(
+            actionCount = keepImportActionCount,
+            currentAction = keepImportCurrentAction,
+            currentActionIndex = keepImportCurrentActionIndex,
+            onCancel = { viewModel.cancelKeepImport() }
+        )
+    }
+
     SettingsScreenImpl(
         modifier = modifier,
         nextCloudUri = nextCloudUri,
@@ -436,15 +518,16 @@ fun SettingsScreen(
         nextCloudBaseDir = nextCloudBaseDir,
         minColumnWidth = minColumnWidth,
         isNextCloudTesting = isNextCloudTesting,
-        onBackClick = onBackClick,
+        isNextCloudWorking = isNextCloudWorking,
+        isNextCloudUrlFail = isNextCloudUrlFail,
+        isNextCloudCredentialsFail = isNextCloudCredentialsFail,
         onSave = { viewModel.save() },
+        onBackClick = onBackClick,
         onNextCloudTestClick = {
             viewModel.testNextCloud { result -> nextCloudTestResult = result }
         },
-        onChange = viewModel.updateField,
-        isNextCloudCredentialsFail = isNextCloudCredentialsFail,
-        isNextCloudUrlFail = isNextCloudUrlFail,
-        isNextCloudWorking = isNextCloudWorking,
+        onChange = { field, value -> viewModel.updateField(field, value) },
+        onKeepZipFilePick = { uri -> viewModel.keepImport(uri, context) },
     )
 }
 

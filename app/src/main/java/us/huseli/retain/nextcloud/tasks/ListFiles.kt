@@ -49,13 +49,12 @@ abstract class ListFilesListTask<RT : ListFilesTaskResult, CRT : TaskResult, CT 
     private val successfulRemoteFiles = mutableListOf<RemoteFile>()
     private val unsuccessfulRemoteFiles = mutableListOf<RemoteFile>()
     protected open val failOnUnsuccessfulChildTask = true
+    override val isMetaTask = true
 
     abstract fun getChildTask(remoteFile: RemoteFile): CT?
 
-    open fun processChildTaskResult(remoteFile: RemoteFile, result: CRT) {}
-
-    override fun isReady() =
-        super.isReady() &&
+    override fun isFinished() =
+        super.isFinished() &&
         (
             (successfulRemoteFiles.size + unsuccessfulRemoteFiles.size == remoteFiles.size) ||
             (failOnUnsuccessfulChildTask && !success)
@@ -76,7 +75,6 @@ abstract class ListFilesListTask<RT : ListFilesTaskResult, CRT : TaskResult, CT 
         remoteFiles.addAll(remoteOperationResult.data.filterIsInstance<RemoteFile>().filter(filter))
         remoteFiles.forEach { remoteFile ->
             getChildTask(remoteFile)?.run(triggerStatus) { result ->
-                processChildTaskResult(remoteFile, result)
                 if (result.success) {
                     successfulRemoteFiles.add(remoteFile)
                 } else {
@@ -84,9 +82,9 @@ abstract class ListFilesListTask<RT : ListFilesTaskResult, CRT : TaskResult, CT 
                     if (failOnUnsuccessfulChildTask) failWithMessage(result.error)
                 }
                 onEachCallback?.invoke(remoteFile, result)
-                notifyIfReady()
+                notifyIfFinished()
             }
         }
-        notifyIfReady()
+        notifyIfFinished()
     }
 }

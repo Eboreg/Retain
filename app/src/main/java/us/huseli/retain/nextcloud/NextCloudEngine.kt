@@ -20,9 +20,10 @@ import us.huseli.retain.Constants.PREF_NEXTCLOUD_BASE_DIR
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_PASSWORD
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_URI
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_USERNAME
+import us.huseli.retain.InstantAdapter
 import us.huseli.retain.LogInterface
 import us.huseli.retain.Logger
-import us.huseli.retain.helpers.InstantAdapter
+import us.huseli.retain.nextcloud.tasks.BaseTask
 import us.huseli.retain.nextcloud.tasks.TestNextCloudTask
 import us.huseli.retain.nextcloud.tasks.TestNextCloudTaskResult
 import java.io.File
@@ -36,18 +37,20 @@ class NextCloudEngine @Inject constructor(
     internal val ioScope: CoroutineScope,
     override val logger: Logger,
 ) : SharedPreferences.OnSharedPreferenceChangeListener, LogInterface {
-    private val preferences = PreferenceManager.getDefaultSharedPreferences(context)
     internal val gson: Gson = GsonBuilder()
         .registerTypeAdapter(Instant::class.java, InstantAdapter())
         .create()
-    internal val tempDirUp = File(context.cacheDir, "up").also { it.mkdir() }
-    internal val tempDirDown = File(context.cacheDir, "down").also { it.mkdir() }
+    internal val tempDirUp = File(context.cacheDir, "up").apply { mkdirs() }
+    internal val tempDirDown = File(context.cacheDir, "down").apply { mkdirs() }
     internal val listenerHandler = Handler(Looper.getMainLooper())
+
+    private val preferences = PreferenceManager.getDefaultSharedPreferences(context)
+    private var tasks: List<BaseTask<*>> = listOf()
 
     private var isTestScheduled = false
     private var status = STATUS_READY
 
-    internal var uri: Uri = Uri.EMPTY
+    private var uri: Uri = Uri.EMPTY
         set(value) {
             if (field != value) {
                 field = value
@@ -83,6 +86,15 @@ class NextCloudEngine @Inject constructor(
         setDefaultTimeouts(120_000, 120_000)
     }
 
+    private val runningTasks: List<BaseTask<*>>
+        get() = tasks.filter { it.status == BaseTask.STATUS_RUNNING }
+
+    private val runningNonMetaTasks: List<BaseTask<*>>
+        get() = runningTasks.filter { !it.isMetaTask }
+
+    private val waitingTasks: List<BaseTask<*>>
+        get() = tasks.filter { it.status == BaseTask.STATUS_WAITING }
+
     init {
         uri = Uri.parse(preferences.getString(PREF_NEXTCLOUD_URI, "") ?: "")
         username = preferences.getString(PREF_NEXTCLOUD_USERNAME, "") ?: ""
@@ -97,14 +109,22 @@ class NextCloudEngine @Inject constructor(
             *segments.map { it.trim('/') }.toTypedArray()
         ).joinToString("/")
 
-    fun awaitStatus(value: Int, callback: () -> Unit) {
-        if (status >= value) callback()
+    private fun logTasks() {
+        log("Running tasks: ${runningTasks.map { it.javaClass.simpleName }}")
+        log("Waiting tasks: ${waitingTasks.map { it.javaClass.simpleName }}")
+    }
+
+    fun registerTask(task: BaseTask<*>, triggerStatus: Int, callback: () -> Unit) {
+        tasks = tasks.toMutableList().apply { add(task) }
+        task.addOnFinishedListener { logTasks() }
+        if (status >= triggerStatus && runningNonMetaTasks.size < 3) callback()
         else {
             ioScope.launch {
-                while (status < value) delay(1_000)
+                while (status < triggerStatus || runningNonMetaTasks.size >= 3) delay(1_000)
                 callback()
             }
         }
+        logTasks()
     }
 
     fun testClient(

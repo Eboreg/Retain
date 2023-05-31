@@ -1,6 +1,7 @@
 package us.huseli.retain
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
@@ -11,10 +12,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.core.graphics.scale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import us.huseli.retain.Constants.ZIP_BUFFER_SIZE
+import us.huseli.retain.data.entities.Image
 import java.io.File
 import java.io.FileOutputStream
+import java.io.StringWriter
+import java.util.UUID
+import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
+import kotlin.math.max
+import kotlin.math.roundToInt
 
 suspend fun copyFileToLocal(context: Context, uri: Uri, outFile: File): File {
     return withContext(Dispatchers.IO) {
@@ -63,6 +73,72 @@ fun fileToImageBitmap(file: File, context: Context): ImageBitmap? {
             }
             return bitmap?.asImageBitmap()
         }
+    }
+    return null
+}
+
+
+fun readTextFileFromZip(zipFile: ZipFile, zipEntry: ZipEntry): String {
+    val inputStream = zipFile.getInputStream(zipEntry)
+    val buffer = ByteArray(ZIP_BUFFER_SIZE)
+    val writer = StringWriter()
+    var length: Int
+    while (inputStream.read(buffer).also { length = it } > 0) {
+        writer.write(buffer.decodeToString(0, length))
+    }
+    return writer.toString()
+}
+
+
+suspend fun uriToImage(context: Context, uri: Uri, noteId: UUID): Image? {
+    val basename: String
+    val mimeType: String?
+    val imageFile: File
+    val finalBitmap: Bitmap?
+
+    val imageDir = File(context.filesDir, Constants.IMAGE_SUBDIR).apply { mkdirs() }
+    val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, uri))
+    } else {
+        @Suppress("DEPRECATION")
+        MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
+    }
+
+    if (
+        bitmap != null &&
+        (bitmap.width > Constants.DEFAULT_MAX_IMAGE_DIMEN || bitmap.height > Constants.DEFAULT_MAX_IMAGE_DIMEN)
+    ) {
+        val factor = Constants.DEFAULT_MAX_IMAGE_DIMEN.toFloat() / max(bitmap.width, bitmap.height)
+        val width = (bitmap.width * factor).roundToInt()
+        val height = (bitmap.height * factor).roundToInt()
+        basename = "${UUID.randomUUID()}.png"
+        mimeType = "image/png"
+        finalBitmap = bitmap.scale(width = width, height = height)
+        imageFile = File(imageDir, basename)
+
+        withContext(Dispatchers.IO) {
+            FileOutputStream(imageFile).use { outputStream ->
+                finalBitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+            }
+        }
+    } else {
+        val extension = context.contentResolver.getType(uri)?.split("/")?.last()
+        basename = UUID.randomUUID().toString() + if (extension != null) ".$extension" else ""
+        mimeType = context.contentResolver.getType(uri)
+        imageFile = File(imageDir, basename)
+        copyFileToLocal(context, uri, imageFile)
+        finalBitmap = bitmap
+    }
+
+    if (finalBitmap != null) {
+        return Image(
+            filename = basename,
+            mimeType = mimeType,
+            width = finalBitmap.width,
+            height = finalBitmap.height,
+            size = imageFile.length().toInt(),
+            noteId = noteId,
+        )
     }
     return null
 }

@@ -8,152 +8,229 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-object RetainColor {
-    val Green = Color(0xFF008000)
-    val Red = Color(220, 20, 60)
+interface RetainColorScheme {
+    val Background: Color
+    val Error: Color
+    val ErrorContainer: Color
+    val InverseOnSurface: Color
+    val InversePrimary: Color
+    val InverseSurface: Color
+    val OnBackground: Color
+    val OnError: Color
+    val OnErrorContainer: Color
+    val OnPrimary: Color
+    val OnPrimaryContainer: Color
+    val OnPrimaryFixed: Color
+    val OnPrimaryFixedVariant: Color
+    val OnSecondary: Color
+    val OnSecondaryContainer: Color
+    val OnSecondaryFixed: Color
+    val OnSecondaryFixedVariant: Color
+    val OnSurface: Color
+    val OnSurfaceVariant: Color
+    val OnTertiary: Color
+    val OnTertiaryContainer: Color
+    val OnTertiaryFixed: Color
+    val OnTertiaryFixedVariant: Color
+    val Outline: Color
+    val OutlineVariant: Color
+    val Primary: Color
+    val PrimaryContainer: Color
+    val PrimaryFixed: Color
+    val PrimaryFixedDim: Color
+    val Scrim: Color
+    val Secondary: Color
+    val SecondaryContainer: Color
+    val SecondaryFixed: Color
+    val SecondaryFixedDim: Color
+    val Shadow: Color
+    val Surface: Color
+    val SurfaceBright: Color
+    val SurfaceContainer: Color
+    val SurfaceContainerHigh: Color
+    val SurfaceContainerHighest: Color
+    val SurfaceContainerLow: Color
+    val SurfaceContainerLowest: Color
+    val SurfaceDim: Color
+    val SurfaceTint: Color
+    val SurfaceVariant: Color
+    val Tertiary: Color
+    val TertiaryContainer: Color
+    val TertiaryFixed: Color
+    val TertiaryFixedDim: Color
 
-    val LightBackground = Color(0xFFFAFDFD)
-    val LightError = Color(0xFFBA1A1A)
-    val LightErrorContainer = Color(0xFFFFDAD6)
-    val LightInverseOnSurface = Color(0xFFEFF1F1)
-    val LightInversePrimary = Color(0xFF85CFFF)
-    val LightInverseSurface = Color(0xFF2E3132)
-    val LightOnBackground = Color(0xFF191C1D)
-    val LightOnError = Color(0xFFFFFFFF)
-    val LightOnErrorContainer = Color(0xFF410002)
-    val LightOnPrimary = Color(0xFFFFFFFF)
-    val LightOnPrimaryContainer = Color(0xFF001E2E)
-    val LightOnPrimaryFixed = Color(0xFF001E2E)
-    val LightOnPrimaryFixedVariant = Color(0xFF004C6C)
-    val LightOnSecondary = Color(0xFFFFFFFF)
-    val LightOnSecondaryContainer = Color(0xFF0B1D29)
-    val LightOnSecondaryFixed = Color(0xFF0B1D29)
-    val LightOnSecondaryFixedVariant = Color(0xFF374955)
-    val LightOnSurface = Color(0xFF191C1D)
-    val LightOnSurfaceVariant = Color(0xFF3F484A)
-    val LightOnTertiary = Color(0xFFFFFFFF)
-    val LightOnTertiaryContainer = Color(0xFF171E00)
-    val LightOnTertiaryFixed = Color(0xFF171E00)
-    val LightOnTertiaryFixedVariant = Color(0xFF3D4D00)
-    val LightOutline = Color(0xFF6F797A)
-    val LightOutlineVariant = Color(0xFFBFC8CA)
-    val LightPrimary = Color(0xFF00658F)
-    val LightPrimaryContainer = Color(0xFFC7E7FF)
-    val LightPrimaryFixed = Color(0xFFC7E7FF)
-    val LightPrimaryFixedDim = Color(0xFF85CFFF)
-    val LightScrim = Color(0xFF000000)
-    val LightSecondary = Color(0xFF4F616E)
-    val LightSecondaryContainer = Color(0xFFD2E5F5)
-    val LightSecondaryFixed = Color(0xFFD2E5F5)
-    val LightSecondaryFixedDim = Color(0xFFB6C9D8)
-    val LightShadow = Color(0xFF000000)
-    val LightSurface = Color(0xFFF8FAFA)
-    val LightSurfaceBright = Color(0xFFF8FAFA)
-    val LightSurfaceContainer = Color(0xFFECEEEF)
-    val LightSurfaceContainerHigh = Color(0xFFE6E8E9)
-    val LightSurfaceContainerHighest = Color(0xFFE1E3E3)
-    val LightSurfaceContainerLow = Color(0xFFF2F4F4)
-    val LightSurfaceContainerLowest = Color(0xFFFFFFFF)
-    val LightSurfaceDim = Color(0xFFD8DADB)
-    val LightSurfaceTint = Color(0xFF00658F)
-    val LightSurfaceVariant = Color(0xFFDBE4E6)
-    val LightTertiary = Color(0xFF526600)
-    val LightTertiaryContainer = Color(0xFFD4ED7F)
-    val LightTertiaryFixed = Color(0xFFD4ED7F)
-    val LightTertiaryFixedDim = Color(0xFFB8D166)
+    val Brown: Color
+    val Purple: Color
+    val Cerulean: Color
+    val Gray: Color
+    val Pink: Color
+    val Blue: Color
+    val Red: Color
+    val Yellow: Color
+    val Green: Color
+    val Teal: Color
+    val Orange: Color
+}
 
-    val DarkBackground = Color(0xFF191C1D)
-    val DarkError = Color(0xFFFFB4AB)
-    val DarkErrorContainer = Color(0xFF93000A)
-    val DarkInverseOnSurface = Color(0xFF191C1D)
-    val DarkInversePrimary = Color(0xFF00658F)
-    val DarkInverseSurface = Color(0xFFE1E3E3)
-    val DarkOnBackground = Color(0xFFE1E3E3)
-    val DarkOnError = Color(0xFF690005)
-    val DarkOnErrorContainer = Color(0xFFFFDAD6)
-    val DarkOnPrimary = Color(0xFF00344C)
-    val DarkOnPrimaryContainer = Color(0xFFC7E7FF)
-    val DarkOnPrimaryFixed = Color(0xFF001E2E)
-    val DarkOnPrimaryFixedVariant = Color(0xFF004C6C)
-    val DarkOnSecondary = Color(0xFF21323E)
-    val DarkOnSecondaryContainer = Color(0xFFD2E5F5)
-    val DarkOnSecondaryFixed = Color(0xFF0B1D29)
-    val DarkOnSecondaryFixedVariant = Color(0xFF374955)
-    val DarkOnSurface = Color(0xFFC4C7C7)
-    val DarkOnSurfaceVariant = Color(0xFFBFC8CA)
-    val DarkOnTertiary = Color(0xFF293500)
-    val DarkOnTertiaryContainer = Color(0xFFD4ED7F)
-    val DarkOnTertiaryFixed = Color(0xFF171E00)
-    val DarkOnTertiaryFixedVariant = Color(0xFF3D4D00)
-    val DarkOutline = Color(0xFF899294)
-    val DarkOutlineVariant = Color(0xFF3F484A)
-    val DarkPrimary = Color(0xFF85CFFF)
-    val DarkPrimaryContainer = Color(0xFF004C6C)
-    val DarkPrimaryFixed = Color(0xFFC7E7FF)
-    val DarkPrimaryFixedDim = Color(0xFF85CFFF)
-    val DarkScrim = Color(0xFF000000)
-    val DarkSecondary = Color(0xFFB6C9D8)
-    val DarkSecondaryContainer = Color(0xFF374955)
-    val DarkSecondaryFixed = Color(0xFFD2E5F5)
-    val DarkSecondaryFixedDim = Color(0xFFB6C9D8)
-    val DarkShadow = Color(0xFF000000)
-    val DarkSurface = Color(0xFF101415)
-    val DarkSurfaceBright = Color(0xFF363A3A)
-    val DarkSurfaceContainer = Color(0xFF1D2021)
-    val DarkSurfaceContainerHigh = Color(0xFF272B2B)
-    val DarkSurfaceContainerHighest = Color(0xFF323536)
-    val DarkSurfaceContainerLow = Color(0xFF191C1D)
-    val DarkSurfaceContainerLowest = Color(0xFF0B0F0F)
-    val DarkSurfaceDim = Color(0xFF101415)
-    val DarkSurfaceTint = Color(0xFF85CFFF)
-    val DarkSurfaceVariant = Color(0xFF3F484A)
-    val DarkTertiary = Color(0xFFB8D166)
-    val DarkTertiaryContainer = Color(0xFF3D4D00)
-    val DarkTertiaryFixed = Color(0xFFD4ED7F)
-    val DarkTertiaryFixedDim = Color(0xFFB8D166)
+object RetainColorDark : RetainColorScheme {
+    override val Background = Color(0xFF191C1D)
+    override val Error = Color(0xFFFFB4AB)
+    override val ErrorContainer = Color(0xFF93000A)
+    override val InverseOnSurface = Color(0xFF191C1D)
+    override val InversePrimary = Color(0xFF00658F)
+    override val InverseSurface = Color(0xFFE1E3E3)
+    override val OnBackground = Color(0xFFE1E3E3)
+    override val OnError = Color(0xFF690005)
+    override val OnErrorContainer = Color(0xFFFFDAD6)
+    override val OnPrimary = Color(0xFF00344C)
+    override val OnPrimaryContainer = Color(0xFFC7E7FF)
+    override val OnPrimaryFixed = Color(0xFF001E2E)
+    override val OnPrimaryFixedVariant = Color(0xFF004C6C)
+    override val OnSecondary = Color(0xFF21323E)
+    override val OnSecondaryContainer = Color(0xFFD2E5F5)
+    override val OnSecondaryFixed = Color(0xFF0B1D29)
+    override val OnSecondaryFixedVariant = Color(0xFF374955)
+    override val OnSurface = Color(0xFFC4C7C7)
+    override val OnSurfaceVariant = Color(0xFFBFC8CA)
+    override val OnTertiary = Color(0xFF293500)
+    override val OnTertiaryContainer = Color(0xFFD4ED7F)
+    override val OnTertiaryFixed = Color(0xFF171E00)
+    override val OnTertiaryFixedVariant = Color(0xFF3D4D00)
+    override val Outline = Color(0xFF899294)
+    override val OutlineVariant = Color(0xFF3F484A)
+    override val Primary = Color(0xFF85CFFF)
+    override val PrimaryContainer = Color(0xFF004C6C)
+    override val PrimaryFixed = Color(0xFFC7E7FF)
+    override val PrimaryFixedDim = Color(0xFF85CFFF)
+    override val Scrim = Color(0xFF000000)
+    override val Secondary = Color(0xFFB6C9D8)
+    override val SecondaryContainer = Color(0xFF374955)
+    override val SecondaryFixed = Color(0xFFD2E5F5)
+    override val SecondaryFixedDim = Color(0xFFB6C9D8)
+    override val Shadow = Color(0xFF000000)
+    override val Surface = Color(0xFF101415)
+    override val SurfaceBright = Color(0xFF363A3A)
+    override val SurfaceContainer = Color(0xFF1D2021)
+    override val SurfaceContainerHigh = Color(0xFF272B2B)
+    override val SurfaceContainerHighest = Color(0xFF323536)
+    override val SurfaceContainerLow = Color(0xFF191C1D)
+    override val SurfaceContainerLowest = Color(0xFF0B0F0F)
+    override val SurfaceDim = Color(0xFF101415)
+    override val SurfaceTint = Color(0xFF85CFFF)
+    override val SurfaceVariant = Color(0xFF3F484A)
+    override val Tertiary = Color(0xFFB8D166)
+    override val TertiaryContainer = Color(0xFF3D4D00)
+    override val TertiaryFixed = Color(0xFFD4ED7F)
+    override val TertiaryFixedDim = Color(0xFFB8D166)
+
+    override val Brown = Color(0xff4b443a)
+    override val Purple = Color(0xff472e5b)
+    override val Cerulean = Color(0xff284255)
+    override val Gray = Color(0xff232427)
+    override val Pink = Color(0xff6c394f)
+    override val Blue = Color(0xff256377)
+    override val Red = Color(0xff77172e)
+    override val Yellow = Color(0xff7c4a03)
+    override val Green = Color(0xff264d3b)
+    override val Teal = Color(0xff0c625d)
+    override val Orange = Color(0xff692b17)
+}
+
+object RetainColorLight : RetainColorScheme {
+    override val Background = Color(0xFFFAFDFD)
+    override val Error = Color(0xFFBA1A1A)
+    override val ErrorContainer = Color(0xFFFFDAD6)
+    override val InverseOnSurface = Color(0xFFEFF1F1)
+    override val InversePrimary = Color(0xFF85CFFF)
+    override val InverseSurface = Color(0xFF2E3132)
+    override val OnBackground = Color(0xFF191C1D)
+    override val OnError = Color(0xFFFFFFFF)
+    override val OnErrorContainer = Color(0xFF410002)
+    override val OnPrimary = Color(0xFFFFFFFF)
+    override val OnPrimaryContainer = Color(0xFF001E2E)
+    override val OnPrimaryFixed = Color(0xFF001E2E)
+    override val OnPrimaryFixedVariant = Color(0xFF004C6C)
+    override val OnSecondary = Color(0xFFFFFFFF)
+    override val OnSecondaryContainer = Color(0xFF0B1D29)
+    override val OnSecondaryFixed = Color(0xFF0B1D29)
+    override val OnSecondaryFixedVariant = Color(0xFF374955)
+    override val OnSurface = Color(0xFF191C1D)
+    override val OnSurfaceVariant = Color(0xFF3F484A)
+    override val OnTertiary = Color(0xFFFFFFFF)
+    override val OnTertiaryContainer = Color(0xFF171E00)
+    override val OnTertiaryFixed = Color(0xFF171E00)
+    override val OnTertiaryFixedVariant = Color(0xFF3D4D00)
+    override val Outline = Color(0xFF6F797A)
+    override val OutlineVariant = Color(0xFFBFC8CA)
+    override val Primary = Color(0xFF00658F)
+    override val PrimaryContainer = Color(0xFFC7E7FF)
+    override val PrimaryFixed = Color(0xFFC7E7FF)
+    override val PrimaryFixedDim = Color(0xFF85CFFF)
+    override val Scrim = Color(0xFF000000)
+    override val Secondary = Color(0xFF4F616E)
+    override val SecondaryContainer = Color(0xFFD2E5F5)
+    override val SecondaryFixed = Color(0xFFD2E5F5)
+    override val SecondaryFixedDim = Color(0xFFB6C9D8)
+    override val Shadow = Color(0xFF000000)
+    override val Surface = Color(0xFFF8FAFA)
+    override val SurfaceBright = Color(0xFFF8FAFA)
+    override val SurfaceContainer = Color(0xFFECEEEF)
+    override val SurfaceContainerHigh = Color(0xFFE6E8E9)
+    override val SurfaceContainerHighest = Color(0xFFE1E3E3)
+    override val SurfaceContainerLow = Color(0xFFF2F4F4)
+    override val SurfaceContainerLowest = Color(0xFFFFFFFF)
+    override val SurfaceDim = Color(0xFFD8DADB)
+    override val SurfaceTint = Color(0xFF00658F)
+    override val SurfaceVariant = Color(0xFFDBE4E6)
+    override val Tertiary = Color(0xFF526600)
+    override val TertiaryContainer = Color(0xFFD4ED7F)
+    override val TertiaryFixed = Color(0xFFD4ED7F)
+    override val TertiaryFixedDim = Color(0xFFB8D166)
+
+    override val Brown = Color(0xffe9e3d4)
+    override val Purple = Color(0xffd3bfdb)
+    override val Cerulean = Color(0xffaeccdc)
+    override val Gray = Color(0xffefeff1)
+    override val Pink = Color(0xfff6e2dd)
+    override val Blue = Color(0xffd4e4ed)
+    override val Red = Color(0xfffaafa8)
+    override val Yellow = Color(0xfffff8b8)
+    override val Green = Color(0xffe2f6d4)
+    override val Teal = Color(0xffb4ddd3)
+    override val Orange = Color(0xfff39f76)
 }
 
 val seed = Color(0xFF4E6C81)
 
-val noteColorsDark = listOf(
-    RetainColor.DarkBackground,
-    Color(0xff77172e),
-    Color(0xff692b17),
-    Color(0xff7c4a03),
-    Color(0xff264d3b),
-    Color(0xff0c625d),
-    Color(0xff256377),
-    Color(0xff284255),
-    Color(0xff472e5b),
-    Color(0xff6c394f),
-    Color(0xff4b443a),
-    Color(0xff232427),
+val noteColors: (RetainColorScheme) -> Map<String, Color> = { colorScheme ->
+    mapOf(
+        "DEFAULT" to colorScheme.Background,
+        "RED" to colorScheme.Red,
+        "ORANGE" to colorScheme.Orange,
+        "YELLOW" to colorScheme.Yellow,
+        "GREEN" to colorScheme.Green,
+        "TEAL" to colorScheme.Teal,
+        "BLUE" to colorScheme.Blue,
+        "CERULEAN" to colorScheme.Cerulean,
+        "PURPLE" to colorScheme.Purple,
+        "PINK" to colorScheme.Pink,
+        "BROWN" to colorScheme.Brown,
+        "GRAY" to colorScheme.Gray,
+    )
+}
+
+fun getNoteColor(key: String, dark: Boolean): Color {
+    val colorScheme = if (dark) RetainColorDark else RetainColorLight
+    return noteColors(colorScheme).getOrDefault(key, colorScheme.Background)
+}
+
+fun getNoteColor(context: Context, key: String) = getNoteColor(
+    key = key,
+    dark = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
 )
 
-val noteColorsLight = listOf(
-    RetainColor.LightBackground,
-    Color(0xfffaafa8),
-    Color(0xfff39f76),
-    Color(0xfffff8b8),
-    Color(0xffe2f6d4),
-    Color(0xffb4ddd3),
-    Color(0xffd4e4ed),
-    Color(0xffaeccdc),
-    Color(0xffd3bfdb),
-    Color(0xfff6e2dd),
-    Color(0xffe9e3d4),
-    Color(0xffefeff1),
-)
-
-fun getNoteColors(context: Context): List<Color> =
-    if (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES)
-        noteColorsDark
-    else noteColorsLight
-
-fun getNoteColor(context: Context, index: Int): Color = getNoteColors(context)[index]
+@Composable
+fun getNoteColors(): Map<String, Color> = noteColors(if (isSystemInDarkTheme()) RetainColorDark else RetainColorLight)
 
 @Composable
-fun getNoteColors(): List<Color> = if (isSystemInDarkTheme()) noteColorsDark else noteColorsLight
-
-@Composable
-fun getNoteColor(index: Int): Color = getNoteColors()[index]
+fun getNoteColor(key: String): Color = getNoteColor(key, isSystemInDarkTheme())

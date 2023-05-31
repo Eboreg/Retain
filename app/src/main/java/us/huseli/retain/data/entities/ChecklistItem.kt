@@ -18,9 +18,7 @@ import java.util.UUID
     indices = [Index("checklistItemNoteId"), Index("checklistItemPosition")],
 )
 open class ChecklistItem(
-    @PrimaryKey
-    @ColumnInfo(name = "checklistItemId")
-    val id: UUID = UUID.randomUUID(),
+    @ColumnInfo(name = "checklistItemId") @PrimaryKey val id: UUID = UUID.randomUUID(),
     @ColumnInfo(name = "checklistItemText", defaultValue = "") val text: String = "",
     @ColumnInfo(name = "checklistItemNoteId") val noteId: UUID,
     @ColumnInfo(name = "checklistItemChecked", defaultValue = "0") val checked: Boolean = false,

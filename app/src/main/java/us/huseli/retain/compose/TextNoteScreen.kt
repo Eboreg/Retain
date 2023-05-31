@@ -23,7 +23,6 @@ import us.huseli.retain.R
 import us.huseli.retain.data.entities.ChecklistItem
 import us.huseli.retain.data.entities.Image
 import us.huseli.retain.data.entities.Note
-import us.huseli.retain.data.entities.NoteCombo
 import us.huseli.retain.outlinedTextFieldColors
 import us.huseli.retain.viewmodels.EditTextNoteViewModel
 
@@ -31,7 +30,7 @@ import us.huseli.retain.viewmodels.EditTextNoteViewModel
 fun TextNoteScreen(
     modifier: Modifier = Modifier,
     viewModel: EditTextNoteViewModel = hiltViewModel(),
-    onSave: (NoteCombo?, Note?, List<ChecklistItem>, List<Image>) -> Unit,
+    onSave: (Note?, List<ChecklistItem>, List<Image>) -> Unit,
     onBackClick: () -> Unit,
 ) {
     val note by viewModel.note.collectAsStateWithLifecycle()

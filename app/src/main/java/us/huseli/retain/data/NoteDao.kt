@@ -15,19 +15,21 @@ interface NoteDao {
     @Query("SELECT * FROM note WHERE noteIsDeleted = 0 ORDER BY notePosition")
     fun flowList(): Flow<List<Note>>
 
+    @Query("SELECT COALESCE(MAX(notePosition), -1) FROM note")
+    suspend fun getMaxPosition(): Int
+
     @Query("SELECT * FROM note WHERE noteId = :id")
     suspend fun getNote(id: UUID): Note?
 
     @Insert
     suspend fun insert(note: Note)
 
+    @Insert
+    suspend fun insert(notes: Collection<Note>)
+
     @Transaction
     @Query("SELECT * FROM note")
     suspend fun listAllCombos(): List<NoteCombo>
-
-    @Transaction
-    @Query("SELECT * FROM note WHERE noteId IN (:ids)")
-    suspend fun listCombos(ids: Collection<UUID>): List<NoteCombo>
 
     @Query(
         """

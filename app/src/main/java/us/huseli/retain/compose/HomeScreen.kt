@@ -57,6 +57,7 @@ fun HomeScreen(
     val selectedNoteIds by viewModel.selectedNoteIds.collectAsStateWithLifecycle()
     val interactionSource = remember { MutableInteractionSource() }
     val minColumnWidth by settingsViewModel.minColumnWidth.collectAsStateWithLifecycle()
+    val showArchive by viewModel.showArchive.collectAsStateWithLifecycle()
     val reorderableState = rememberReorderableLazyListState(
         onMove = { from, to -> viewModel.switchNotePositions(from, to) },
         onDragEnd = { _, _ -> viewModel.saveNotePositions() }
@@ -70,11 +71,19 @@ fun HomeScreen(
                 selectedCount = selectedNoteIds.size,
                 onCloseClick = { viewModel.deselectAllNotes() },
                 onTrashClick = { viewModel.trashSelectedNotes() },
+                onSelectAllClick = { viewModel.selectAllNotes() },
+                onArchiveClick = {
+                    if (showArchive) viewModel.unarchiveSelectedNotes()
+                    else viewModel.archiveSelectedNotes()
+                },
+                showArchive = showArchive,
             ) else HomeScreenTopAppBar(
                 viewType = viewType,
                 onSettingsClick = onSettingsClick,
                 onDebugClick = onDebugClick,
-                onViewTypeClick = { viewType = it }
+                onViewTypeClick = { viewType = it },
+                onArchiveClick = { viewModel.toggleShowArchive() },
+                showArchive = showArchive,
             )
         },
     ) { innerPadding ->

@@ -1,12 +1,11 @@
 package us.huseli.retain.nextcloud.tasks
 
+import com.google.gson.reflect.TypeToken
 import com.owncloud.android.lib.common.operations.RemoteOperationResult
 import com.owncloud.android.lib.resources.files.DownloadFileRemoteOperation
-import com.owncloud.android.lib.resources.files.model.RemoteFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.internal.toImmutableList
 import us.huseli.retain.Constants.NEXTCLOUD_IMAGE_SUBDIR
 import us.huseli.retain.Constants.NEXTCLOUD_JSON_SUBDIR
 import us.huseli.retain.LogMessage
@@ -20,19 +19,19 @@ import java.io.FileReader
 abstract class BaseDownloadFileTask<RT : OperationTaskResult>(
     engine: NextCloudEngine,
     val remotePath: String,
-    tempDir: File,
+    private val tempDir: File,
 ) : BaseOperationTask<RT>(engine) {
-    internal val localTempFile = File(tempDir, remotePath)
     override val remoteOperation = DownloadFileRemoteOperation(remotePath, tempDir.absolutePath)
 
     override fun onSuccessfulRemoteOperation(remoteOperationResult: RemoteOperationResult<*>) {
+        val localTempFile = File(tempDir, remotePath)
         if (!localTempFile.isFile)
             failWithMessage("$remotePath: $localTempFile is not a file")
         else
-            handleDownloadedFile()
+            handleDownloadedFile(localTempFile)
     }
 
-    open fun handleDownloadedFile() = notifyIfReady()
+    open fun handleDownloadedFile(file: File) = notifyIfFinished()
 }
 
 open class DownloadFileTask(
@@ -41,7 +40,7 @@ open class DownloadFileTask(
     tempDir: File,
     private val localFile: File,
 ) : BaseDownloadFileTask<OperationTaskResult>(engine, remotePath, tempDir) {
-    override val successMessageString = "Successfully downloaded $localTempFile to $localFile"
+    override val successMessageString = "Successfully downloaded $remotePath to $localFile"
 
     override fun getResult() = OperationTaskResult(
         success = success,
@@ -49,11 +48,11 @@ open class DownloadFileTask(
         remoteOperationResult = remoteOperationResult,
     )
 
-    override fun handleDownloadedFile() {
-        if (!localTempFile.renameTo(localFile))
-            failWithMessage("$remotePath: Could not move $localTempFile to $localFile")
+    override fun handleDownloadedFile(file: File) {
+        if (!file.renameTo(localFile))
+            failWithMessage("$remotePath: Could not move $file to $localFile")
         else
-            notifyIfReady()
+            notifyIfFinished()
     }
 }
 
@@ -102,38 +101,48 @@ class DownloadNoteImagesTask(
 }
 
 
-class DownloadNoteTaskResult(
+class DownloadListJSONTaskResult<T>(
     success: Boolean,
     error: LogMessage?,
     remoteOperationResult: RemoteOperationResult<*>?,
-    val remoteNoteCombo: NoteCombo?
+    val objects: Collection<T>?
 ) : OperationTaskResult(success, error, remoteOperationResult)
 
-/** Down: 1 note JSON file */
-class DownloadNoteTask(engine: NextCloudEngine, remotePath: String) : BaseDownloadFileTask<DownloadNoteTaskResult>(
+abstract class DownloadListJSONTask<T>(
+    engine: NextCloudEngine,
+    remotePath: String
+) : BaseDownloadFileTask<DownloadListJSONTaskResult<T>>(
     engine = engine,
     remotePath = remotePath,
-    tempDir = File(engine.context.cacheDir, "down").also { it.mkdir() },
+    tempDir = File(engine.context.cacheDir, "down").apply { mkdirs() },
 ) {
-    private var remoteNoteCombo: NoteCombo? = null
+    private var _finished = false
+    private var objects: Collection<T>? = null
 
-    override fun getResult() =
-        DownloadNoteTaskResult(success, error, remoteOperationResult, remoteNoteCombo)
+    override fun isFinished() = _finished || !success
+    override fun getResult() = DownloadListJSONTaskResult(
+        success = success,
+        error = error,
+        remoteOperationResult = remoteOperationResult,
+        objects = objects,
+    )
 
-    override fun handleDownloadedFile() {
+    abstract fun deserialize(json: String): Collection<T>?
+
+    override fun handleDownloadedFile(file: File) {
         engine.ioScope.launch {
             withContext(Dispatchers.IO) {
                 try {
-                    val json = FileReader(localTempFile).use { it.readText() }
-
-                    remoteNoteCombo = engine.gson.fromJson(json, NoteCombo::class.java)
-                    if (remoteNoteCombo != null) {
-                        notifyIfReady("Successfully parsed $remoteNoteCombo from Nextcloud")
-                    } else failWithMessage("$remotePath: NoteCombo is null")
+                    val json = FileReader(file).use { it.readText() }
+                    objects = deserialize(json)
+                    _finished = true
+                    if (objects != null)
+                        notifyIfFinished("Successfully parsed $remotePath; result=$objects")
+                    else failWithMessage("$remotePath: result is null")
                 } catch (e: Exception) {
                     failWithMessage("$remotePath: $e")
                 } finally {
-                    localTempFile.delete()
+                    file.delete()
                 }
             }
         }
@@ -141,39 +150,13 @@ class DownloadNoteTask(engine: NextCloudEngine, remotePath: String) : BaseDownlo
 }
 
 
-class DownstreamSyncTaskResult(
-    success: Boolean,
-    error: LogMessage?,
-    remoteOperationResult: RemoteOperationResult<*>?,
-    remoteFiles: List<RemoteFile>,
-    val remoteNoteCombos: List<NoteCombo>,
-) : ListFilesTaskResult(success, error, remoteOperationResult, remoteFiles)
-
-/** Down: 0..n note JSON files */
-class DownstreamSyncTask(engine: NextCloudEngine) :
-    ListFilesListTask<DownstreamSyncTaskResult, DownloadNoteTaskResult, DownloadNoteTask>(
-        engine = engine,
-        remoteDir = engine.getAbsolutePath(NEXTCLOUD_JSON_SUBDIR),
-        filter = { remoteFile ->
-            remoteFile.mimeType == "application/json" &&
-            remoteFile.remotePath.split("/").last().startsWith("note-")
-        }
-    ) {
-    private val remoteNoteCombos = mutableListOf<NoteCombo>()
-    override val failOnUnsuccessfulChildTask = false
-
-    override fun getChildTask(remoteFile: RemoteFile) = DownloadNoteTask(engine, remoteFile.remotePath)
-
-    override fun processChildTaskResult(remoteFile: RemoteFile, result: DownloadNoteTaskResult) {
-        if (result.success && result.remoteNoteCombo != null)
-            remoteNoteCombos.add(result.remoteNoteCombo)
+class DownloadNoteCombosJSONTask(engine: NextCloudEngine) : DownloadListJSONTask<NoteCombo>(
+    engine = engine,
+    remotePath = engine.getAbsolutePath(NEXTCLOUD_JSON_SUBDIR, "noteCombos.json")
+) {
+    override fun deserialize(json: String): Collection<NoteCombo>? {
+        val listType = object : TypeToken<Collection<NoteCombo>>() {}
+        @Suppress("RemoveExplicitTypeArguments")
+        return engine.gson.fromJson<Collection<NoteCombo>>(json, listType)
     }
-
-    override fun getResult() = DownstreamSyncTaskResult(
-        success = success,
-        error = error,
-        remoteOperationResult = remoteOperationResult,
-        remoteFiles = remoteFiles.toImmutableList(),
-        remoteNoteCombos = remoteNoteCombos.toImmutableList(),
-    )
 }

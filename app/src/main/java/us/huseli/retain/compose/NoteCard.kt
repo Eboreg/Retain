@@ -54,7 +54,7 @@ fun NoteCard(
     reorderableState: ReorderableLazyListState? = null,
     showDragHandle: Boolean = false,
 ) {
-    val noteColor = getNoteColor(note.colorIdx)
+    val noteColor = getNoteColor(note.color)
     val border =
         if (isSelected) BorderStroke(3.dp, MaterialTheme.colorScheme.primary)
         else BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f))
@@ -79,8 +79,9 @@ fun NoteCard(
                     secondaryRowHeight = 100.dp,
                 )
 
-                Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
+                Column(modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth()) {
                     if (note.title.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             modifier = if (showDragHandle) Modifier.padding(end = 24.dp) else Modifier,
                             text = note.title,
@@ -93,7 +94,7 @@ fun NoteCard(
                     when (note.type) {
                         Enums.NoteType.TEXT -> {
                             if (note.text.isNotBlank()) {
-                                if (note.title.isNotBlank()) Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.height(if (note.title.isNotBlank()) 8.dp else 16.dp))
                                 Text(
                                     text = note.text,
                                     overflow = TextOverflow.Ellipsis,
@@ -102,13 +103,17 @@ fun NoteCard(
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
                                 )
                             }
+                            if (note.text.isNotBlank() || note.title.isNotBlank())
+                                Spacer(modifier = Modifier.height(16.dp))
                         }
 
                         Enums.NoteType.CHECKLIST -> checklistData?.let {
-                            if (note.title.isNotBlank() && it.shownChecklistItems.isNotEmpty()) {
-                                Spacer(modifier = Modifier.height(8.dp))
+                            if (it.shownChecklistItems.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(if (note.title.isNotBlank()) 8.dp else 16.dp))
+                                NoteCardChecklist(data = it)
                             }
-                            NoteCardChecklist(data = it)
+                            if (it.shownChecklistItems.isNotEmpty() || note.title.isNotBlank())
+                                Spacer(modifier = Modifier.height(16.dp))
                         }
                     }
                 }

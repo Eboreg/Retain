@@ -30,14 +30,13 @@ import us.huseli.retain.R
 import us.huseli.retain.data.entities.ChecklistItem
 import us.huseli.retain.data.entities.Image
 import us.huseli.retain.data.entities.Note
-import us.huseli.retain.data.entities.NoteCombo
 import us.huseli.retain.viewmodels.EditChecklistNoteViewModel
 
 @Composable
 fun ChecklistNoteScreen(
     modifier: Modifier = Modifier,
     viewModel: EditChecklistNoteViewModel = hiltViewModel(),
-    onSave: (NoteCombo?, Note?, List<ChecklistItem>, List<Image>) -> Unit,
+    onSave: (Note?, List<ChecklistItem>, List<Image>) -> Unit,
     onBackClick: () -> Unit,
 ) {
     val context = LocalContext.current

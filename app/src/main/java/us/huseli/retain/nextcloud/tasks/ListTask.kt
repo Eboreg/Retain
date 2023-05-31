@@ -15,14 +15,15 @@ abstract class BaseListTask<RT : TaskResult, CRT : TaskResult, CT : BaseTask<CRT
 ) : BaseTask<RT>(engine) {
     private var onEachCallback: ((LT, CRT) -> Unit)? = null
     private val successfulObjects = mutableListOf<LT>()
-    protected val unsuccessfulObjects = mutableListOf<LT>()
+    private val unsuccessfulObjects = mutableListOf<LT>()
     protected open val failOnUnsuccessfulChildTask = true
+    override val isMetaTask = true
 
     abstract fun getChildTask(obj: LT): CT?
 
     open fun processChildTaskResult(obj: LT, result: CRT) {}
 
-    override fun isReady() =
+    override fun isFinished() =
         (successfulObjects.size + unsuccessfulObjects.size == objects.size) ||
         (failOnUnsuccessfulChildTask && !success)
 
@@ -46,10 +47,10 @@ abstract class BaseListTask<RT : TaskResult, CRT : TaskResult, CT : BaseTask<CRT
                     if (failOnUnsuccessfulChildTask) failWithMessage(result.error)
                 }
                 onEachCallback?.invoke(obj, result)
-                notifyIfReady()
+                notifyIfFinished()
             }
         }
-        notifyIfReady()
+        notifyIfFinished()
     }
 }
 

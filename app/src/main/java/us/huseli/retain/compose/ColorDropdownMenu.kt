@@ -38,13 +38,13 @@ fun ColorCircle(modifier: Modifier = Modifier, color: Color, onClick: () -> Unit
 @Composable
 fun ColorDropdownMenu(
     modifier: Modifier = Modifier,
-    colors: List<Color>,
+    colors: Map<String, Color>,
     isExpanded: Boolean,
     width: Dp = 200.dp,
     circleHeight: Dp = 50.dp,
     padding: Dp = 5.dp,
     onDismiss: () -> Unit,
-    onColorClick: (Int) -> Unit,
+    onColorClick: (String) -> Unit,
 ) {
     DropdownMenu(
         modifier = modifier,
@@ -54,11 +54,11 @@ fun ColorDropdownMenu(
         Column {
             Text(stringResource(R.string.select_note_colour), modifier = Modifier.padding(horizontal = padding))
             FlowRow(modifier = Modifier.width(width)) {
-                colors.forEachIndexed { index, color ->
+                colors.forEach { (key, color) ->
                     ColorCircle(
                         modifier = Modifier.height(circleHeight).padding(padding),
                         color = color,
-                        onClick = { onColorClick(index) }
+                        onClick = { onColorClick(key) }
                     )
                 }
             }

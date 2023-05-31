@@ -6,15 +6,14 @@ import us.huseli.retain.LogMessage
 import us.huseli.retain.Logger
 import us.huseli.retain.nextcloud.NextCloudEngine
 
-val runningTaskNames = mutableListOf<String>()
-
 open class TaskResult(open val success: Boolean, open val error: LogMessage? = null)
 
 abstract class BaseTask<RT : TaskResult>(protected val engine: NextCloudEngine) : LogInterface {
     override val logger: Logger = engine.logger
 
     private var hasNotified = false
-    private var onReadyCallback: ((RT) -> Unit)? = null
+    private var _status = STATUS_WAITING
+    private val onFinishedListeners = mutableListOf<(RT) -> Unit>()
 
     protected var success: Boolean = true
     protected var error: LogMessage? = null
@@ -22,37 +21,41 @@ abstract class BaseTask<RT : TaskResult>(protected val engine: NextCloudEngine) 
 
     open val startMessageString: String? = null
     open val successMessageString: String? = null
+    open val isMetaTask: Boolean = false
+
+    val status: Int
+        get() = _status
 
     abstract fun start()
     abstract fun getResult(): RT
-    abstract fun isReady(): Boolean
+    abstract fun isFinished(): Boolean
 
-    open fun run(triggerStatus: Int = NextCloudEngine.STATUS_OK, onReadyCallback: ((RT) -> Unit)? = null) {
+    fun addOnFinishedListener(listener: (RT) -> Unit) = onFinishedListeners.add(listener)
+
+    open fun run(triggerStatus: Int = NextCloudEngine.STATUS_OK, onFinishedListener: ((RT) -> Unit)? = null) {
         this.triggerStatus = triggerStatus
-        this.onReadyCallback = onReadyCallback
-        runningTaskNames.add(javaClass.simpleName)
-        engine.awaitStatus(triggerStatus) {
-            log("START", level = Log.DEBUG)
+        if (onFinishedListener != null) onFinishedListeners.add(onFinishedListener)
+        engine.registerTask(this, triggerStatus) {
+            _status = STATUS_RUNNING
+            log("${javaClass.simpleName}: START", level = Log.DEBUG)
             startMessageString?.let { log(it) }
             start()
-            notifyIfReady()
+            notifyIfFinished()
         }
     }
 
-    fun notifyIfReady(successMessage: String? = null) {
-        if (isReady() && !hasNotified) {
+    fun notifyIfFinished(successMessage: String? = null) {
+        if (isFinished() && !hasNotified) {
+            _status = STATUS_FINISHED
             val result = getResult()
 
             hasNotified = true
             if (success) {
                 (successMessage ?: successMessageString)?.let { log(it) }
-                log("FINISH SUCCESSFULLY", level = Log.DEBUG)
-            } else log("FINISH FAILINGLY", level = Log.ERROR)
+                log("${javaClass.simpleName}: FINISH SUCCESSFULLY", level = Log.DEBUG)
+            } else log("${javaClass.simpleName}: FINISH FAILINGLY", level = Log.ERROR)
 
-            runningTaskNames.remove(javaClass.simpleName)
-            log("RUNNING TASKS: $runningTaskNames", level = Log.DEBUG)
-
-            onReadyCallback?.invoke(result)
+            onFinishedListeners.forEach { it.invoke(result) }
         }
     }
 
@@ -60,21 +63,18 @@ abstract class BaseTask<RT : TaskResult>(protected val engine: NextCloudEngine) 
         success = false
         error = logMessage ?: createLogMessage("Unknown error")
         if (logMessage != null) log(logMessage)
-        notifyIfReady()
+        notifyIfFinished()
     }
 
     fun failWithMessage(message: String?) {
         failWithMessage(logMessage = if (message != null) createLogMessage(message, level = Log.ERROR) else null)
     }
 
-    /*
-    override fun createLogMessage(message: String, level: Int): LogMessage {
-        return super.createLogMessage(
-            message = "$message (uri=${engine.uri}, username=${engine.username}, password=${engine.password})",
-            level = level
-        )
+    companion object {
+        const val STATUS_WAITING = 0
+        const val STATUS_RUNNING = 1
+        const val STATUS_FINISHED = 2
     }
-     */
 }
 
 abstract class Task(engine: NextCloudEngine) : BaseTask<TaskResult>(engine) {

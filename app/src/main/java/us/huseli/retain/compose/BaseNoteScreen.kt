@@ -40,7 +40,6 @@ import us.huseli.retain.R
 import us.huseli.retain.data.entities.ChecklistItem
 import us.huseli.retain.data.entities.Image
 import us.huseli.retain.data.entities.Note
-import us.huseli.retain.data.entities.NoteCombo
 import us.huseli.retain.outlinedTextFieldColors
 import us.huseli.retain.viewmodels.BaseEditNoteViewModel
 import us.huseli.retain.viewmodels.SettingsViewModel
@@ -55,7 +54,7 @@ fun BaseNoteScreen(
     onTitleFieldNext: (() -> Unit)?,
     onBackClick: () -> Unit,
     onBackgroundClick: (() -> Unit)? = null,
-    onSave: (NoteCombo?, Note?, List<ChecklistItem>, List<Image>) -> Unit,
+    onSave: (Note?, List<ChecklistItem>, List<Image>) -> Unit,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     contextMenu: @Composable (() -> Unit)? = null,
     content: LazyListScope.() -> Unit,
@@ -69,8 +68,8 @@ fun BaseNoteScreen(
     val noteColor by viewModel.noteColor.collectAsStateWithLifecycle(MaterialTheme.colorScheme.background)
     val appBarColor by viewModel.appBarColor.collectAsStateWithLifecycle(MaterialTheme.colorScheme.surface)
 
-    LaunchedEffect(note.colorIdx) {
-        if (note.colorIdx > 0) {
+    LaunchedEffect(note.color) {
+        if (note.color != "DEFAULT") {
             settingsViewModel.setSystemBarColors(
                 statusBar = appBarColor,
                 navigationBar = noteColor
@@ -100,7 +99,7 @@ fun BaseNoteScreen(
 
     DisposableEffect(Unit) {
         onDispose {
-            onSave(viewModel.dirtyNoteCombo, viewModel.dirtyNote, viewModel.dirtyChecklistItems, viewModel.dirtyImages)
+            onSave(viewModel.dirtyNote, viewModel.dirtyChecklistItems, viewModel.dirtyImages)
         }
     }
 
@@ -111,7 +110,7 @@ fun BaseNoteScreen(
                 backgroundColor = appBarColor,
                 onBackClick = onBackClick,
                 onImagePick = { uri -> viewModel.insertImage(uri) },
-                onColorSelected = { index -> viewModel.setColorIdx(index) }
+                onColorSelected = { index -> viewModel.setColor(index) }
             )
         },
     ) { innerPadding ->

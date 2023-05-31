@@ -7,7 +7,6 @@ import kotlinx.coroutines.withContext
 import us.huseli.retain.Constants
 import us.huseli.retain.Constants.NEXTCLOUD_IMAGE_SUBDIR
 import us.huseli.retain.Constants.NEXTCLOUD_JSON_SUBDIR
-import us.huseli.retain.LogMessage
 import us.huseli.retain.data.entities.Image
 import us.huseli.retain.data.entities.NoteCombo
 import us.huseli.retain.nextcloud.NextCloudEngine
@@ -55,7 +54,8 @@ class UploadMissingImagesTask(engine: NextCloudEngine, private val images: Colle
     private var processedFiles = 0
     private var missingImages = mutableListOf<Image>()
 
-    override fun isReady() = !success || missingImages.size == processedFiles
+    override fun isFinished() = !success || missingImages.size == processedFiles
+    override val isMetaTask = true
 
     override fun start() {
         ListFilesTask(
@@ -81,25 +81,19 @@ class UploadMissingImagesTask(engine: NextCloudEngine, private val images: Colle
                 UploadImageTask(engine, image).run(triggerStatus) { task ->
                     if (!task.success) success = false
                     processedFiles++
-                    notifyIfReady()
+                    notifyIfFinished()
                 }
             }
-            notifyIfReady()
+            notifyIfFinished()
         }
     }
 }
 
 
-/** Up: 1 note JSON file */
-class UploadNoteCombinedTask(
-    engine: NextCloudEngine,
-    private val combo: NoteCombo
-) : OperationTask(engine) {
-    private val filename = "note-${combo.note.id}.json"
+class UploadNoteCombosTask(engine: NextCloudEngine, private val combos: Collection<NoteCombo>) : OperationTask(engine) {
+    private val filename = "noteCombos.json"
     private val remotePath = engine.getAbsolutePath(NEXTCLOUD_JSON_SUBDIR, filename)
     private val localFile = File(engine.tempDirUp, filename).apply { deleteOnExit() }
-    override val successMessageString = "Successfully saved $combo to $remotePath on Nextcloud"
-    override val startMessageString = "Uploading file $remotePath from $localFile"
 
     override val remoteOperation = UploadFileRemoteOperation(
         localFile.absolutePath,
@@ -112,7 +106,7 @@ class UploadNoteCombinedTask(
         engine.ioScope.launch {
             withContext(Dispatchers.IO) {
                 try {
-                    FileWriter(localFile).use { it.write(engine.gson.toJson(combo)) }
+                    FileWriter(localFile).use { it.write(engine.gson.toJson(combos)) }
                     super.start()
                 } catch (e: Exception) {
                     failWithMessage(e.toString())
@@ -120,24 +114,4 @@ class UploadNoteCombinedTask(
             }
         }
     }
-}
-
-
-class UpstreamSyncTaskResult(
-    success: Boolean,
-    error: LogMessage?,
-    val unsuccessfulCount: Int,
-) : TaskResult(success, error)
-
-/** Up: 0..n note JSON files */
-class UpstreamSyncTask(
-    engine: NextCloudEngine,
-    combos: Collection<NoteCombo>,
-) : BaseListTask<UpstreamSyncTaskResult, OperationTaskResult, UploadNoteCombinedTask, NoteCombo>(engine, combos) {
-    override val failOnUnsuccessfulChildTask = false
-    override val startMessageString = "Starting upstream sync of $combos"
-
-    override fun getChildTask(obj: NoteCombo) = UploadNoteCombinedTask(engine, obj)
-
-    override fun getResult() = UpstreamSyncTaskResult(success, error, unsuccessfulObjects.size)
 }

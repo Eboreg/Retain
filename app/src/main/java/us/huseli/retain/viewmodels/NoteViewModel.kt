@@ -6,6 +6,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.burnoutcrew.reorderable.ItemPosition
@@ -16,7 +17,6 @@ import us.huseli.retain.data.NoteRepository
 import us.huseli.retain.data.entities.ChecklistItem
 import us.huseli.retain.data.entities.Image
 import us.huseli.retain.data.entities.Note
-import us.huseli.retain.data.entities.NoteCombo
 import java.util.UUID
 import javax.inject.Inject
 import kotlin.math.min
@@ -37,10 +37,12 @@ class NoteViewModel @Inject constructor(
     private val _selectedNoteIds = MutableStateFlow<Set<UUID>>(emptySet())
     private val _trashedNotes = MutableStateFlow<Set<Note>>(emptySet())
     private val _notes = MutableStateFlow<List<Note>>(emptyList())
+    private val _showArchive = MutableStateFlow(false)
 
     private val _isSelectEnabled: Boolean
         get() = _selectedNoteIds.value.isNotEmpty()
 
+    val showArchive = _showArchive.asStateFlow()
     val trashedNoteCount = _trashedNotes.map { it.size }
     val isSelectEnabled = _selectedNoteIds.map { it.isNotEmpty() }
     val selectedNoteIds = _selectedNoteIds.asStateFlow()
@@ -62,18 +64,23 @@ class NoteViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            repository.notes.collect { notes ->
+            combine(repository.notes, _showArchive) { notes, showArchive ->
+                notes.filter { it.isArchived == showArchive }
+            }.collect { notes ->
                 _notes.value = notes
             }
         }
     }
 
-    fun reallyTrashNotes() {
-        val trashedNotes = _trashedNotes.value
+    fun archiveSelectedNotes() {
+        val selectedNotes = _notes.value.filter { _selectedNoteIds.value.contains(it.id) }
 
-        _trashedNotes.value = emptySet()
-        viewModelScope.launch {
-            nextCloudRepository.upload(repository.listCombos(trashedNotes.map { it.id }))
+        deselectAllNotes()
+        if (selectedNotes.isNotEmpty()) {
+            viewModelScope.launch {
+                repository.archiveNotes(selectedNotes)
+                log("Archived ${selectedNotes.size} notes.", showInSnackbar = true)
+            }
         }
     }
 
@@ -84,6 +91,13 @@ class NoteViewModel @Inject constructor(
     fun deselectNote(noteId: UUID) {
         _selectedNoteIds.value -= noteId
         log("deselectNote: noteId=$noteId, _selectedNoteIds.value=${_selectedNoteIds.value}")
+    }
+
+    fun reallyTrashNotes() {
+        _trashedNotes.value = emptySet()
+        viewModelScope.launch {
+            nextCloudRepository.uploadNotes()
+        }
     }
 
     fun save(note: Note?, checklistItems: List<ChecklistItem>, images: List<Image>) = viewModelScope.launch {
@@ -99,6 +113,10 @@ class NoteViewModel @Inject constructor(
                 if (note.position != index) note.copy(position = index) else null
             }
         )
+    }
+
+    fun selectAllNotes() {
+        _selectedNoteIds.value = _notes.value.map { it.id }.toSet()
     }
 
     fun selectNote(noteId: UUID) {
@@ -117,6 +135,10 @@ class NoteViewModel @Inject constructor(
         }
     }
 
+    fun toggleShowArchive() {
+        _showArchive.value = !_showArchive.value
+    }
+
     fun trashSelectedNotes() {
         _trashedNotes.value = _notes.value.filter { _selectedNoteIds.value.contains(it.id) }.toSet()
         deselectAllNotes()
@@ -125,12 +147,24 @@ class NoteViewModel @Inject constructor(
         }
     }
 
+    fun unarchiveSelectedNotes() {
+        val selectedNotes = _notes.value.filter { _selectedNoteIds.value.contains(it.id) }
+
+        deselectAllNotes()
+        if (selectedNotes.isNotEmpty()) {
+            viewModelScope.launch {
+                repository.unarchiveNotes(selectedNotes)
+                log("Unarchived ${selectedNotes.size} notes.", showInSnackbar = true)
+            }
+        }
+    }
+
     fun undoTrashNotes() = viewModelScope.launch {
         repository.upsertNotes(_trashedNotes.value)
         _trashedNotes.value = emptySet()
     }
 
-    fun uploadCombo(combo: NoteCombo?) {
-        combo?.let { nextCloudRepository.upload(it) }
+    fun uploadNotes() = viewModelScope.launch {
+        nextCloudRepository.uploadNotes()
     }
 }

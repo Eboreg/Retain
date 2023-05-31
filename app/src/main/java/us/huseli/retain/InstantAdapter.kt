@@ -1,4 +1,4 @@
-package us.huseli.retain.helpers
+package us.huseli.retain
 
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer

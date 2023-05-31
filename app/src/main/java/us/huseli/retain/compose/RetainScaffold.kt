@@ -10,11 +10,8 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.zIndex
@@ -22,7 +19,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import kotlinx.coroutines.launch
-import us.huseli.retain.LogMessage
 import us.huseli.retain.R
 import us.huseli.retain.viewmodels.NoteViewModel
 import us.huseli.retain.viewmodels.SettingsViewModel
@@ -37,7 +33,6 @@ fun RetainScaffold(
     content: @Composable (PaddingValues) -> Unit
 ) {
     val context = LocalContext.current
-    var lastSnackbarMessage by rememberSaveable { mutableStateOf<LogMessage?>(null) }
     val nextCloudNeedsTesting by settingsViewModel.nextCloudNeedsTesting.collectAsStateWithLifecycle()
     val snackbarMessage by viewModel.logger.snackbarMessage.collectAsStateWithLifecycle(null)
     val scope = rememberCoroutineScope()
@@ -56,10 +51,10 @@ fun RetainScaffold(
     }
 
     LaunchedEffect(snackbarMessage) {
-        if (snackbarMessage != lastSnackbarMessage) {
+        if (snackbarMessage != viewModel.logger.lastSnackbarMessage) {
             snackbarMessage?.let {
                 snackbarHostState.showSnackbar(it.message)
-                lastSnackbarMessage = it
+                viewModel.logger.setLastSnackbarMessage(it)
             }
         }
     }

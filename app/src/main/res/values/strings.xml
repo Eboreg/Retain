@@ -40,6 +40,15 @@
     <string name="undo">Undo</string>
     <string name="uncheck_all">Uncheck all</string>
     <string name="delete_checked">Delete checked</string>
+    <string name="google_keep_import">Google Keep import</string>
+    <string name="select_zip_file">Select zip file</string>
+    <string name="google_keep_import_about">You can import Google Keep notes from a zip file produced by Google Takeout.</string>
+    <string name="cancel">Cancel</string>
+    <string name="importing_from_google_keep_don_t_go_anywhere">Importing from Google Keep, don\'t go anywhere.</string>
+    <string name="select_all_notes">Select all notes</string>
+    <string name="archive_selected_notes">Archive selected notes</string>
+    <string name="unarchive_selected_notes">Unarchive selected notes</string>
+    <string name="archive">Archive</string>
     <plurals name="plus_x_items">
         <item quantity="one">+ 1 item</item>
         <item quantity="other">+ %1$d items</item>

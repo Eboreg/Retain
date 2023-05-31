@@ -3,15 +3,19 @@ package us.huseli.retain.compose
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.sharp.Archive
 import androidx.compose.material.icons.sharp.BugReport
 import androidx.compose.material.icons.sharp.Close
 import androidx.compose.material.icons.sharp.Delete
 import androidx.compose.material.icons.sharp.GridView
+import androidx.compose.material.icons.sharp.SelectAll
 import androidx.compose.material.icons.sharp.Settings
+import androidx.compose.material.icons.sharp.Unarchive
 import androidx.compose.material.icons.sharp.ViewAgenda
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -31,6 +35,9 @@ fun SelectionTopAppBar(
     selectedCount: Int,
     onCloseClick: () -> Unit,
     onTrashClick: () -> Unit,
+    onSelectAllClick: () -> Unit,
+    onArchiveClick: () -> Unit,
+    showArchive: Boolean,
 ) {
     TopAppBar(
         title = { Text(selectedCount.toString()) },
@@ -44,6 +51,21 @@ fun SelectionTopAppBar(
             }
         },
         actions = {
+            IconButton(onClick = onSelectAllClick) {
+                Icon(
+                    imageVector = Icons.Sharp.SelectAll,
+                    contentDescription = stringResource(R.string.select_all_notes)
+                )
+            }
+            IconButton(onClick = onArchiveClick) {
+                Icon(
+                    imageVector = if (showArchive) Icons.Sharp.Unarchive else Icons.Sharp.Archive,
+                    contentDescription = stringResource(
+                        if (showArchive) R.string.unarchive_selected_notes
+                        else R.string.archive_selected_notes
+                    )
+                )
+            }
             IconButton(onClick = onTrashClick) {
                 Icon(
                     imageVector = Icons.Sharp.Delete,
@@ -62,16 +84,20 @@ fun HomeScreenTopAppBar(
     onSettingsClick: () -> Unit,
     onDebugClick: () -> Unit,
     onViewTypeClick: (HomeScreenViewType) -> Unit,
+    onArchiveClick: () -> Unit,
+    showArchive: Boolean,
 ) {
     TopAppBar(
         modifier = modifier,
-        title = {},
+        title = { if (showArchive) Text(stringResource(R.string.archive)) },
         navigationIcon = {
-            Image(
-                bitmap = ImageBitmap.imageResource(R.mipmap.ic_launcher_round),
-                modifier = Modifier.height(50.dp),
-                contentDescription = null,
-            )
+            if (!showArchive) {
+                Image(
+                    bitmap = ImageBitmap.imageResource(R.mipmap.ic_launcher_round),
+                    modifier = Modifier.height(50.dp),
+                    contentDescription = null,
+                )
+            }
         },
         actions = {
             when (viewType) {
@@ -100,6 +126,13 @@ fun HomeScreenTopAppBar(
                         contentDescription = stringResource(R.string.debug),
                     )
                 }
+            }
+            IconButton(onClick = onArchiveClick) {
+                Icon(
+                    imageVector = Icons.Sharp.Archive,
+                    contentDescription = stringResource(R.string.archive),
+                    tint = LocalContentColor.current.copy(alpha = if (showArchive) 1f else 0.5f),
+                )
             }
             IconButton(onClick = onSettingsClick) {
                 Icon(

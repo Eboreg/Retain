@@ -11,18 +11,16 @@ import us.huseli.retain.Constants
 import us.huseli.retain.LogInterface
 import us.huseli.retain.Logger
 import us.huseli.retain.data.entities.Image
-import us.huseli.retain.data.entities.NoteCombo
 import us.huseli.retain.nextcloud.NextCloudEngine
 import us.huseli.retain.nextcloud.tasks.DownloadMissingImagesTask
+import us.huseli.retain.nextcloud.tasks.DownloadNoteCombosJSONTask
 import us.huseli.retain.nextcloud.tasks.DownloadNoteImagesTask
-import us.huseli.retain.nextcloud.tasks.DownstreamSyncTask
 import us.huseli.retain.nextcloud.tasks.RemoveImagesTask
 import us.huseli.retain.nextcloud.tasks.RemoveNotesTask
 import us.huseli.retain.nextcloud.tasks.RemoveOrphanImagesTask
 import us.huseli.retain.nextcloud.tasks.TestNextCloudTaskResult
 import us.huseli.retain.nextcloud.tasks.UploadMissingImagesTask
-import us.huseli.retain.nextcloud.tasks.UploadNoteCombinedTask
-import us.huseli.retain.nextcloud.tasks.UpstreamSyncTask
+import us.huseli.retain.nextcloud.tasks.UploadNoteCombosTask
 import java.io.File
 import java.util.UUID
 import javax.inject.Inject
@@ -82,30 +80,34 @@ class NextCloudRepository @Inject constructor(
             DownloadMissingImagesTask(nextCloudEngine, missingImages).run()
         }
 
-        DownstreamSyncTask(nextCloudEngine).run { downTaskResult ->
+        DownloadNoteCombosJSONTask(nextCloudEngine).run { downTaskResult ->
             if (!downTaskResult.success) logError("Failed to download notes from Nextcloud", downTaskResult.error)
 
-            // Remote files have been fetched and parsed; now update DB where needed.
             ioScope.launch {
-                val remoteCombosMap = downTaskResult.remoteNoteCombos.associateBy { it.note.id }
-
-                val localCombosMap = noteDao.listAllCombos()
-                    .map { it.copy(databaseVersion = database.openHelper.readableDatabase.version) }
-                    .associateBy { it.note.id }
+                val remoteCombos = downTaskResult.objects ?: emptyList()
+                val localCombos = noteDao.listAllCombos().map {
+                    it.copy(databaseVersion = database.openHelper.readableDatabase.version)
+                }
 
                 // All notes on remote that either don't exist locally, or
                 // have a newer timestamp than their local counterparts:
                 @Suppress("destructure")
-                val remoteUpdated = remoteCombosMap.filter { (id, remote) ->
-                    localCombosMap[id]?.let { local -> local.note < remote.note } ?: true
-                }.values
+                val remoteUpdated = remoteCombos.filter { remote ->
+                    localCombos
+                        .find { it.note.id == remote.note.id }
+                        ?.let { local -> local.note < remote.note }
+                    ?: true
+                }
 
                 // All local notes that either don't exist on remote, or
                 // have a newer timestamp than their remote counterparts:
                 @Suppress("destructure")
-                val localUpdated = localCombosMap.filter { (id, local) ->
-                    remoteCombosMap[id]?.let { remote -> remote.note < local.note } ?: true
-                }.values
+                val localUpdated = localCombos.filter { local ->
+                    remoteCombos
+                        .find { it.note.id == local.note.id }
+                        ?.let { remote -> remote.note < local.note }
+                    ?: true
+                }
 
                 remoteUpdated.forEach {
                     noteDao.upsert(it.note)
@@ -127,13 +129,8 @@ class NextCloudRepository @Inject constructor(
                 }
 
                 // Now upload all notes that are new or updated locally:
-                UpstreamSyncTask(nextCloudEngine, localUpdated).run { result ->
-                    if (!result.success) {
-                        if (result.unsuccessfulCount > 0)
-                            logError("Failed to upload ${result.unsuccessfulCount} notes to Nextcloud", result.error)
-                        else
-                            logError("Failed to upload notes to Nextcloud", result.error)
-                    }
+                UploadNoteCombosTask(nextCloudEngine, localUpdated).run { result ->
+                    if (!result.success) logError("Failed to upload notes to Nextcloud", result.error)
                 }
 
                 syncImages()
@@ -147,18 +144,15 @@ class NextCloudRepository @Inject constructor(
         password: String,
         baseDir: String,
         onResult: (TestNextCloudTaskResult) -> Unit
-    ) {
-        nextCloudEngine.testClient(uri, username, password, baseDir) { result -> onResult(result) }
-    }
+    ) = nextCloudEngine.testClient(uri, username, password, baseDir) { result -> onResult(result) }
 
-    fun upload(combo: NoteCombo) {
-        UploadNoteCombinedTask(
-            nextCloudEngine,
-            combo.copy(databaseVersion = database.openHelper.readableDatabase.version)
+    suspend fun uploadNotes() {
+        val combos = noteDao.listAllCombos()
+        UploadNoteCombosTask(
+            engine = nextCloudEngine,
+            combos = combos.map { it.copy(databaseVersion = database.openHelper.readableDatabase.version) },
         ).run { result ->
-            if (!result.success) logError("Failed to upload note to Nextcloud", result.error)
+            if (!result.success) logError("Failed to upload note(s) to Nextcloud", result.error)
         }
     }
-
-    fun upload(combos: Collection<NoteCombo>) = combos.forEach { combo -> upload(combo) }
 }

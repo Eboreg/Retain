@@ -20,7 +20,6 @@ import us.huseli.retain.data.NoteRepository
 import us.huseli.retain.data.entities.ChecklistItem
 import us.huseli.retain.data.entities.Image
 import us.huseli.retain.data.entities.Note
-import us.huseli.retain.data.entities.NoteCombo
 import us.huseli.retain.ui.theme.getNoteColor
 import java.util.UUID
 import kotlin.math.max
@@ -80,15 +79,9 @@ abstract class BaseEditNoteViewModel(
                 _originalNote != _note.value ||
                 (_isNew && (_dirtyChecklistItems.isNotEmpty() || _dirtyImages.isNotEmpty()))
             ) _note.value else null
-    val dirtyNoteCombo: NoteCombo?
-        get() =
-            if (dirtyNote != null || dirtyImages.isNotEmpty() || dirtyImages.isNotEmpty())
-                NoteCombo(_note.value, _checklistItems.value, _images.value)
-            else null
-    //val images = _images.map { images -> images.map { ImageViewData(it.noteId, it.filename, it.ratio, it.imageBitmap) } }
     val images = _images.asStateFlow()
     val note = _note.asStateFlow()
-    val noteColor = _note.map { getNoteColor(context, it.colorIdx) }
+    val noteColor = _note.map { getNoteColor(context, it.color) }
     val trashedImageCount = _trashedImages.map { it.size }
 
     val appBarColor = noteColor.map {
@@ -143,8 +136,8 @@ abstract class BaseEditNoteViewModel(
         }
     }
 
-    fun setColorIdx(value: Int) {
-        if (value != _note.value.colorIdx) _note.value = _note.value.copy(colorIdx = value)
+    fun setColor(value: String) {
+        if (value != _note.value.color) _note.value = _note.value.copy(color = value)
     }
 
     fun setText(value: String) {

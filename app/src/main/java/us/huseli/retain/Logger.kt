@@ -42,12 +42,17 @@ class Logger {
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
     private val _snackbarMessage = MutableSharedFlow<LogMessage>(extraBufferCapacity = 5, replay = 1000)
+    private var _lastSnackbarMessage: LogMessage? = null
 
     val logMessages = _logMessages.asSharedFlow()
     val snackbarMessage = _snackbarMessage.asSharedFlow()
+    val lastSnackbarMessage: LogMessage?
+        get() = _lastSnackbarMessage
 
     private fun addMessage(logMessage: LogMessage, showInSnackbar: Boolean = false) {
-        if (showInSnackbar) _snackbarMessage.tryEmit(logMessage)
+        if (showInSnackbar) {
+            _snackbarMessage.tryEmit(logMessage)
+        }
         if (BuildConfig.DEBUG) {
             Log.println(
                 logMessage.level,
@@ -59,6 +64,10 @@ class Logger {
     }
 
     fun log(logMessage: LogMessage, showInSnackbar: Boolean = false) = addMessage(logMessage, showInSnackbar)
+
+    fun setLastSnackbarMessage(logMessage: LogMessage) {
+        _lastSnackbarMessage = logMessage
+    }
 }
 
 interface LogInterface {

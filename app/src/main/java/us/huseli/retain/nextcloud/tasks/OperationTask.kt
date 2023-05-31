@@ -16,14 +16,14 @@ abstract class BaseOperationTask<RT : OperationTaskResult>(engine: NextCloudEngi
     var remoteOperationResult: RemoteOperationResult<*>? = null
 
     open fun onSuccessfulRemoteOperation(remoteOperationResult: RemoteOperationResult<*>) {
-        notifyIfReady()
+        notifyIfFinished()
     }
 
     open fun onUnsuccessfulRemoteOperation(remoteOperationResult: RemoteOperationResult<*>) {
         failWithMessage(remoteOperationResult.logMessage ?: remoteOperationResult.message)
     }
 
-    override fun isReady() = remoteOperationResult != null
+    override fun isFinished() = remoteOperationResult != null
 
     open fun isRemoteOperationSuccessful(remoteOperationResult: RemoteOperationResult<*>) =
         remoteOperationResult.isSuccess
