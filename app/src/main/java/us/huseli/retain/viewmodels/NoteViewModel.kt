@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.launch
 import org.burnoutcrew.reorderable.ItemPosition
 import us.huseli.retain.LogInterface
@@ -63,6 +64,17 @@ class NoteViewModel @Inject constructor(
     }
 
     init {
+        // Just make sure note positions are set:
+        viewModelScope.launch {
+            var fetchCount = 0
+
+            repository.notes.takeWhile { fetchCount++ == 0 }.collect { notes ->
+                notes.toMutableList().mapIndexedNotNull { index, note ->
+                    if (note.position != index) note.copy(position = index) else null
+                }.also { repository.updateNotes(it) }
+            }
+        }
+
         viewModelScope.launch {
             combine(repository.notes, _showArchive) { notes, showArchive ->
                 notes.filter { it.isArchived == showArchive }
@@ -160,7 +172,7 @@ class NoteViewModel @Inject constructor(
     }
 
     fun undoTrashNotes() = viewModelScope.launch {
-        repository.upsertNotes(_trashedNotes.value)
+        repository.updateNotes(_trashedNotes.value)
         _trashedNotes.value = emptySet()
     }
 

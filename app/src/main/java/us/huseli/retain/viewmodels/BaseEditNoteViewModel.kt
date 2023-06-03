@@ -57,6 +57,7 @@ abstract class BaseEditNoteViewModel(
     private val _dirtyImages = mutableListOf<Image>()
     private val _images = MutableStateFlow<List<Image>>(emptyList())
     private val _originalImages = mutableListOf<Image>()
+    private val _selectedImages = MutableStateFlow<List<String>>(emptyList())
     private val _trashedImages = MutableStateFlow<List<Image>>(emptyList())
     private var _isNew = true
 
@@ -83,6 +84,7 @@ abstract class BaseEditNoteViewModel(
     val note = _note.asStateFlow()
     val noteColor = _note.map { getNoteColor(context, it.color) }
     val trashedImageCount = _trashedImages.map { it.size }
+    val selectedImages = _selectedImages.asStateFlow()
 
     val appBarColor = noteColor.map {
         it.copy(
@@ -117,15 +119,8 @@ abstract class BaseEditNoteViewModel(
         _trashedImages.value = emptyList()
     }
 
-    fun deleteImage(filename: String) {
-        val index = _images.value.indexOfFirst { it.filename == filename }
-
-        if (index > -1) {
-            val image = _images.value[index]
-            _images.value = _images.value.toMutableList().apply { removeAt(index) }
-            addDirtyImage(image.copy(isDeleted = true))
-            _trashedImages.value = listOf(image)
-        }
+    fun deselectAllImages() {
+        _selectedImages.value = emptyList()
     }
 
     fun insertImage(uri: Uri) = viewModelScope.launch {
@@ -134,6 +129,14 @@ abstract class BaseEditNoteViewModel(
             addDirtyImage(image)
             updateImagePositions()
         }
+    }
+
+    fun selectAllImages() {
+        _selectedImages.value = _images.value.map { it.filename }
+    }
+
+    fun selectImage(filename: String) {
+        _selectedImages.value = _selectedImages.value.toMutableList().apply { add(filename) }
     }
 
     fun setColor(value: String) {
@@ -146,6 +149,26 @@ abstract class BaseEditNoteViewModel(
 
     fun setTitle(value: String) {
         if (value != _note.value.title) _note.value = _note.value.copy(title = value)
+    }
+
+    fun toggleImageSelected(filename: String) {
+        _selectedImages.value = _selectedImages.value.toMutableList().apply {
+            if (contains(filename)) remove(filename)
+            else add(filename)
+        }
+    }
+
+    fun trashSelectedImages() {
+        _images.value = _images.value.toMutableList().apply {
+            val trashedImages = filter { _selectedImages.value.contains(it.filename) }
+
+            filter { _selectedImages.value.contains(it.filename) }.forEach { image ->
+                addDirtyImage(image.copy(isDeleted = true))
+            }
+            _trashedImages.value = trashedImages
+            removeAll(trashedImages)
+            deselectAllImages()
+        }
     }
 
     fun undoTrashBitmapImages() = viewModelScope.launch {

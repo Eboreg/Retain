@@ -133,25 +133,32 @@ fun ErrorDialog(
 
 
 @Composable
-fun KeepImportDialog(
+fun ExternalImportDialog(
     modifier: Modifier = Modifier,
-    actionCount: Int,
+    actionCount: Int?,
     currentAction: String,
     currentActionIndex: Int,
+    serviceName: String,
     onCancel: () -> Unit
 ) {
-    val progress = if (actionCount > 0) (currentActionIndex.toFloat() / actionCount) else 0f
-
+    val progressModifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)
     AlertDialog(
         modifier = modifier,
-        title = { Text(stringResource(R.string.google_keep_import)) },
+        title = { Text(stringResource(R.string.external_import, serviceName)) },
         text = {
             Column {
                 Text(
-                    stringResource(R.string.importing_from_google_keep_don_t_go_anywhere),
+                    stringResource(R.string.importing_dont_go_anywhere, serviceName),
                     modifier = Modifier.padding(bottom = 20.dp)
                 )
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp), progress = progress)
+                if (actionCount != null) {
+                    LinearProgressIndicator(
+                        modifier = progressModifier,
+                        progress = if (actionCount > 0) (currentActionIndex.toFloat() / actionCount) else 0f
+                    )
+                } else {
+                    LinearProgressIndicator(modifier = progressModifier)
+                }
                 Text(currentAction, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
             }
         },
@@ -176,6 +183,27 @@ fun KeepImportSection(modifier: Modifier = Modifier, onZipFilePick: (Uri) -> Uni
         title = stringResource(R.string.google_keep_import)
     ) {
         Text(stringResource(R.string.google_keep_import_about), modifier = Modifier.padding(bottom = 8.dp))
+        OutlinedButton(
+            onClick = { zipFilePicker.launch(arrayOf("application/zip")) },
+            shape = ShapeDefaults.ExtraSmall,
+        ) {
+            Text(stringResource(R.string.select_zip_file))
+        }
+    }
+}
+
+
+@Composable
+fun QuickNoteImportSection(modifier: Modifier = Modifier, onZipFilePick: (Uri) -> Unit) {
+    val zipFilePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) onZipFilePick(uri)
+    }
+
+    SettingsSection(
+        modifier = modifier,
+        title = stringResource(R.string.quicknote_import),
+    ) {
+        Text(stringResource(R.string.quicknote_import_about), modifier = Modifier.padding(bottom = 8.dp))
         OutlinedButton(
             onClick = { zipFilePicker.launch(arrayOf("application/zip")) },
             shape = ShapeDefaults.ExtraSmall,
@@ -410,6 +438,7 @@ fun SettingsScreenImpl(
     onNextCloudTestClick: () -> Unit = {},
     onChange: (field: String, value: Any) -> Unit = { _, _ -> },
     onKeepZipFilePick: (Uri) -> Unit = {},
+    onQuickNoteZipFilePick: (Uri) -> Unit = {},
 ) {
     DisposableEffect(Unit) {
         onDispose {
@@ -452,6 +481,12 @@ fun SettingsScreenImpl(
                 )
             }
             item {
+                QuickNoteImportSection(
+                    modifier = Modifier.fillMaxWidth(),
+                    onZipFilePick = onQuickNoteZipFilePick,
+                )
+            }
+            item {
                 KeepImportSection(
                     modifier = Modifier.fillMaxWidth(),
                     onZipFilePick = onKeepZipFilePick,
@@ -479,9 +514,10 @@ fun SettingsScreen(
     val isNextCloudUrlFail by viewModel.isNextCloudUrlFail.collectAsStateWithLifecycle()
     val isNextCloudCredentialsFail by viewModel.isNextCloudCredentialsFail.collectAsStateWithLifecycle()
     val keepImportIsActive by viewModel.keepImportIsActive.collectAsStateWithLifecycle()
-    val keepImportActionCount by viewModel.keepImportActionCount.collectAsStateWithLifecycle()
-    val keepImportCurrentAction by viewModel.keepImportCurrentAction.collectAsStateWithLifecycle()
-    val keepImportCurrentActionIndex by viewModel.keepImportCurrentActionIndex.collectAsStateWithLifecycle()
+    val quickNoteImportIsActive by viewModel.quickNoteImportIsActive.collectAsStateWithLifecycle()
+    val importActionCount by viewModel.importActionCount.collectAsStateWithLifecycle()
+    val importCurrentAction by viewModel.importCurrentAction.collectAsStateWithLifecycle()
+    val importCurrentActionIndex by viewModel.importCurrentActionIndex.collectAsStateWithLifecycle()
     val nextCloudSuccessMessage = stringResource(R.string.successfully_connected_to_nextcloud)
     val context = LocalContext.current
 
@@ -501,12 +537,13 @@ fun SettingsScreen(
         }
     }
 
-    if (keepImportIsActive) {
-        KeepImportDialog(
-            actionCount = keepImportActionCount,
-            currentAction = keepImportCurrentAction,
-            currentActionIndex = keepImportCurrentActionIndex,
-            onCancel = { viewModel.cancelKeepImport() }
+    if (keepImportIsActive || quickNoteImportIsActive) {
+        ExternalImportDialog(
+            actionCount = importActionCount,
+            currentAction = importCurrentAction,
+            currentActionIndex = importCurrentActionIndex,
+            onCancel = { viewModel.cancelImport() },
+            serviceName = if (keepImportIsActive) "Google Keep" else "Quicknote",
         )
     }
 
@@ -528,6 +565,7 @@ fun SettingsScreen(
         },
         onChange = { field, value -> viewModel.updateField(field, value) },
         onKeepZipFilePick = { uri -> viewModel.keepImport(uri, context) },
+        onQuickNoteZipFilePick = { uri -> viewModel.quickNoteImport(uri, context) },
     )
 }
 

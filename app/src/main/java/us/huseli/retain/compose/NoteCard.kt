@@ -74,7 +74,6 @@ fun NoteCard(
             Column(modifier = Modifier.fillMaxWidth()) {
                 NoteImageGrid(
                     images = images,
-                    showDeleteButton = false,
                     maxRows = 2,
                     secondaryRowHeight = 100.dp,
                 )

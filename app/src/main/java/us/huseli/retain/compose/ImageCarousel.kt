@@ -69,35 +69,42 @@ fun ImageCarousel(
     var slideTo by remember(image) { mutableStateOf<Side?>(null) }
 
     val context = LocalContext.current
+    val density = LocalDensity.current
     val interactionSource = remember { MutableInteractionSource() }
-    val maxHeight = with(LocalDensity.current) { maxHeightDp.toPx() }
     val offset by remember { mutableStateOf(Animatable(0f)) }
-    val screenWidth = with(LocalDensity.current) { context.resources.configuration.screenWidthDp.dp.toPx() }
+    val containerHeight = with(density) { maxHeightDp.toPx() }
+    val containerWidth = remember { with(density) { context.resources.configuration.screenWidthDp.dp.toPx() } }
+    val containerRatio = if (containerHeight > 0f) containerWidth / containerHeight else 0f
 
+    @Suppress("UNUSED_VARIABLE")
+    val originalImageWidth =
+        if (image.ratio >= containerRatio) containerWidth
+        else imageBitmap.width * (containerHeight / imageBitmap.height)
     val originalImageHeight =
-        imageBitmap.height * (screenWidth / imageBitmap.width)
-    val maxX = abs(screenWidth * (1 - scale) / 2)
-    val maxY = abs((maxHeight / 2) - ((originalImageHeight * scale) / 2))
+        if (image.ratio <= containerRatio) containerHeight
+        else imageBitmap.height * (containerWidth / imageBitmap.width)
+    val maxX = abs(containerWidth * (1 - scale) / 2)
+    val maxY = abs((containerHeight / 2) - ((originalImageHeight * scale) / 2))
 
     settingsViewModel.setSystemBarColors(statusBar = Color.Black, navigationBar = Color.Black)
 
     LaunchedEffect(slideFrom, image) {
         if (slideFrom == Side.LEFT) {
-            offset.snapTo(-screenWidth)
+            offset.snapTo(-containerWidth)
             offset.animateTo(0f, animationSpec = tween(easing = LinearEasing, durationMillis = 100))
         } else if (slideFrom == Side.RIGHT) {
-            offset.snapTo(screenWidth)
+            offset.snapTo(containerWidth)
             offset.animateTo(0f, animationSpec = tween(easing = LinearEasing, durationMillis = 100))
         }
     }
 
     LaunchedEffect(slideTo, image) {
         if (slideTo == Side.LEFT) {
-            offset.animateTo(-screenWidth, animationSpec = tween(easing = LinearEasing, durationMillis = 100))
+            offset.animateTo(-containerWidth, animationSpec = tween(easing = LinearEasing, durationMillis = 100))
             slideFrom = Side.RIGHT
             onSwipeLeft()
         } else if (slideTo == Side.RIGHT) {
-            offset.animateTo(screenWidth, animationSpec = tween(easing = LinearEasing, durationMillis = 100))
+            offset.animateTo(containerWidth, animationSpec = tween(easing = LinearEasing, durationMillis = 100))
             slideFrom = Side.LEFT
             onSwipeRight()
         }
@@ -119,7 +126,7 @@ fun ImageCarousel(
             if (overScroll < -500f && multiple) slideTo = Side.LEFT
             else if (overScroll > 500f && multiple) slideTo = Side.RIGHT
 
-            if (originalImageHeight * scale > maxHeight) {
+            if (originalImageHeight * scale > containerHeight) {
                 if (abs(panY + panChange.y) <= maxY) panY += panChange.y
                 else if (panY + panChange.y > maxY) panY = maxY
                 else if (panY + panChange.y < -maxY) panY = -maxY
@@ -155,12 +162,13 @@ fun ImageCarousel(
                 leftIndicatorVisible = overScroll > 100f,
                 rightIndicatorVisible = overScroll < -100f,
             ) {
+                val imageModifier =
+                    if (containerRatio > image.ratio) Modifier.fillMaxSize() else Modifier.fillMaxWidth()
                 Image(
                     bitmap = imageBitmap,
                     contentDescription = null,
-                    contentScale = ContentScale.FillWidth,
-                    modifier = Modifier
-                        .fillMaxWidth()
+                    contentScale = if (containerRatio > image.ratio) ContentScale.FillHeight else ContentScale.FillWidth,
+                    modifier = imageModifier
                         .align(Alignment.Center)
                         .graphicsLayer(scaleX = scale, scaleY = scale, translationX = panX, translationY = panY)
                         .clickable(enabled = false) {}

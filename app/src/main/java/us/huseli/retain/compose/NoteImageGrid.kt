@@ -1,30 +1,27 @@
 package us.huseli.retain.compose
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.sharp.Close
-import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import okhttp3.internal.toImmutableList
-import us.huseli.retain.R
 import us.huseli.retain.data.entities.Image
 
 class ImageIterator(
@@ -53,15 +50,16 @@ class ImageIterator(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NoteImageGrid(
     modifier: Modifier = Modifier,
     images: List<Image>,
-    showDeleteButton: Boolean,
     maxRows: Int = Int.MAX_VALUE,
     secondaryRowHeight: Dp,
     onImageClick: ((String) -> Unit)? = null,
-    onDeleteButtonClick: ((String) -> Unit)? = null,
+    onImageLongClick: ((String) -> Unit)? = null,
+    selectedImages: List<String>? = null,
 ) {
     val imageLists = ImageIterator(
         objects = images,
@@ -77,12 +75,21 @@ fun NoteImageGrid(
                 val imageBitmap by image.imageBitmap.collectAsStateWithLifecycle(null)
 
                 Box(
-                    modifier = Modifier.weight(if (sublist.size == 1) 1f else image.ratio)
+                    modifier = Modifier
+                        .weight(if (sublist.size == 1) 1f else image.ratio)
+                        .aspectRatio(image.ratio)
                 ) {
                     var imageModifier = Modifier.fillMaxWidth()
-                    if (onImageClick != null) imageModifier = imageModifier.clickable {
-                        onImageClick.invoke(image.filename)
+
+                    if (onImageClick != null || onImageLongClick != null) {
+                        imageModifier = imageModifier.combinedClickable(
+                            onClick = { onImageClick?.invoke(image.filename) },
+                            onLongClick = { onImageLongClick?.invoke(image.filename) },
+                        )
                     }
+
+                    if (selectedImages?.contains(image.filename) == true)
+                        imageModifier = imageModifier.border(BorderStroke(3.dp, MaterialTheme.colorScheme.primary))
 
                     imageBitmap?.let {
                         Image(
@@ -92,23 +99,9 @@ fun NoteImageGrid(
                             modifier = imageModifier,
                         )
                     } ?: kotlin.run {
-                        Box(modifier = Modifier.fillMaxSize())
-                    }
-
-                    if (showDeleteButton) {
-                        FilledTonalIconButton(
-                            onClick = { onDeleteButtonClick?.invoke(image.filename) },
-                            colors = IconButtonDefaults.filledTonalIconButtonColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.75f),
-                            ),
-                            modifier = Modifier.scale(0.5f).align(Alignment.TopEnd)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Sharp.Close,
-                                contentDescription = stringResource(R.string.delete_image),
-                                tint = Color.LightGray.copy(alpha = 0.75f),
-                            )
-                        }
+                        CircularProgressIndicator(
+                            modifier = Modifier.align(Alignment.Center).widthIn(max = 20.dp).aspectRatio(1f)
+                        )
                     }
                 }
             }

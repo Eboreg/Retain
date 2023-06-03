@@ -112,7 +112,7 @@ class NoteRepository @Inject constructor(
 
     suspend fun upsertNote(note: Note) = noteDao.upsert(note)
 
-    suspend fun upsertNotes(notes: Collection<Note>) = noteDao.update(notes)
+    suspend fun updateNotes(notes: Collection<Note>) = noteDao.update(notes)
 
     suspend fun uriToImage(uri: Uri, noteId: UUID): Image? =
         us.huseli.retain.uriToImage(context, uri, noteId)?.let {

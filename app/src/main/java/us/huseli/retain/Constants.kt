@@ -1,7 +1,7 @@
 package us.huseli.retain
 
 object Constants {
-    const val DEFAULT_MAX_IMAGE_DIMEN = 1024
+    const val DEFAULT_MAX_IMAGE_DIMEN = 2048
     const val DEFAULT_MIN_COLUMN_WIDTH = 180
     const val IMAGE_SUBDIR = "images"
     const val NAV_ARG_NOTE_ID = "noteId"

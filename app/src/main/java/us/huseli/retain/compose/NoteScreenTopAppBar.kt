@@ -8,10 +8,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.sharp.AddAPhoto
 import androidx.compose.material.icons.sharp.AddPhotoAlternate
 import androidx.compose.material.icons.sharp.ArrowBack
+import androidx.compose.material.icons.sharp.Close
+import androidx.compose.material.icons.sharp.Delete
 import androidx.compose.material.icons.sharp.Palette
+import androidx.compose.material.icons.sharp.SelectAll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -95,6 +99,46 @@ fun NoteScreenTopAppBar(
                     imageVector = Icons.Sharp.AddPhotoAlternate,
                     modifier = Modifier.scale(1.1f),
                     contentDescription = stringResource(R.string.add_image)
+                )
+            }
+        }
+    )
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ImageSelectionTopAppBar(
+    modifier: Modifier = Modifier,
+    backgroundColor: Color,
+    selectedImageCount: Int,
+    onCloseClick: () -> Unit,
+    onSelectAllClick: () -> Unit,
+    onTrashClick: () -> Unit,
+) {
+    TopAppBar(
+        modifier = modifier,
+        title = { Text(selectedImageCount.toString()) },
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = backgroundColor),
+        navigationIcon = {
+            IconButton(onClick = onCloseClick) {
+                Icon(
+                    imageVector = Icons.Sharp.Close,
+                    contentDescription = stringResource(R.string.exit_selection_mode),
+                )
+            }
+        },
+        actions = {
+            IconButton(onClick = onSelectAllClick) {
+                Icon(
+                    imageVector = Icons.Sharp.SelectAll,
+                    contentDescription = stringResource(R.string.select_all_images),
+                )
+            }
+            IconButton(onClick = onTrashClick) {
+                Icon(
+                    imageVector = Icons.Sharp.Delete,
+                    contentDescription = stringResource(R.string.delete_selected_images),
                 )
             }
         }

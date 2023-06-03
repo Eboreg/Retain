@@ -67,6 +67,8 @@ fun BaseNoteScreen(
     val trashedImageCount by viewModel.trashedImageCount.collectAsStateWithLifecycle(0)
     val noteColor by viewModel.noteColor.collectAsStateWithLifecycle(MaterialTheme.colorScheme.background)
     val appBarColor by viewModel.appBarColor.collectAsStateWithLifecycle(MaterialTheme.colorScheme.surface)
+    val selectedImages by viewModel.selectedImages.collectAsStateWithLifecycle()
+    val isImageSelectEnabled = selectedImages.isNotEmpty()
 
     LaunchedEffect(note.color) {
         if (note.color != "DEFAULT") {
@@ -106,12 +108,22 @@ fun BaseNoteScreen(
     RetainScaffold(
         snackbarHostState = snackbarHostState,
         topBar = {
-            NoteScreenTopAppBar(
-                backgroundColor = appBarColor,
-                onBackClick = onBackClick,
-                onImagePick = { uri -> viewModel.insertImage(uri) },
-                onColorSelected = { index -> viewModel.setColor(index) }
-            )
+            if (isImageSelectEnabled) {
+                ImageSelectionTopAppBar(
+                    backgroundColor = appBarColor,
+                    selectedImageCount = selectedImages.size,
+                    onCloseClick = { viewModel.deselectAllImages() },
+                    onSelectAllClick = { viewModel.selectAllImages() },
+                    onTrashClick = { viewModel.trashSelectedImages() },
+                )
+            } else {
+                NoteScreenTopAppBar(
+                    backgroundColor = appBarColor,
+                    onBackClick = onBackClick,
+                    onImagePick = { uri -> viewModel.insertImage(uri) },
+                    onColorSelected = { index -> viewModel.setColor(index) }
+                )
+            }
         },
     ) { innerPadding ->
         var columnModifier = modifier
@@ -130,10 +142,16 @@ fun BaseNoteScreen(
             item {
                 NoteImageGrid(
                     images = images,
-                    showDeleteButton = true,
-                    onImageClick = { viewModel.setCarouselImage(it) },
-                    onDeleteButtonClick = { viewModel.deleteImage(it) },
                     secondaryRowHeight = 200.dp,
+                    onImageClick = {
+                        if (isImageSelectEnabled) viewModel.toggleImageSelected(it)
+                        else viewModel.setCarouselImage(it)
+                    },
+                    onImageLongClick = {
+                        if (isImageSelectEnabled) viewModel.toggleImageSelected(it)
+                        else viewModel.selectImage(it)
+                    },
+                    selectedImages = selectedImages,
                 )
             }
             item {

@@ -1,5 +1,6 @@
 package us.huseli.retain
 
+import android.content.ContentResolver
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
@@ -20,6 +21,8 @@ import us.huseli.retain.data.entities.Image
 import java.io.File
 import java.io.FileOutputStream
 import java.io.StringWriter
+import java.nio.file.Files
+import java.nio.file.Paths
 import java.util.UUID
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
@@ -90,6 +93,19 @@ fun readTextFileFromZip(zipFile: ZipFile, zipEntry: ZipEntry): String {
 }
 
 
+fun extractFileFromZip(zipFile: ZipFile, zipEntry: ZipEntry, outfile: File) {
+    val buffer = ByteArray(ZIP_BUFFER_SIZE)
+
+    FileOutputStream(outfile).use { outputStream ->
+        val inputStream = zipFile.getInputStream(zipEntry)
+        var length: Int
+        while (inputStream.read(buffer).also { length = it } > 0) {
+            outputStream.write(buffer, 0, length)
+        }
+    }
+}
+
+
 suspend fun uriToImage(context: Context, uri: Uri, noteId: UUID): Image? {
     val basename: String
     val mimeType: String?
@@ -122,9 +138,9 @@ suspend fun uriToImage(context: Context, uri: Uri, noteId: UUID): Image? {
             }
         }
     } else {
-        val extension = context.contentResolver.getType(uri)?.split("/")?.last()
+        mimeType = uri.getMimeType(context)
+        val extension = mimeType?.split('/')?.last() ?: uri.lastPathSegment?.split('.')?.last()
         basename = UUID.randomUUID().toString() + if (extension != null) ".$extension" else ""
-        mimeType = context.contentResolver.getType(uri)
         imageFile = File(imageDir, basename)
         copyFileToLocal(context, uri, imageFile)
         finalBitmap = bitmap
@@ -142,3 +158,13 @@ suspend fun uriToImage(context: Context, uri: Uri, noteId: UUID): Image? {
     }
     return null
 }
+
+
+fun isImageFile(filename: String): Boolean {
+    return Files.probeContentType(Paths.get(filename))?.startsWith("image/") == true
+}
+
+
+fun Uri.getMimeType(context: Context): String? =
+    if (scheme == ContentResolver.SCHEME_CONTENT) context.contentResolver.getType(this)
+    else Files.probeContentType(Paths.get(path))
