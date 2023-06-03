@@ -1,6 +1,5 @@
 package us.huseli.retain.viewmodels
 
-import android.content.Context
 import android.net.Uri
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
@@ -12,7 +11,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import okhttp3.internal.toImmutableList
-import us.huseli.retain.Constants.NAV_ARG_IMAGE_CAROUSEL_CURRENT_ID
 import us.huseli.retain.Constants.NAV_ARG_NOTE_ID
 import us.huseli.retain.Enums.NoteType
 import us.huseli.retain.LogInterface
@@ -20,9 +18,7 @@ import us.huseli.retain.data.NoteRepository
 import us.huseli.retain.data.entities.ChecklistItem
 import us.huseli.retain.data.entities.Image
 import us.huseli.retain.data.entities.Note
-import us.huseli.retain.ui.theme.getNoteColor
 import java.util.UUID
-import kotlin.math.max
 
 class ChecklistItemExtended(
     item: ChecklistItem,
@@ -47,12 +43,10 @@ class ChecklistItemExtended(
 }
 
 abstract class BaseEditNoteViewModel(
-    context: Context,
     savedStateHandle: SavedStateHandle,
     private val repository: NoteRepository,
     type: NoteType
 ) : ViewModel(), LogInterface {
-    private val _currentCarouselId = MutableStateFlow(savedStateHandle.get<String?>(NAV_ARG_IMAGE_CAROUSEL_CURRENT_ID))
     private val _dirtyImages = mutableListOf<Image>()
     private val _images = MutableStateFlow<List<Image>>(emptyList())
     private val _originalImages = mutableListOf<Image>()
@@ -70,7 +64,6 @@ abstract class BaseEditNoteViewModel(
     private var _originalNote: Note = Note(type = type, id = _noteId)
     protected val _note = MutableStateFlow(_originalNote)
 
-    val currentCarouselImage = _currentCarouselId.map { filename -> _images.value.find { it.filename == filename } }
     val deletedChecklistItemIds: List<UUID>
         get() = _deletedChecklistItemIds.toImmutableList()
     val deletedImageIds: List<String>
@@ -87,21 +80,12 @@ abstract class BaseEditNoteViewModel(
             ) _note.value else null
     val images = _images.asStateFlow()
     val note = _note.asStateFlow()
-    val noteColor = _note.map { getNoteColor(context, it.color) }
     val trashedImageCount = _trashedImages.map { it.size }
     val selectedImages = _selectedImages.asStateFlow()
 
-    val appBarColor = noteColor.map {
-        it.copy(
-            red = max(it.red - 0.05f, 0f),
-            green = max(it.green - 0.05f, 0f),
-            blue = max(it.blue - 0.05f, 0f),
-        )
-    }
-
     init {
         viewModelScope.launch {
-            repository.getCombo(_noteId)?.let { (note, checklistItems, images, _) ->
+            repository.getCombo(_noteId)?.also { (note, checklistItems, images, _) ->
                 _isNew = false
                 _originalNote = note
                 _note.value = note
@@ -138,10 +122,6 @@ abstract class BaseEditNoteViewModel(
 
     fun selectAllImages() {
         _selectedImages.value = _images.value.map { it.filename }
-    }
-
-    fun selectImage(filename: String) {
-        _selectedImages.value = _selectedImages.value.toMutableList().apply { add(filename) }
     }
 
     fun setColor(value: String) {
@@ -187,26 +167,5 @@ abstract class BaseEditNoteViewModel(
                 image.copy(position = index).also { addDirtyImage(it) }
             } else image
         }
-    }
-
-    /** IMAGE CAROUSEL *******************************************************/
-    fun gotoNextCarouselImage() {
-        val currentImageIdx = _images.value.indexOfFirst { it.filename == _currentCarouselId.value }
-        val newImageIdx = if (currentImageIdx >= _images.value.size - 1) 0 else currentImageIdx + 1
-        _currentCarouselId.value = _images.value.getOrNull(newImageIdx)?.filename
-    }
-
-    fun gotoPreviousCarouselImage() {
-        val currentImageIdx = _images.value.indexOfFirst { it.filename == _currentCarouselId.value }
-        val newImageIdx = if (currentImageIdx == 0) _images.value.size - 1 else currentImageIdx - 1
-        _currentCarouselId.value = _images.value.getOrNull(newImageIdx)?.filename
-    }
-
-    fun setCarouselImage(filename: String) {
-        _currentCarouselId.value = filename
-    }
-
-    fun unsetCarouselImage() {
-        _currentCarouselId.value = null
     }
 }

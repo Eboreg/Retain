@@ -9,8 +9,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import us.huseli.retain.ChecklistNoteDestination
 import us.huseli.retain.DebugDestination
-import us.huseli.retain.Enums
+import us.huseli.retain.Enums.NoteType
 import us.huseli.retain.HomeDestination
+import us.huseli.retain.ImageCarouselDestination
 import us.huseli.retain.Logger
 import us.huseli.retain.SettingsDestination
 import us.huseli.retain.TextNoteDestination
@@ -35,16 +36,15 @@ fun App(
             composable(route = HomeDestination.route) {
                 HomeScreen(
                     onAddChecklistClick = {
-                        navController.navigate(ChecklistNoteDestination.routeForNoteId(UUID.randomUUID()))
+                        navController.navigate(ChecklistNoteDestination.route(UUID.randomUUID()))
                     },
                     onAddTextNoteClick = {
-                        navController.navigate(TextNoteDestination.routeForNoteId(UUID.randomUUID()))
+                        navController.navigate(TextNoteDestination.route(UUID.randomUUID()))
                     },
                     onCardClick = { note ->
                         when (note.type) {
-                            Enums.NoteType.TEXT -> navController.navigate(TextNoteDestination.routeForNoteId(note.id))
-                            Enums.NoteType.CHECKLIST ->
-                                navController.navigate(ChecklistNoteDestination.routeForNoteId(note.id))
+                            NoteType.TEXT -> navController.navigate(TextNoteDestination.route(note.id))
+                            NoteType.CHECKLIST -> navController.navigate(ChecklistNoteDestination.route(note.id))
                         }
                     },
                     onSettingsClick = {
@@ -86,6 +86,9 @@ fun App(
                         viewModel.uploadNotes()
                     },
                     onBackClick = onClose,
+                    onImageCarouselStart = { noteId, imageId ->
+                        navController.navigate(ImageCarouselDestination.route(noteId, imageId))
+                    },
                 )
             }
 
@@ -105,6 +108,18 @@ fun App(
                         viewModel.uploadNotes()
                     },
                     onBackClick = onClose,
+                    onImageCarouselStart = { noteId, imageId ->
+                        navController.navigate(ImageCarouselDestination.route(noteId, imageId))
+                    },
+                )
+            }
+
+            composable(
+                route = ImageCarouselDestination.routeTemplate,
+                arguments = ImageCarouselDestination.arguments,
+            ) {
+                ImageCarouselScreen(
+                    onClose = onClose,
                 )
             }
         }

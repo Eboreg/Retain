@@ -45,8 +45,11 @@ fun RetainScaffold(
         MaterialTheme.colorScheme.background
     )
 
-    LaunchedEffect(statusBarColor, navigationBarColor) {
+    LaunchedEffect(statusBarColor) {
         statusBarColor?.let { systemUiController.setStatusBarColor(it) }
+    }
+
+    LaunchedEffect(navigationBarColor) {
         navigationBarColor?.let { systemUiController.setNavigationBarColor(it) }
     }
 

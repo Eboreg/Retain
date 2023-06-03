@@ -7,6 +7,7 @@ import android.content.res.Configuration
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import kotlin.math.max
 
 interface RetainColorScheme {
     val Background: Color
@@ -219,6 +220,9 @@ val noteColors: (RetainColorScheme) -> Map<String, Color> = { colorScheme ->
     )
 }
 
+@Composable
+fun getNoteColors(): Map<String, Color> = noteColors(if (isSystemInDarkTheme()) RetainColorDark else RetainColorLight)
+
 fun getNoteColor(key: String, dark: Boolean): Color {
     val colorScheme = if (dark) RetainColorDark else RetainColorLight
     return noteColors(colorScheme).getOrDefault(key, colorScheme.Background)
@@ -230,7 +234,22 @@ fun getNoteColor(context: Context, key: String) = getNoteColor(
 )
 
 @Composable
-fun getNoteColors(): Map<String, Color> = noteColors(if (isSystemInDarkTheme()) RetainColorDark else RetainColorLight)
-
-@Composable
 fun getNoteColor(key: String): Color = getNoteColor(key, isSystemInDarkTheme())
+
+fun getAppBarColor(key: String, dark: Boolean): Color {
+    val colorScheme = if (dark) RetainColorDark else RetainColorLight
+
+    return if (key == "DEFAULT") colorScheme.Surface
+    else getNoteColor(key, dark).let {
+        it.copy(
+            red = max(it.red - 0.05f, 0f),
+            green = max(it.green - 0.05f, 0f),
+            blue = max(it.blue - 0.05f, 0f),
+        )
+    }
+}
+
+fun getAppBarColor(context: Context, key: String) = getAppBarColor(
+    key = key,
+    dark = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+)

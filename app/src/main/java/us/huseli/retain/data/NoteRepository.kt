@@ -95,7 +95,7 @@ class NoteRepository @Inject constructor(
             NoteCombo(
                 note = note,
                 checklistItems = checklistItemDao.listByNoteId(noteId),
-                images = imageDao.listByNoteIds(listOf(noteId)).map {
+                images = imageDao.listByNoteId(noteId).map {
                     it.copy(imageBitmap = getImageBitmap(it.filename))
                 },
                 databaseVersion = database.openHelper.readableDatabase.version,
@@ -113,6 +113,10 @@ class NoteRepository @Inject constructor(
     }
 
     suspend fun listImages(ids: List<String>) = imageDao.list(ids)
+
+    suspend fun listImagesByNoteId(noteId: UUID) = imageDao.listByNoteId(noteId).map {
+        it.copy(imageBitmap = getImageBitmap(it.filename))
+    }
 
     suspend fun trashNotes(notes: Collection<Note>) = noteDao.update(notes.map { it.copy(isDeleted = true) })
 

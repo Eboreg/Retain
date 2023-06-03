@@ -2,6 +2,7 @@ package us.huseli.retain.compose
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.sharp.Archive
 import androidx.compose.material.icons.sharp.BugReport
@@ -94,7 +95,7 @@ fun HomeScreenTopAppBar(
             if (!showArchive) {
                 Image(
                     bitmap = ImageBitmap.imageResource(R.mipmap.ic_launcher_round),
-                    modifier = Modifier.height(50.dp),
+                    modifier = Modifier.height(50.dp).padding(start = 8.dp),
                     contentDescription = null,
                 )
             }

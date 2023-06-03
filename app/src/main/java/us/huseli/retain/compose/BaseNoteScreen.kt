@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,6 +42,8 @@ import us.huseli.retain.data.entities.ChecklistItem
 import us.huseli.retain.data.entities.Image
 import us.huseli.retain.data.entities.Note
 import us.huseli.retain.outlinedTextFieldColors
+import us.huseli.retain.ui.theme.getAppBarColor
+import us.huseli.retain.ui.theme.getNoteColor
 import us.huseli.retain.viewmodels.BaseEditNoteViewModel
 import us.huseli.retain.viewmodels.SettingsViewModel
 import java.util.UUID
@@ -56,28 +59,25 @@ fun BaseNoteScreen(
     onBackClick: () -> Unit,
     onBackgroundClick: (() -> Unit)? = null,
     onSave: (Note?, List<ChecklistItem>, List<Image>, List<UUID>, List<String>) -> Unit,
+    onImageCarouselStart: (UUID, String) -> Unit,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     contextMenu: @Composable (() -> Unit)? = null,
     content: LazyListScope.() -> Unit,
 ) {
     val images by viewModel.images.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val currentCarouselImage by viewModel.currentCarouselImage.collectAsStateWithLifecycle(null)
-    val currentCarouselImageBitmap = currentCarouselImage?.imageBitmap?.collectAsStateWithLifecycle(null)
     val interactionSource = remember { MutableInteractionSource() }
     val trashedImageCount by viewModel.trashedImageCount.collectAsStateWithLifecycle(0)
-    val noteColor by viewModel.noteColor.collectAsStateWithLifecycle(MaterialTheme.colorScheme.background)
-    val appBarColor by viewModel.appBarColor.collectAsStateWithLifecycle(MaterialTheme.colorScheme.surface)
+    val noteColor by remember(note.color) { mutableStateOf(getNoteColor(context, note.color)) }
+    val appBarColor by remember(note.color) { mutableStateOf(getAppBarColor(context, note.color)) }
     val selectedImages by viewModel.selectedImages.collectAsStateWithLifecycle()
     val isImageSelectEnabled = selectedImages.isNotEmpty()
 
-    LaunchedEffect(note.color) {
-        if (note.color != "DEFAULT") {
-            settingsViewModel.setSystemBarColors(
-                statusBar = appBarColor,
-                navigationBar = noteColor
-            )
-        }
+    if (note.color != "DEFAULT") {
+        settingsViewModel.setSystemBarColors(
+            statusBar = appBarColor,
+            navigationBar = noteColor
+        )
     }
 
     LaunchedEffect(trashedImageCount) {
@@ -152,12 +152,9 @@ fun BaseNoteScreen(
                     secondaryRowHeight = 200.dp,
                     onImageClick = {
                         if (isImageSelectEnabled) viewModel.toggleImageSelected(it)
-                        else viewModel.setCarouselImage(it)
+                        else onImageCarouselStart(note.id, it)
                     },
-                    onImageLongClick = {
-                        if (isImageSelectEnabled) viewModel.toggleImageSelected(it)
-                        else viewModel.selectImage(it)
-                    },
+                    onImageLongClick = { viewModel.toggleImageSelected(it) },
                     selectedImages = selectedImages,
                 )
             }
@@ -177,19 +174,6 @@ fun BaseNoteScreen(
                 Spacer(Modifier.height(4.dp))
             }
             content()
-        }
-
-        currentCarouselImage?.let { image ->
-            currentCarouselImageBitmap?.value?.let { imageBitmap ->
-                ImageCarousel(
-                    image = image,
-                    imageBitmap = imageBitmap,
-                    multiple = images.size > 1,
-                    onClose = { viewModel.unsetCarouselImage() },
-                    onSwipeLeft = { viewModel.gotoNextCarouselImage() },
-                    onSwipeRight = { viewModel.gotoPreviousCarouselImage() },
-                )
-            }
         }
     }
 }

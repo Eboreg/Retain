@@ -17,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,6 +31,7 @@ import us.huseli.retain.R
 import us.huseli.retain.data.entities.ChecklistItem
 import us.huseli.retain.data.entities.Image
 import us.huseli.retain.data.entities.Note
+import us.huseli.retain.ui.theme.getNoteColor
 import us.huseli.retain.viewmodels.EditChecklistNoteViewModel
 import java.util.UUID
 
@@ -39,6 +41,7 @@ fun ChecklistNoteScreen(
     viewModel: EditChecklistNoteViewModel = hiltViewModel(),
     onSave: (Note?, List<ChecklistItem>, List<Image>, List<UUID>, List<String>) -> Unit,
     onBackClick: () -> Unit,
+    onImageCarouselStart: (UUID, String) -> Unit,
 ) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -50,7 +53,7 @@ fun ChecklistNoteScreen(
     val reorderableState = rememberReorderableLazyListState(
         onMove = { from, to -> viewModel.switchItemPositions(from, to) },
     )
-    val noteColor by viewModel.noteColor.collectAsStateWithLifecycle(MaterialTheme.colorScheme.background)
+    val noteColor by remember(note.color) { mutableStateOf(getNoteColor(context, note.color)) }
 
     LaunchedEffect(trashedChecklistItems) {
         if (trashedChecklistItems.isNotEmpty()) {
@@ -84,6 +87,7 @@ fun ChecklistNoteScreen(
         },
         onBackClick = onBackClick,
         onSave = onSave,
+        onImageCarouselStart = onImageCarouselStart,
         snackbarHostState = snackbarHostState,
         contextMenu = {
             ChecklistNoteContextMenu(

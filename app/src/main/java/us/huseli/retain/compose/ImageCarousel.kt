@@ -4,13 +4,11 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.absoluteOffset
@@ -40,18 +38,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.hilt.navigation.compose.hiltViewModel
 import us.huseli.retain.Enums.Side
 import us.huseli.retain.R
 import us.huseli.retain.data.entities.Image
-import us.huseli.retain.viewmodels.SettingsViewModel
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
 @Composable
 fun ImageCarousel(
     modifier: Modifier = Modifier,
-    settingsViewModel: SettingsViewModel = hiltViewModel(),
     image: Image,
     imageBitmap: ImageBitmap,
     multiple: Boolean,
@@ -85,8 +80,6 @@ fun ImageCarousel(
         else imageBitmap.height * (containerWidth / imageBitmap.width)
     val maxX = abs(containerWidth * (1 - scale) / 2)
     val maxY = abs((containerHeight / 2) - ((originalImageHeight * scale) / 2))
-
-    settingsViewModel.setSystemBarColors(statusBar = Color.Black, navigationBar = Color.Black)
 
     LaunchedEffect(slideFrom, image) {
         if (slideFrom == Side.LEFT) {
@@ -143,13 +136,6 @@ fun ImageCarousel(
         modifier = Modifier.fillMaxSize().zIndex(1f)
     ) {
         maxHeightDp = this.maxHeight
-
-        // Backdrop:
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.9f))
-        )
 
         Column(
             verticalArrangement = Arrangement.Center,

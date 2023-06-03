@@ -1,12 +1,10 @@
 package us.huseli.retain.viewmodels
 
-import android.content.Context
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
@@ -26,11 +24,10 @@ fun addNullChar(str: String): String = Char.MIN_VALUE + stripNullChar(str)
 
 @HiltViewModel
 class EditChecklistNoteViewModel @Inject constructor(
-    @ApplicationContext context: Context,
     savedStateHandle: SavedStateHandle,
     repository: NoteRepository,
     override val logger: Logger,
-) : BaseEditNoteViewModel(context, savedStateHandle, repository, NoteType.CHECKLIST) {
+) : BaseEditNoteViewModel(savedStateHandle, repository, NoteType.CHECKLIST) {
     private val _focusedItemId = MutableStateFlow<UUID?>(null)
     private val _trashedItems = MutableStateFlow<List<ChecklistItemExtended>>(emptyList())
 

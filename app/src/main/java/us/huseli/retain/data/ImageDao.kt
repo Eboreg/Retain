@@ -27,8 +27,8 @@ interface ImageDao {
     @Query("SELECT * FROM image WHERE imageFilename IN (:ids)")
     suspend fun list(ids: List<String>): List<Image>
 
-    @Query("SELECT * FROM image WHERE imageNoteId IN (:noteIds) ORDER BY imagePosition")
-    suspend fun listByNoteIds(noteIds: Collection<UUID>): List<Image>
+    @Query("SELECT * FROM image WHERE imageNoteId = :noteId ORDER BY imagePosition")
+    suspend fun listByNoteId(noteId: UUID): List<Image>
 
     @Query("SELECT * FROM image ORDER BY imagePosition")
     suspend fun listAll(): List<Image>
