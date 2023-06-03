@@ -138,6 +138,8 @@ class NextCloudRepository @Inject constructor(
         }
     }
 
+    fun removeImages(images: Collection<Image>) = RemoveImagesTask(nextCloudEngine, images).run()
+
     fun test(
         uri: Uri,
         username: String,

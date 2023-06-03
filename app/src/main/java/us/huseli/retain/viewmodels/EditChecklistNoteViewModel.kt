@@ -32,7 +32,7 @@ class EditChecklistNoteViewModel @Inject constructor(
     override val logger: Logger,
 ) : BaseEditNoteViewModel(context, savedStateHandle, repository, NoteType.CHECKLIST) {
     private val _focusedItemId = MutableStateFlow<UUID?>(null)
-    private val _trashedItems = MutableStateFlow<List<ChecklistItem>>(emptyList())
+    private val _trashedItems = MutableStateFlow<List<ChecklistItemExtended>>(emptyList())
 
     val checkedItems = _checklistItems.map { items -> items.filter { item -> item.checked } }
     val focusedItemId = _focusedItemId.asStateFlow()
@@ -50,27 +50,19 @@ class EditChecklistNoteViewModel @Inject constructor(
 
     fun deleteCheckedItems() {
         clearTrashedItems()
-        _checklistItems.value = _checklistItems.value.mapNotNull { item ->
-            if (item.checked) {
-                _trashedItems.value = _trashedItems.value.toMutableList().apply { add(item) }
-                addDirtyItem(item.copy(isDeleted = true))
-                null
-            } else item
+        _trashedItems.value = _checklistItems.value.filter { it.checked }
+        _checklistItems.value = _checklistItems.value.toMutableList().apply {
+            removeAll(_trashedItems.value)
         }
+        _deletedChecklistItemIds.addAll(_trashedItems.value.map { it.id })
     }
 
-    fun deleteItem(item: ChecklistItem, permanent: Boolean = false) {
-        val index = _checklistItems.value.indexOfFirst { it.id == item.id }
-        addDirtyItem(item.copy(isDeleted = true))
-
-        if (index > -1) {
-            _checklistItems.value = _checklistItems.value.toMutableList().apply {
-                removeAt(index)
-                if (!permanent) {
-                    _trashedItems.value = listOf(item)
-                }
-            }
+    fun deleteItem(item: ChecklistItemExtended, permanent: Boolean = false) {
+        _checklistItems.value = _checklistItems.value.toMutableList().apply {
+            removeIf { it.id == item.id }
         }
+        if (!permanent) _trashedItems.value = listOf(item)
+        _deletedChecklistItemIds.add(item.id)
     }
 
     private fun insertItem(item: ChecklistItem) {
@@ -172,10 +164,11 @@ class EditChecklistNoteViewModel @Inject constructor(
         }
     }
 
-    fun undoTrashItems() = viewModelScope.launch {
+    fun undoDeleteItems() = viewModelScope.launch {
         _checklistItems.value = _checklistItems.value.toMutableList().apply {
-            _trashedItems.value.forEach { insertItem(it) }
+            _trashedItems.value.forEach { add(it.position, it) }
         }
+        _deletedChecklistItemIds.removeAll(_trashedItems.value.map { it.id })
         clearTrashedItems()
     }
 

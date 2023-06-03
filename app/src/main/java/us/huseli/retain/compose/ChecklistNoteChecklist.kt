@@ -27,7 +27,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.burnoutcrew.reorderable.ReorderableItem
 import org.burnoutcrew.reorderable.ReorderableLazyListState
 import us.huseli.retain.R
-import us.huseli.retain.data.entities.ChecklistItem
 import us.huseli.retain.viewmodels.ChecklistItemExtended
 import java.util.UUID
 
@@ -39,7 +38,7 @@ fun ChecklistNoteChecklist(
     showChecked: Boolean,
     uncheckedItems: List<ChecklistItemExtended>,
     checkedItems: List<ChecklistItemExtended>,
-    onItemDeleteClick: (ChecklistItem) -> Unit,
+    onItemDeleteClick: (ChecklistItemExtended) -> Unit,
     onItemCheckedChange: (ChecklistItemExtended, Boolean) -> Unit,
     onItemTextFieldValueChange: (ChecklistItemExtended, TextFieldValue) -> Unit,
     onNextItem: (ChecklistItemExtended) -> Unit,

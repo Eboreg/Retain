@@ -31,12 +31,13 @@ import us.huseli.retain.data.entities.ChecklistItem
 import us.huseli.retain.data.entities.Image
 import us.huseli.retain.data.entities.Note
 import us.huseli.retain.viewmodels.EditChecklistNoteViewModel
+import java.util.UUID
 
 @Composable
 fun ChecklistNoteScreen(
     modifier: Modifier = Modifier,
     viewModel: EditChecklistNoteViewModel = hiltViewModel(),
-    onSave: (Note?, List<ChecklistItem>, List<Image>) -> Unit,
+    onSave: (Note?, List<ChecklistItem>, List<Image>, List<UUID>, List<String>) -> Unit,
     onBackClick: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -65,7 +66,7 @@ fun ChecklistNoteScreen(
                 withDismissAction = true,
             )
             when (result) {
-                SnackbarResult.ActionPerformed -> viewModel.undoTrashItems()
+                SnackbarResult.ActionPerformed -> viewModel.undoDeleteItems()
                 SnackbarResult.Dismissed -> viewModel.clearTrashedItems()
             }
         }

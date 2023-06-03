@@ -327,7 +327,9 @@ class SettingsViewModel @Inject constructor(
                             if (zipEntry.name.endsWith(".json")) {
                                 updateCurrentAction("Extracting ${zipEntry.name}")
                                 val json = readTextFileFromZip(zipFile, zipEntry)
-                                gson.fromJson(json, GoogleNoteEntry::class.java)?.let { entries.add(it) }
+                                gson.fromJson(json, GoogleNoteEntry::class.java)?.let {
+                                    if (!it.isTrashed) entries.add(it)
+                                }
                             } else if (isImageFile(zipEntry.name)) {
                                 updateCurrentAction("Extracting ${zipEntry.name}")
                                 val imageFile =
@@ -348,7 +350,6 @@ class SettingsViewModel @Inject constructor(
                         title = noteEntry.title ?: "",
                         text = noteEntry.textContent ?: "",
                         type = if (noteEntry.listContent != null) NoteType.CHECKLIST else NoteType.TEXT,
-                        isDeleted = noteEntry.isTrashed,
                         isArchived = noteEntry.isArchived,
                         created = noteEntry.createdTimestampUsec?.let { Instant.ofEpochMilli(it / 1000) }
                                   ?: Instant.now(),

@@ -75,8 +75,14 @@ fun App(
                 arguments = TextNoteDestination.arguments,
             ) {
                 TextNoteScreen(
-                    onSave = { dirtyNote, dirtyChecklistItems, dirtyImages ->
-                        viewModel.save(dirtyNote, dirtyChecklistItems, dirtyImages)
+                    onSave = { dirtyNote, dirtyChecklistItems, dirtyImages, deletedChecklistItemIds, deletedImageIds ->
+                        viewModel.save(
+                            dirtyNote,
+                            dirtyChecklistItems,
+                            dirtyImages,
+                            deletedChecklistItemIds,
+                            deletedImageIds
+                        )
                         viewModel.uploadNotes()
                     },
                     onBackClick = onClose,
@@ -88,8 +94,14 @@ fun App(
                 arguments = ChecklistNoteDestination.arguments,
             ) {
                 ChecklistNoteScreen(
-                    onSave = { dirtyNote, dirtyChecklistItems, dirtyImages ->
-                        viewModel.save(dirtyNote, dirtyChecklistItems, dirtyImages)
+                    onSave = { dirtyNote, dirtyChecklistItems, dirtyImages, deletedChecklistItemIds, deletedImageIds ->
+                        viewModel.save(
+                            dirtyNote,
+                            dirtyChecklistItems,
+                            dirtyImages,
+                            deletedChecklistItemIds,
+                            deletedImageIds
+                        )
                         viewModel.uploadNotes()
                     },
                     onBackClick = onClose,

@@ -43,6 +43,7 @@ import us.huseli.retain.data.entities.Note
 import us.huseli.retain.outlinedTextFieldColors
 import us.huseli.retain.viewmodels.BaseEditNoteViewModel
 import us.huseli.retain.viewmodels.SettingsViewModel
+import java.util.UUID
 
 @Composable
 fun BaseNoteScreen(
@@ -54,7 +55,7 @@ fun BaseNoteScreen(
     onTitleFieldNext: (() -> Unit)?,
     onBackClick: () -> Unit,
     onBackgroundClick: (() -> Unit)? = null,
-    onSave: (Note?, List<ChecklistItem>, List<Image>) -> Unit,
+    onSave: (Note?, List<ChecklistItem>, List<Image>, List<UUID>, List<String>) -> Unit,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     contextMenu: @Composable (() -> Unit)? = null,
     content: LazyListScope.() -> Unit,
@@ -101,7 +102,13 @@ fun BaseNoteScreen(
 
     DisposableEffect(Unit) {
         onDispose {
-            onSave(viewModel.dirtyNote, viewModel.dirtyChecklistItems, viewModel.dirtyImages)
+            onSave(
+                viewModel.dirtyNote,
+                viewModel.dirtyChecklistItems,
+                viewModel.dirtyImages,
+                viewModel.deletedChecklistItemIds,
+                viewModel.deletedImageIds
+            )
         }
     }
 

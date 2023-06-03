@@ -76,6 +76,10 @@ class NoteViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            repository.deleteTrashedNotes()
+        }
+
+        viewModelScope.launch {
             combine(repository.notes, _showArchive) { notes, showArchive ->
                 notes.filter { it.isArchived == showArchive }
             }.collect { notes ->
@@ -108,15 +112,28 @@ class NoteViewModel @Inject constructor(
     fun reallyTrashNotes() {
         _trashedNotes.value = emptySet()
         viewModelScope.launch {
+            repository.deleteTrashedNotes()
             nextCloudRepository.uploadNotes()
         }
     }
 
-    fun save(note: Note?, checklistItems: List<ChecklistItem>, images: List<Image>) = viewModelScope.launch {
+    fun save(
+        note: Note?,
+        checklistItems: List<ChecklistItem>,
+        images: List<Image>,
+        deletedChecklistItemIds: List<UUID>,
+        deletedImageIds: List<String>
+    ) = viewModelScope.launch {
         log("save(): note=$note, checklistItems=$checklistItems, images=$images")
         note?.let { repository.upsertNote(it) }
-        repository.upsertChecklistItems(checklistItems)
-        repository.upsertImages(images)
+        if (checklistItems.isNotEmpty()) repository.upsertChecklistItems(checklistItems)
+        if (images.isNotEmpty()) repository.upsertImages(images)
+        if (deletedChecklistItemIds.isNotEmpty()) repository.deleteChecklistItems(deletedChecklistItemIds)
+        if (deletedImageIds.isNotEmpty()) {
+            val deletedImages = repository.listImages(deletedImageIds)
+            nextCloudRepository.removeImages(deletedImages)
+            repository.deleteImages(deletedImages)
+        }
     }
 
     fun saveNotePositions() = viewModelScope.launch {

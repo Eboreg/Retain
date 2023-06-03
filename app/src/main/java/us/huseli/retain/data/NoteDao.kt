@@ -12,6 +12,9 @@ import java.util.UUID
 
 @Dao
 interface NoteDao {
+    @Query("DELETE FROM note WHERE noteIsDeleted = 1")
+    suspend fun deleteTrashed()
+
     @Query("SELECT * FROM note WHERE noteIsDeleted = 0 ORDER BY notePosition")
     fun flowList(): Flow<List<Note>>
 

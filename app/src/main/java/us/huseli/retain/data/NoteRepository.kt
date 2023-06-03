@@ -78,6 +78,18 @@ class NoteRepository @Inject constructor(
 
     suspend fun archiveNotes(notes: Collection<Note>) = noteDao.update(notes.map { it.copy(isArchived = true) })
 
+    suspend fun deleteChecklistItems(ids: List<UUID>) = checklistItemDao.delete(ids)
+
+    suspend fun deleteImages(images: Collection<Image>) {
+        @Suppress("Destructure")
+        images.forEach { image ->
+            File(_imageDir, image.filename).apply { if (isFile) delete() }
+        }
+        imageDao.delete(images)
+    }
+
+    suspend fun deleteTrashedNotes() = noteDao.deleteTrashed()
+
     suspend fun getCombo(noteId: UUID): NoteCombo? =
         noteDao.getNote(noteId)?.let { note ->
             NoteCombo(
@@ -99,6 +111,8 @@ class NoteRepository @Inject constructor(
         checklistItemDao.upsert(combos.flatMap { it.checklistItems })
         imageDao.upsert(combos.flatMap { it.images })
     }
+
+    suspend fun listImages(ids: List<String>) = imageDao.list(ids)
 
     suspend fun trashNotes(notes: Collection<Note>) = noteDao.update(notes.map { it.copy(isDeleted = true) })
 

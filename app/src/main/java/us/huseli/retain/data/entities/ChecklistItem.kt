@@ -23,10 +23,9 @@ open class ChecklistItem(
     @ColumnInfo(name = "checklistItemNoteId") val noteId: UUID,
     @ColumnInfo(name = "checklistItemChecked", defaultValue = "0") val checked: Boolean = false,
     @ColumnInfo(name = "checklistItemPosition", defaultValue = "0") val position: Int = 0,
-    @ColumnInfo(name = "checklistItemIsDeleted", defaultValue = "0") val isDeleted: Boolean = false,
 ) {
     override fun toString() =
-        "<ChecklistItem: id=$id, text=$text, position=$position, noteId=$noteId, isDeleted=$isDeleted>"
+        "<ChecklistItem: id=$id, text=$text, position=$position, noteId=$noteId>"
 
     override fun equals(other: Any?) =
         other is ChecklistItem &&
@@ -34,8 +33,7 @@ open class ChecklistItem(
         other.text == text &&
         other.noteId == noteId &&
         other.checked == checked &&
-        other.position == position &&
-        other.isDeleted == isDeleted
+        other.position == position
 
     override fun hashCode() = id.hashCode()
 
@@ -43,7 +41,6 @@ open class ChecklistItem(
         text: String = this.text,
         checked: Boolean = this.checked,
         position: Int = this.position,
-        isDeleted: Boolean = this.isDeleted,
     ): ChecklistItem {
         return ChecklistItem(
             id = id,
@@ -51,7 +48,6 @@ open class ChecklistItem(
             checked = checked,
             position = position,
             noteId = noteId,
-            isDeleted = isDeleted,
         )
     }
 }

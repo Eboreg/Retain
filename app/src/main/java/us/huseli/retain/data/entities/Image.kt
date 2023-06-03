@@ -28,7 +28,6 @@ data class Image(
     @ColumnInfo(name = "imageNoteId", index = true) val noteId: UUID,
     @ColumnInfo(name = "imageAdded") val added: Instant = Instant.now(),
     @ColumnInfo(name = "imageSize") val size: Int,
-    @ColumnInfo(name = "imageIsDeleted", defaultValue = "0") val isDeleted: Boolean = false,
     @ColumnInfo(name = "imagePosition", defaultValue = "0") val position: Int = 0,
     @Ignore @Transient val imageBitmap: Flow<ImageBitmap?> = MutableStateFlow<ImageBitmap?>(null),
 ) : Comparable<Image> {
@@ -43,7 +42,6 @@ data class Image(
         noteId: UUID,
         added: Instant,
         size: Int,
-        isDeleted: Boolean,
         position: Int
     ) :
         this(
@@ -54,7 +52,6 @@ data class Image(
             noteId = noteId,
             added = added,
             size = size,
-            isDeleted = isDeleted,
             position = position,
             imageBitmap = MutableStateFlow<ImageBitmap?>(null)
         )
@@ -68,7 +65,6 @@ data class Image(
         other.noteId == noteId &&
         other.added == added &&
         other.size == size &&
-        other.isDeleted == isDeleted &&
         other.position == position
 
     override fun hashCode() = filename.hashCode()

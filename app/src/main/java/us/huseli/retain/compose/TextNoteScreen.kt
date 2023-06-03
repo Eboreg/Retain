@@ -25,12 +25,13 @@ import us.huseli.retain.data.entities.Image
 import us.huseli.retain.data.entities.Note
 import us.huseli.retain.outlinedTextFieldColors
 import us.huseli.retain.viewmodels.EditTextNoteViewModel
+import java.util.UUID
 
 @Composable
 fun TextNoteScreen(
     modifier: Modifier = Modifier,
     viewModel: EditTextNoteViewModel = hiltViewModel(),
-    onSave: (Note?, List<ChecklistItem>, List<Image>) -> Unit,
+    onSave: (Note?, List<ChecklistItem>, List<Image>, List<UUID>, List<String>) -> Unit,
     onBackClick: () -> Unit,
 ) {
     val note by viewModel.note.collectAsStateWithLifecycle()

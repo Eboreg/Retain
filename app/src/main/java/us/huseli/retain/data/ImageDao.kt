@@ -1,6 +1,7 @@
 package us.huseli.retain.data
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -11,16 +12,22 @@ import java.util.UUID
 
 @Dao
 interface ImageDao {
-    @Query("UPDATE image SET imageIsDeleted = 1 WHERE imageNoteId=:noteId AND imageFilename NOT IN (:except)")
+    @Delete
+    suspend fun delete(images: Collection<Image>)
+
+    @Query("DELETE FROM image WHERE imageNoteId=:noteId AND imageFilename NOT IN (:except)")
     suspend fun deleteByNoteId(noteId: UUID, except: Collection<String> = emptyList())
 
-    @Query("SELECT * FROM image WHERE imageIsDeleted = 0 ORDER BY imageNoteId, imagePosition")
+    @Query("SELECT * FROM image ORDER BY imageNoteId, imagePosition")
     fun flowList(): Flow<List<Image>>
 
     @Query("SELECT COALESCE(MAX(imagePosition), -1) FROM image WHERE imageNoteId = :noteId")
     suspend fun getMaxPosition(noteId: UUID): Int
 
-    @Query("SELECT * FROM image WHERE imageNoteId IN (:noteIds) AND imageIsDeleted = 0 ORDER BY imagePosition")
+    @Query("SELECT * FROM image WHERE imageFilename IN (:ids)")
+    suspend fun list(ids: List<String>): List<Image>
+
+    @Query("SELECT * FROM image WHERE imageNoteId IN (:noteIds) ORDER BY imagePosition")
     suspend fun listByNoteIds(noteIds: Collection<UUID>): List<Image>
 
     @Query("SELECT * FROM image ORDER BY imagePosition")

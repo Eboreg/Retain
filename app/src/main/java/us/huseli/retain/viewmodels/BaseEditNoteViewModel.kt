@@ -38,10 +38,9 @@ class ChecklistItemExtended(
     noteId = item.noteId,
     checked = item.checked,
     position = item.position,
-    isDeleted = item.isDeleted
 ) {
-    override fun copy(text: String, checked: Boolean, position: Int, isDeleted: Boolean): ChecklistItemExtended {
-        return ChecklistItemExtended(super.copy(text, checked, position, isDeleted), textFieldValue).also {
+    override fun copy(text: String, checked: Boolean, position: Int): ChecklistItemExtended {
+        return ChecklistItemExtended(super.copy(text, checked, position), textFieldValue).also {
             it.textFieldValue.value = it.textFieldValue.value.copy(text = addNullChar(text))
         }
     }
@@ -60,7 +59,9 @@ abstract class BaseEditNoteViewModel(
     private val _selectedImages = MutableStateFlow<List<String>>(emptyList())
     private val _trashedImages = MutableStateFlow<List<Image>>(emptyList())
     private var _isNew = true
+    private val _deletedImageIds = mutableListOf<String>()
 
+    protected val _deletedChecklistItemIds = mutableListOf<UUID>()
     protected val _checklistItems = MutableStateFlow<List<ChecklistItemExtended>>(emptyList())
     protected val _dirtyChecklistItems = mutableListOf<ChecklistItem>()
     protected val _noteId: UUID = UUID.fromString(savedStateHandle.get<String>(NAV_ARG_NOTE_ID)!!)
@@ -70,6 +71,10 @@ abstract class BaseEditNoteViewModel(
     protected val _note = MutableStateFlow(_originalNote)
 
     val currentCarouselImage = _currentCarouselId.map { filename -> _images.value.find { it.filename == filename } }
+    val deletedChecklistItemIds: List<UUID>
+        get() = _deletedChecklistItemIds.toImmutableList()
+    val deletedImageIds: List<String>
+        get() = _deletedImageIds.toImmutableList()
     val dirtyChecklistItems: List<ChecklistItem>
         get() = _dirtyChecklistItems.toImmutableList()
     val dirtyImages: List<Image>
@@ -159,24 +164,20 @@ abstract class BaseEditNoteViewModel(
     }
 
     fun trashSelectedImages() {
+        clearTrashedImages()
+        _trashedImages.value = _images.value.filter { _selectedImages.value.contains(it.filename) }
+        _deletedImageIds.addAll(_selectedImages.value)
         _images.value = _images.value.toMutableList().apply {
-            val trashedImages = filter { _selectedImages.value.contains(it.filename) }
-
-            filter { _selectedImages.value.contains(it.filename) }.forEach { image ->
-                addDirtyImage(image.copy(isDeleted = true))
-            }
-            _trashedImages.value = trashedImages
-            removeAll(trashedImages)
-            deselectAllImages()
+            removeAll(_trashedImages.value)
         }
+        deselectAllImages()
     }
 
     fun undoTrashBitmapImages() = viewModelScope.launch {
         _images.value = _images.value.toMutableList().apply {
-            addAll(_trashedImages.value)
-            sortBy { it.position }
+            _trashedImages.value.forEach { add(it.position, it) }
         }
-        _trashedImages.value.forEach { addDirtyImage(it) }
+        _deletedImageIds.removeAll(_trashedImages.value.map { it.filename })
         clearTrashedImages()
     }
 
