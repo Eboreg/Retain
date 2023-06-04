@@ -1,6 +1,5 @@
 package us.huseli.retain.compose
 
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -24,7 +23,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -122,12 +120,13 @@ fun HomeScreen(
             .fillMaxHeight()
             .padding(innerPadding)
 
-        val lazyContent: @Composable (Note, Modifier) -> Unit = { note, modifier ->
+        val lazyContent: @Composable (Note, Boolean) -> Unit = { note, isDragging ->
             NoteCard(
-                modifier = modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 note = note,
                 checklistData = checklistData.find { it.noteId == note.id },
                 images = images.filter { it.noteId == note.id },
+                isDragging = isDragging,
                 onClick = {
                     if (isSelectEnabled) toggleNoteSelected(note.id)
                     else onCardClick(note)
@@ -150,7 +149,7 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalItemSpacing = 8.dp,
             ) {
-                items(notes, key = { it.id }) { note -> lazyContent(note, Modifier) }
+                items(notes, key = { it.id }) { note -> lazyContent(note, false) }
             }
         } else {
             LazyColumn(
@@ -161,8 +160,7 @@ fun HomeScreen(
             ) {
                 items(notes, key = { it.id }) { note ->
                     ReorderableItem(reorderableState, key = note.id) { isDragging ->
-                        val elevation by animateDpAsState(if (isDragging) 16.dp else 0.dp)
-                        lazyContent(note, Modifier.shadow(elevation))
+                        lazyContent(note, isDragging)
                     }
                 }
             }

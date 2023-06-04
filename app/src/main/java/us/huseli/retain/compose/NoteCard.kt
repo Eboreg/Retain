@@ -1,5 +1,6 @@
 package us.huseli.retain.compose
 
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -25,8 +26,10 @@ import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.ShapeDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -53,7 +56,9 @@ fun NoteCard(
     isSelected: Boolean,
     reorderableState: ReorderableLazyListState? = null,
     showDragHandle: Boolean = false,
+    isDragging: Boolean,
 ) {
+    val elevation by animateDpAsState(if (isDragging) 16.dp else 0.dp)
     val noteColor = getNoteColor(note.color)
     val border =
         if (isSelected) BorderStroke(3.dp, MaterialTheme.colorScheme.primary)
@@ -65,6 +70,7 @@ fun NoteCard(
             shape = ShapeDefaults.ExtraSmall,
             colors = CardDefaults.outlinedCardColors(containerColor = noteColor),
             modifier = modifier
+                .shadow(elevation)
                 .heightIn(min = 50.dp)
                 .combinedClickable(
                     onClick = onClick,
@@ -72,11 +78,13 @@ fun NoteCard(
                 )
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
-                NoteImageGrid(
-                    images = images,
-                    maxRows = 2,
-                    secondaryRowHeight = 100.dp,
-                )
+                if (!isDragging) {
+                    NoteImageGrid(
+                        images = images,
+                        maxRows = 2,
+                        secondaryRowHeight = 100.dp,
+                    )
+                }
 
                 Column(modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth()) {
                     if (note.title.isNotBlank()) {
@@ -90,29 +98,31 @@ fun NoteCard(
                         )
                     }
 
-                    when (note.type) {
-                        Enums.NoteType.TEXT -> {
-                            if (note.text.isNotBlank()) {
-                                Spacer(modifier = Modifier.height(if (note.title.isNotBlank()) 8.dp else 16.dp))
-                                Text(
-                                    text = note.text,
-                                    overflow = TextOverflow.Ellipsis,
-                                    maxLines = 6,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
-                                )
+                    if (!isDragging) {
+                        when (note.type) {
+                            Enums.NoteType.TEXT -> {
+                                if (note.text.isNotBlank()) {
+                                    Spacer(modifier = Modifier.height(if (note.title.isNotBlank()) 8.dp else 16.dp))
+                                    Text(
+                                        text = note.text,
+                                        overflow = TextOverflow.Ellipsis,
+                                        maxLines = 6,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
+                                    )
+                                }
+                                if (note.text.isNotBlank() || note.title.isNotBlank())
+                                    Spacer(modifier = Modifier.height(16.dp))
                             }
-                            if (note.text.isNotBlank() || note.title.isNotBlank())
-                                Spacer(modifier = Modifier.height(16.dp))
-                        }
 
-                        Enums.NoteType.CHECKLIST -> checklistData?.let {
-                            if (it.shownChecklistItems.isNotEmpty()) {
-                                Spacer(modifier = Modifier.height(if (note.title.isNotBlank()) 8.dp else 16.dp))
-                                NoteCardChecklist(data = it)
+                            Enums.NoteType.CHECKLIST -> checklistData?.let {
+                                if (it.shownChecklistItems.isNotEmpty()) {
+                                    Spacer(modifier = Modifier.height(if (note.title.isNotBlank()) 8.dp else 16.dp))
+                                    NoteCardChecklist(data = it)
+                                }
+                                if (it.shownChecklistItems.isNotEmpty() || note.title.isNotBlank())
+                                    Spacer(modifier = Modifier.height(16.dp))
                             }
-                            if (it.shownChecklistItems.isNotEmpty() || note.title.isNotBlank())
-                                Spacer(modifier = Modifier.height(16.dp))
                         }
                     }
                 }
