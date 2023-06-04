@@ -6,6 +6,8 @@ object Constants {
     const val IMAGE_SUBDIR = "images"
     const val NAV_ARG_NOTE_ID = "noteId"
     const val NAV_ARG_IMAGE_CAROUSEL_CURRENT_ID = "imageCarouselCurrentId"
+    const val NAV_ARG_SELECTED_NOTE = "selectedNote"
+    const val NAV_ARG_SELECTED_IMAGE = "selectedImage"
     const val NEXTCLOUD_BASE_DIR = "/.retain"
     const val NEXTCLOUD_IMAGE_SUBDIR = "images"
     const val NEXTCLOUD_JSON_SUBDIR = "json"

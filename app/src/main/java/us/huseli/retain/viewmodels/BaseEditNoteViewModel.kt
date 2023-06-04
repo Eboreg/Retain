@@ -1,17 +1,21 @@
 package us.huseli.retain.viewmodels
 
 import android.net.Uri
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import okhttp3.internal.toImmutableList
 import us.huseli.retain.Constants.NAV_ARG_NOTE_ID
+import us.huseli.retain.Constants.NAV_ARG_SELECTED_IMAGE
 import us.huseli.retain.Enums.NoteType
 import us.huseli.retain.LogInterface
 import us.huseli.retain.data.NoteRepository
@@ -50,10 +54,13 @@ abstract class BaseEditNoteViewModel(
     private val _dirtyImages = mutableListOf<Image>()
     private val _images = MutableStateFlow<List<Image>>(emptyList())
     private val _originalImages = mutableListOf<Image>()
-    private val _selectedImages = MutableStateFlow<List<String>>(emptyList())
     private val _trashedImages = MutableStateFlow<List<Image>>(emptyList())
     private var _isNew = true
     private val _deletedImageIds = mutableListOf<String>()
+    private val _imageAdded = MutableSharedFlow<ImageBitmap>()
+    private val _selectedImages = MutableStateFlow(
+        savedStateHandle.get<String>(NAV_ARG_SELECTED_IMAGE)?.let { setOf(it) } ?: emptySet()
+    )
 
     protected val _deletedChecklistItemIds = mutableListOf<UUID>()
     protected val _checklistItems = MutableStateFlow<List<ChecklistItemExtended>>(emptyList())
@@ -82,6 +89,7 @@ abstract class BaseEditNoteViewModel(
     val note = _note.asStateFlow()
     val trashedImageCount = _trashedImages.map { it.size }
     val selectedImages = _selectedImages.asStateFlow()
+    val imageAdded = _imageAdded.asSharedFlow()
 
     init {
         viewModelScope.launch {
@@ -109,7 +117,7 @@ abstract class BaseEditNoteViewModel(
     }
 
     fun deselectAllImages() {
-        _selectedImages.value = emptyList()
+        _selectedImages.value = emptySet()
     }
 
     fun insertImage(uri: Uri) = viewModelScope.launch {
@@ -117,11 +125,14 @@ abstract class BaseEditNoteViewModel(
             _images.value = _images.value.toMutableList().apply { add(image) }
             addDirtyImage(image)
             updateImagePositions()
+            image.imageBitmap.collect {
+                if (it != null) _imageAdded.emit(it)
+            }
         }
     }
 
     fun selectAllImages() {
-        _selectedImages.value = _images.value.map { it.filename }
+        _selectedImages.value = _images.value.map { it.filename }.toSet()
     }
 
     fun setColor(value: String) {
@@ -137,7 +148,7 @@ abstract class BaseEditNoteViewModel(
     }
 
     fun toggleImageSelected(filename: String) {
-        _selectedImages.value = _selectedImages.value.toMutableList().apply {
+        _selectedImages.value = _selectedImages.value.toMutableSet().apply {
             if (contains(filename)) remove(filename)
             else add(filename)
         }

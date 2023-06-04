@@ -37,14 +37,15 @@ class NoteRepository @Inject constructor(
     private val _imageDirObserver = object : FileObserver(_imageDir) {
         override fun onEvent(event: Int, path: String?) {
             if (event and _eventTypeMask != 0 && path != null) {
+                val eventType = when (event) {
+                    CLOSE_WRITE -> "CLOSE_WRITE"
+                    MOVED_TO -> "MOVED_TO"
+                    else -> event.toString()
+                }
                 try {
-                    addImageBitmap(path)
+                    addImageBitmap(path, false)
+                    log("_imageDirObserver.onEvent($eventType, $path): finished")
                 } catch (e: Exception) {
-                    val eventType = when (event) {
-                        CLOSE_WRITE -> "CLOSE_WRITE"
-                        MOVED_TO -> "MOVED_TO"
-                        else -> event.toString()
-                    }
                     log("_imageDirObserver.onEvent($eventType, $path): could not process: $e", level = Log.ERROR)
                     log(e.stackTraceToString(), level = Log.ERROR)
                 }
@@ -64,17 +65,18 @@ class NoteRepository @Inject constructor(
         _imageDir.listFiles()?.forEach { file -> addImageBitmap(file) }
     }
 
-    private fun addImageBitmap(file: File) {
+    private fun addImageBitmap(file: File, silent: Boolean = true) {
         try {
             fileToImageBitmap(file, context)?.let {
                 _imageBitmaps.value = _imageBitmaps.value.toMutableMap().apply { set(file.name, it) }
             }
         } catch (e: Exception) {
-            log("Error on processing ${file.name}: $e", level = Log.ERROR, showInSnackbar = true)
+            if (!silent) throw e
         }
     }
 
-    internal fun addImageBitmap(filename: String) = addImageBitmap(File(_imageDir, filename))
+    internal fun addImageBitmap(filename: String, silent: Boolean = true) =
+        addImageBitmap(File(_imageDir, filename), silent)
 
     suspend fun archiveNotes(notes: Collection<Note>) = noteDao.update(notes.map { it.copy(isArchived = true) })
 

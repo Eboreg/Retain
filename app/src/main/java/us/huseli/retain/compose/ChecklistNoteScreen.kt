@@ -26,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import org.burnoutcrew.reorderable.rememberReorderableLazyListState
 import us.huseli.retain.R
 import us.huseli.retain.data.entities.ChecklistItem
@@ -38,10 +39,12 @@ import java.util.UUID
 @Composable
 fun ChecklistNoteScreen(
     modifier: Modifier = Modifier,
+    navController: NavHostController,
     viewModel: EditChecklistNoteViewModel = hiltViewModel(),
     onSave: (Note?, List<ChecklistItem>, List<Image>, List<UUID>, List<String>) -> Unit,
     onBackClick: () -> Unit,
     onImageCarouselStart: (UUID, String) -> Unit,
+    onFirstImageSelected: (UUID, String) -> Unit,
 ) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -80,6 +83,7 @@ fun ChecklistNoteScreen(
         viewModel = viewModel,
         note = note,
         reorderableState = reorderableState,
+        navController = navController,
         onTitleFieldNext = {
             if (checkedItems.isEmpty() && uncheckedItems.isEmpty()) {
                 viewModel.insertItem(text = "", checked = false, index = 0)
@@ -87,6 +91,7 @@ fun ChecklistNoteScreen(
         },
         onBackClick = onBackClick,
         onSave = onSave,
+        onFirstImageSelected = onFirstImageSelected,
         onImageCarouselStart = onImageCarouselStart,
         snackbarHostState = snackbarHostState,
         contextMenu = {

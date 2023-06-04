@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import org.burnoutcrew.reorderable.ReorderableItem
 import org.burnoutcrew.reorderable.detectReorder
 import org.burnoutcrew.reorderable.rememberReorderableLazyListState
@@ -37,6 +38,7 @@ import us.huseli.retain.Enums.HomeScreenViewType
 import us.huseli.retain.data.entities.Note
 import us.huseli.retain.viewmodels.NoteViewModel
 import us.huseli.retain.viewmodels.SettingsViewModel
+import java.util.UUID
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -44,18 +46,20 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     viewModel: NoteViewModel = hiltViewModel(),
     settingsViewModel: SettingsViewModel = hiltViewModel(),
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    navController: NavHostController,
     onAddTextNoteClick: () -> Unit,
     onAddChecklistClick: () -> Unit,
     onCardClick: (Note) -> Unit,
     onSettingsClick: () -> Unit,
     onDebugClick: () -> Unit,
+    onFirstNoteSelected: (UUID) -> Unit,
 ) {
     val notes by viewModel.notes.collectAsStateWithLifecycle(emptyList())
     val images by viewModel.images.collectAsStateWithLifecycle(emptyList())
     val checklistData by viewModel.checklistData.collectAsStateWithLifecycle(emptyList())
     val isSelectEnabled by viewModel.isSelectEnabled.collectAsStateWithLifecycle(false)
     val selectedNoteIds by viewModel.selectedNoteIds.collectAsStateWithLifecycle()
-    val interactionSource = remember { MutableInteractionSource() }
     val minColumnWidth by settingsViewModel.minColumnWidth.collectAsStateWithLifecycle()
     val showArchive by viewModel.showArchive.collectAsStateWithLifecycle()
     val reorderableState = rememberReorderableLazyListState(
@@ -65,11 +69,19 @@ fun HomeScreen(
     var isFABExpanded by rememberSaveable { mutableStateOf(false) }
     var viewType by rememberSaveable { mutableStateOf(HomeScreenViewType.GRID) }
 
+    fun toggleNoteSelected(noteId: UUID) {
+        if (selectedNoteIds.minus(noteId).isEmpty()) navController.popBackStack()
+        viewModel.toggleNoteSelected(noteId)
+    }
+
     RetainScaffold(
         topBar = {
             if (isSelectEnabled) SelectionTopAppBar(
                 selectedCount = selectedNoteIds.size,
-                onCloseClick = { viewModel.deselectAllNotes() },
+                onCloseClick = {
+                    navController.popBackStack()
+                    viewModel.deselectAllNotes()
+                },
                 onTrashClick = { viewModel.trashSelectedNotes() },
                 onSelectAllClick = { viewModel.selectAllNotes() },
                 onArchiveClick = {
@@ -117,12 +129,12 @@ fun HomeScreen(
                 checklistData = checklistData.find { it.noteId == note.id },
                 images = images.filter { it.noteId == note.id },
                 onClick = {
-                    if (isSelectEnabled) viewModel.toggleNoteSelected(note.id)
+                    if (isSelectEnabled) toggleNoteSelected(note.id)
                     else onCardClick(note)
                 },
                 onLongClick = {
-                    if (!isSelectEnabled) viewModel.selectNote(note.id)
-                    else viewModel.deselectNote(note.id)
+                    if (!isSelectEnabled) onFirstNoteSelected(note.id)
+                    else toggleNoteSelected(note.id)
                 },
                 isSelected = selectedNoteIds.contains(note.id),
                 showDragHandle = viewType == HomeScreenViewType.LIST,

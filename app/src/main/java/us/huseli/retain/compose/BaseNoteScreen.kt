@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -33,8 +34,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import org.burnoutcrew.reorderable.ReorderableLazyListState
 import org.burnoutcrew.reorderable.reorderable
 import us.huseli.retain.R
@@ -45,39 +46,44 @@ import us.huseli.retain.outlinedTextFieldColors
 import us.huseli.retain.ui.theme.getAppBarColor
 import us.huseli.retain.ui.theme.getNoteColor
 import us.huseli.retain.viewmodels.BaseEditNoteViewModel
-import us.huseli.retain.viewmodels.SettingsViewModel
+import java.lang.Integer.max
 import java.util.UUID
 
 @Composable
 fun BaseNoteScreen(
     modifier: Modifier = Modifier,
     viewModel: BaseEditNoteViewModel,
-    settingsViewModel: SettingsViewModel = hiltViewModel(),
+    navController: NavHostController,
     note: Note,
     reorderableState: ReorderableLazyListState? = null,
+    lazyListState: LazyListState = reorderableState?.listState ?: rememberLazyListState(),
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     onTitleFieldNext: (() -> Unit)?,
     onBackClick: () -> Unit,
     onBackgroundClick: (() -> Unit)? = null,
     onSave: (Note?, List<ChecklistItem>, List<Image>, List<UUID>, List<String>) -> Unit,
     onImageCarouselStart: (UUID, String) -> Unit,
-    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    onFirstImageSelected: (UUID, String) -> Unit,
     contextMenu: @Composable (() -> Unit)? = null,
     content: LazyListScope.() -> Unit,
 ) {
-    val images by viewModel.images.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val interactionSource = remember { MutableInteractionSource() }
+    val images by viewModel.images.collectAsStateWithLifecycle()
     val trashedImageCount by viewModel.trashedImageCount.collectAsStateWithLifecycle(0)
     val noteColor by remember(note.color) { mutableStateOf(getNoteColor(context, note.color)) }
     val appBarColor by remember(note.color) { mutableStateOf(getAppBarColor(context, note.color)) }
     val selectedImages by viewModel.selectedImages.collectAsStateWithLifecycle()
+    val imageAdded by viewModel.imageAdded.collectAsStateWithLifecycle(null)
     val isImageSelectEnabled = selectedImages.isNotEmpty()
 
-    if (note.color != "DEFAULT") {
-        settingsViewModel.setSystemBarColors(
-            statusBar = appBarColor,
-            navigationBar = noteColor
-        )
+    fun toggleImageSelected(imageId: String) {
+        if (selectedImages.minus(imageId).isEmpty()) navController.popBackStack()
+        viewModel.toggleImageSelected(imageId)
+    }
+
+    LaunchedEffect(imageAdded) {
+        if (imageAdded != null) lazyListState.animateScrollToItem(max(images.size - 1, 0))
     }
 
     LaunchedEffect(trashedImageCount) {
@@ -114,12 +120,17 @@ fun BaseNoteScreen(
 
     RetainScaffold(
         snackbarHostState = snackbarHostState,
+        statusBarColor = appBarColor,
+        navigationBarColor = noteColor,
         topBar = {
             if (isImageSelectEnabled) {
                 ImageSelectionTopAppBar(
                     backgroundColor = appBarColor,
                     selectedImageCount = selectedImages.size,
-                    onCloseClick = { viewModel.deselectAllImages() },
+                    onCloseClick = {
+                        navController.popBackStack()
+                        viewModel.deselectAllImages()
+                    },
                     onSelectAllClick = { viewModel.selectAllImages() },
                     onTrashClick = { viewModel.trashSelectedImages() },
                 )
@@ -151,10 +162,13 @@ fun BaseNoteScreen(
                     images = images,
                     secondaryRowHeight = 200.dp,
                     onImageClick = {
-                        if (isImageSelectEnabled) viewModel.toggleImageSelected(it)
+                        if (isImageSelectEnabled) toggleImageSelected(it)
                         else onImageCarouselStart(note.id, it)
                     },
-                    onImageLongClick = { viewModel.toggleImageSelected(it) },
+                    onImageLongClick = {
+                        if (!isImageSelectEnabled) onFirstImageSelected(note.id, it)
+                        else toggleImageSelected(it)
+                    },
                     selectedImages = selectedImages,
                 )
             }

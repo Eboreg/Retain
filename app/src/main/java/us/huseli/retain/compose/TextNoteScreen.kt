@@ -19,6 +19,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import us.huseli.retain.R
 import us.huseli.retain.data.entities.ChecklistItem
 import us.huseli.retain.data.entities.Image
@@ -30,10 +31,12 @@ import java.util.UUID
 @Composable
 fun TextNoteScreen(
     modifier: Modifier = Modifier,
+    navController: NavHostController,
     viewModel: EditTextNoteViewModel = hiltViewModel(),
     onSave: (Note?, List<ChecklistItem>, List<Image>, List<UUID>, List<String>) -> Unit,
     onBackClick: () -> Unit,
     onImageCarouselStart: (UUID, String) -> Unit,
+    onFirstImageSelected: (UUID, String) -> Unit,
 ) {
     val note by viewModel.note.collectAsStateWithLifecycle()
     val focusRequester = remember { FocusRequester() }
@@ -47,6 +50,7 @@ fun TextNoteScreen(
         modifier = modifier,
         viewModel = viewModel,
         note = note,
+        navController = navController,
         onTitleFieldNext = null,
         onBackClick = onBackClick,
         onBackgroundClick = {
@@ -54,6 +58,7 @@ fun TextNoteScreen(
             focusRequester.requestFocus()
         },
         onSave = onSave,
+        onFirstImageSelected = onFirstImageSelected,
         onImageCarouselStart = onImageCarouselStart,
         snackbarHostState = snackbarHostState,
     ) {

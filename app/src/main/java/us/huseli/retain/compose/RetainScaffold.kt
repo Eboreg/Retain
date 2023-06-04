@@ -13,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -29,6 +30,8 @@ fun RetainScaffold(
     viewModel: NoteViewModel = hiltViewModel(),
     settingsViewModel: SettingsViewModel = hiltViewModel(),
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    statusBarColor: Color = MaterialTheme.colorScheme.surface,
+    navigationBarColor: Color = MaterialTheme.colorScheme.background,
     topBar: @Composable () -> Unit = {},
     content: @Composable (PaddingValues) -> Unit
 ) {
@@ -38,19 +41,13 @@ fun RetainScaffold(
     val scope = rememberCoroutineScope()
     val trashedNoteCount by viewModel.trashedNoteCount.collectAsStateWithLifecycle(0)
     val systemUiController = rememberSystemUiController()
-    val statusBarColor by settingsViewModel.statusBarColor.collectAsStateWithLifecycle(
-        MaterialTheme.colorScheme.surface
-    )
-    val navigationBarColor by settingsViewModel.navigationBarColor.collectAsStateWithLifecycle(
-        MaterialTheme.colorScheme.background
-    )
 
     LaunchedEffect(statusBarColor) {
-        statusBarColor?.let { systemUiController.setStatusBarColor(it) }
+        systemUiController.setStatusBarColor(statusBarColor)
     }
 
     LaunchedEffect(navigationBarColor) {
-        navigationBarColor?.let { systemUiController.setNavigationBarColor(it) }
+        systemUiController.setNavigationBarColor(navigationBarColor)
     }
 
     LaunchedEffect(snackbarMessage) {

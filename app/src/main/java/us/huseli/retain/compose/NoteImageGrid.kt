@@ -59,7 +59,7 @@ fun NoteImageGrid(
     secondaryRowHeight: Dp,
     onImageClick: ((String) -> Unit)? = null,
     onImageLongClick: ((String) -> Unit)? = null,
-    selectedImages: List<String>? = null,
+    selectedImages: Set<String>? = null,
 ) {
     val imageLists = ImageIterator(
         objects = images,

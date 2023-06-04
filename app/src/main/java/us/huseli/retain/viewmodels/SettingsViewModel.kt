@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
 import android.util.Log
-import androidx.compose.ui.graphics.Color
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -91,8 +90,6 @@ class SettingsViewModel @Inject constructor(
     override val logger: Logger,
 ) : ViewModel(), SharedPreferences.OnSharedPreferenceChangeListener, LogInterface {
     private val preferences = PreferenceManager.getDefaultSharedPreferences(context)
-    private val _statusBarColor = MutableStateFlow<Color?>(null)
-    private val _navigationBarColor = MutableStateFlow<Color?>(null)
     private val _importActionCount = MutableStateFlow<Int?>(null)
     private val _importCurrentAction = MutableStateFlow("")
     private val _importCurrentActionIndex = MutableStateFlow(0)
@@ -110,8 +107,6 @@ class SettingsViewModel @Inject constructor(
     val isNextCloudUrlFail = MutableStateFlow(false)
     val isNextCloudCredentialsFail = MutableStateFlow(false)
     val nextCloudNeedsTesting = repository.nextCloudNeedsTesting.asStateFlow()
-    val statusBarColor = _statusBarColor.asStateFlow()
-    val navigationBarColor = _navigationBarColor.asStateFlow()
     val importActionCount = _importActionCount.asStateFlow()
     val importCurrentAction = _importCurrentAction.asStateFlow()
     val importCurrentActionIndex = _importCurrentActionIndex.asStateFlow()
@@ -405,11 +400,6 @@ class SettingsViewModel @Inject constructor(
             .putInt(PREF_MIN_COLUMN_WIDTH, minColumnWidth.value)
             .apply()
         repository.nextCloudNeedsTesting.value = true
-    }
-
-    fun setSystemBarColors(statusBar: Color, navigationBar: Color) {
-        _statusBarColor.value = statusBar
-        _navigationBarColor.value = navigationBar
     }
 
     fun testNextCloud(onResult: (TestNextCloudTaskResult) -> Unit) = viewModelScope.launch {

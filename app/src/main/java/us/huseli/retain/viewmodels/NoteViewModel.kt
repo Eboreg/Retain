@@ -1,5 +1,6 @@
 package us.huseli.retain.viewmodels
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -11,6 +12,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.launch
 import org.burnoutcrew.reorderable.ItemPosition
+import us.huseli.retain.Constants.NAV_ARG_SELECTED_NOTE
 import us.huseli.retain.LogInterface
 import us.huseli.retain.Logger
 import us.huseli.retain.data.NextCloudRepository
@@ -31,11 +33,14 @@ data class NoteCardChecklistData(
 
 @HiltViewModel
 class NoteViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
     private val repository: NoteRepository,
     private val nextCloudRepository: NextCloudRepository,
     override val logger: Logger
 ) : ViewModel(), LogInterface {
-    private val _selectedNoteIds = MutableStateFlow<Set<UUID>>(emptySet())
+    private val _selectedNoteIds = MutableStateFlow<Set<UUID>>(
+        savedStateHandle.get<String>(NAV_ARG_SELECTED_NOTE)?.let { setOf(UUID.fromString(it)) } ?: emptySet()
+    )
     private val _trashedNotes = MutableStateFlow<Set<Note>>(emptySet())
     private val _notes = MutableStateFlow<List<Note>>(emptyList())
     private val _showArchive = MutableStateFlow(false)
@@ -104,11 +109,6 @@ class NoteViewModel @Inject constructor(
         _selectedNoteIds.value = emptySet()
     }
 
-    fun deselectNote(noteId: UUID) {
-        _selectedNoteIds.value -= noteId
-        log("deselectNote: noteId=$noteId, _selectedNoteIds.value=${_selectedNoteIds.value}")
-    }
-
     fun reallyTrashNotes() {
         _trashedNotes.value = emptySet()
         viewModelScope.launch {
@@ -148,19 +148,14 @@ class NoteViewModel @Inject constructor(
         _selectedNoteIds.value = _notes.value.map { it.id }.toSet()
     }
 
-    fun selectNote(noteId: UUID) {
-        _selectedNoteIds.value += noteId
-        log("selectNote: note=$noteId, _selectedNoteIds.value=${_selectedNoteIds.value}")
-    }
-
     fun switchNotePositions(from: ItemPosition, to: ItemPosition) {
         _notes.value = _notes.value.toMutableList().apply { add(to.index, removeAt(from.index)) }
     }
 
     fun toggleNoteSelected(noteId: UUID) {
         if (_isSelectEnabled) {
-            if (_selectedNoteIds.value.contains(noteId)) deselectNote(noteId)
-            else selectNote(noteId)
+            if (_selectedNoteIds.value.contains(noteId)) _selectedNoteIds.value -= noteId
+            else _selectedNoteIds.value += noteId
         }
     }
 

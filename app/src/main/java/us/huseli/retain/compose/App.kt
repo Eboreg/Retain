@@ -4,6 +4,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -23,23 +24,26 @@ import java.util.UUID
 fun App(
     logger: Logger,
     viewModel: NoteViewModel = hiltViewModel(),
+    navController: NavHostController = rememberNavController(),
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }
 ) {
     RetainTheme {
-        val navController = rememberNavController()
         val onClose: () -> Unit = { navController.popBackStack() }
-        val snackbarHostState = remember { SnackbarHostState() }
 
         NavHost(
             navController = navController,
-            startDestination = HomeDestination.route,
+            startDestination = HomeDestination.routeTemplate,
         ) {
-            composable(route = HomeDestination.route) {
+            composable(
+                route = HomeDestination.routeTemplate,
+                arguments = HomeDestination.arguments,
+            ) {
                 HomeScreen(
-                    onAddChecklistClick = {
-                        navController.navigate(ChecklistNoteDestination.route(UUID.randomUUID()))
-                    },
                     onAddTextNoteClick = {
                         navController.navigate(TextNoteDestination.route(UUID.randomUUID()))
+                    },
+                    onAddChecklistClick = {
+                        navController.navigate(ChecklistNoteDestination.route(UUID.randomUUID()))
                     },
                     onCardClick = { note ->
                         when (note.type) {
@@ -53,6 +57,8 @@ fun App(
                     onDebugClick = {
                         navController.navigate(DebugDestination.route)
                     },
+                    onFirstNoteSelected = { noteId -> navController.navigate(HomeDestination.route(noteId)) },
+                    navController = navController,
                 )
             }
 
@@ -75,6 +81,7 @@ fun App(
                 arguments = TextNoteDestination.arguments,
             ) {
                 TextNoteScreen(
+                    navController = navController,
                     onSave = { dirtyNote, dirtyChecklistItems, dirtyImages, deletedChecklistItemIds, deletedImageIds ->
                         viewModel.save(
                             dirtyNote,
@@ -88,6 +95,9 @@ fun App(
                     onBackClick = onClose,
                     onImageCarouselStart = { noteId, imageId ->
                         navController.navigate(ImageCarouselDestination.route(noteId, imageId))
+                    },
+                    onFirstImageSelected = { noteId, imageId ->
+                        navController.navigate(TextNoteDestination.route(noteId, imageId))
                     },
                 )
             }
@@ -97,6 +107,7 @@ fun App(
                 arguments = ChecklistNoteDestination.arguments,
             ) {
                 ChecklistNoteScreen(
+                    navController = navController,
                     onSave = { dirtyNote, dirtyChecklistItems, dirtyImages, deletedChecklistItemIds, deletedImageIds ->
                         viewModel.save(
                             dirtyNote,
@@ -110,6 +121,9 @@ fun App(
                     onBackClick = onClose,
                     onImageCarouselStart = { noteId, imageId ->
                         navController.navigate(ImageCarouselDestination.route(noteId, imageId))
+                    },
+                    onFirstImageSelected = { noteId, imageId ->
+                        navController.navigate(TextNoteDestination.route(noteId, imageId))
                     },
                 )
             }
