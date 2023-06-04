@@ -44,7 +44,6 @@ fun ChecklistNoteScreen(
     onSave: (Note?, List<ChecklistItem>, List<Image>, List<UUID>, List<String>) -> Unit,
     onBackClick: () -> Unit,
     onImageCarouselStart: (UUID, String) -> Unit,
-    onFirstImageSelected: (UUID, String) -> Unit,
 ) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -91,7 +90,6 @@ fun ChecklistNoteScreen(
         },
         onBackClick = onBackClick,
         onSave = onSave,
-        onFirstImageSelected = onFirstImageSelected,
         onImageCarouselStart = onImageCarouselStart,
         snackbarHostState = snackbarHostState,
         contextMenu = {

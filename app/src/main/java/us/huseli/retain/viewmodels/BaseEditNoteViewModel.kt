@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import okhttp3.internal.toImmutableList
 import us.huseli.retain.Constants.NAV_ARG_NOTE_ID
-import us.huseli.retain.Constants.NAV_ARG_SELECTED_IMAGE
 import us.huseli.retain.Enums.NoteType
 import us.huseli.retain.LogInterface
 import us.huseli.retain.data.NoteRepository
@@ -58,9 +57,7 @@ abstract class BaseEditNoteViewModel(
     private var _isNew = true
     private val _deletedImageIds = mutableListOf<String>()
     private val _imageAdded = MutableSharedFlow<ImageBitmap>()
-    private val _selectedImages = MutableStateFlow(
-        savedStateHandle.get<String>(NAV_ARG_SELECTED_IMAGE)?.let { setOf(it) } ?: emptySet()
-    )
+    private val _selectedImages = MutableStateFlow<Set<String>>(emptySet())
 
     protected val _deletedChecklistItemIds = mutableListOf<UUID>()
     protected val _checklistItems = MutableStateFlow<List<ChecklistItemExtended>>(emptyList())

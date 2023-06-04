@@ -32,12 +32,9 @@ fun App(
 
         NavHost(
             navController = navController,
-            startDestination = HomeDestination.routeTemplate,
+            startDestination = HomeDestination.route,
         ) {
-            composable(
-                route = HomeDestination.routeTemplate,
-                arguments = HomeDestination.arguments,
-            ) {
+            composable(route = HomeDestination.route) {
                 HomeScreen(
                     onAddTextNoteClick = {
                         navController.navigate(TextNoteDestination.route(UUID.randomUUID()))
@@ -57,7 +54,6 @@ fun App(
                     onDebugClick = {
                         navController.navigate(DebugDestination.route)
                     },
-                    onFirstNoteSelected = { noteId -> navController.navigate(HomeDestination.route(noteId)) },
                     navController = navController,
                 )
             }
@@ -96,9 +92,6 @@ fun App(
                     onImageCarouselStart = { noteId, imageId ->
                         navController.navigate(ImageCarouselDestination.route(noteId, imageId))
                     },
-                    onFirstImageSelected = { noteId, imageId ->
-                        navController.navigate(TextNoteDestination.route(noteId, imageId))
-                    },
                 )
             }
 
@@ -121,9 +114,6 @@ fun App(
                     onBackClick = onClose,
                     onImageCarouselStart = { noteId, imageId ->
                         navController.navigate(ImageCarouselDestination.route(noteId, imageId))
-                    },
-                    onFirstImageSelected = { noteId, imageId ->
-                        navController.navigate(TextNoteDestination.route(noteId, imageId))
                     },
                 )
             }

@@ -162,7 +162,11 @@ fun ImageCarousel(
                         .combinedClickable(
                             interactionSource = remember { MutableInteractionSource() },
                             onClick = {},
-                            onDoubleClick = { scale = 1f },
+                            onDoubleClick = {
+                                scale = 1f
+                                panX = 0f
+                                panY = 0f
+                            },
                             indication = null,
                         )
                         .absoluteOffset { IntOffset(offset.value.roundToInt(), 0) }

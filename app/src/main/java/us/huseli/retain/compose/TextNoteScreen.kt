@@ -36,7 +36,6 @@ fun TextNoteScreen(
     onSave: (Note?, List<ChecklistItem>, List<Image>, List<UUID>, List<String>) -> Unit,
     onBackClick: () -> Unit,
     onImageCarouselStart: (UUID, String) -> Unit,
-    onFirstImageSelected: (UUID, String) -> Unit,
 ) {
     val note by viewModel.note.collectAsStateWithLifecycle()
     val focusRequester = remember { FocusRequester() }
@@ -58,7 +57,6 @@ fun TextNoteScreen(
             focusRequester.requestFocus()
         },
         onSave = onSave,
-        onFirstImageSelected = onFirstImageSelected,
         onImageCarouselStart = onImageCarouselStart,
         snackbarHostState = snackbarHostState,
     ) {

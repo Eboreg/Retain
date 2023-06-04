@@ -1,5 +1,6 @@
 package us.huseli.retain.compose
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -63,7 +64,6 @@ fun BaseNoteScreen(
     onBackgroundClick: (() -> Unit)? = null,
     onSave: (Note?, List<ChecklistItem>, List<Image>, List<UUID>, List<String>) -> Unit,
     onImageCarouselStart: (UUID, String) -> Unit,
-    onFirstImageSelected: (UUID, String) -> Unit,
     contextMenu: @Composable (() -> Unit)? = null,
     content: LazyListScope.() -> Unit,
 ) {
@@ -76,9 +76,8 @@ fun BaseNoteScreen(
     val imageAdded by viewModel.imageAdded.collectAsStateWithLifecycle(null)
     val isImageSelectEnabled = selectedImages.isNotEmpty()
 
-    fun toggleImageSelected(imageId: String) {
-        if (selectedImages.minus(imageId).isEmpty()) navController.popBackStack()
-        viewModel.toggleImageSelected(imageId)
+    BackHandler(isImageSelectEnabled) {
+        viewModel.deselectAllImages()
     }
 
     LaunchedEffect(imageAdded) {
@@ -161,13 +160,10 @@ fun BaseNoteScreen(
                     images = images,
                     secondaryRowHeight = 200.dp,
                     onImageClick = {
-                        if (isImageSelectEnabled) toggleImageSelected(it)
+                        if (isImageSelectEnabled) viewModel.toggleImageSelected(it)
                         else onImageCarouselStart(note.id, it)
                     },
-                    onImageLongClick = {
-                        if (!isImageSelectEnabled) onFirstImageSelected(note.id, it)
-                        else toggleImageSelected(it)
-                    },
+                    onImageLongClick = { viewModel.toggleImageSelected(it) },
                     selectedImages = selectedImages,
                 )
             }

@@ -1,5 +1,6 @@
 package us.huseli.retain.compose
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -36,7 +37,6 @@ import us.huseli.retain.Enums.HomeScreenViewType
 import us.huseli.retain.data.entities.Note
 import us.huseli.retain.viewmodels.NoteViewModel
 import us.huseli.retain.viewmodels.SettingsViewModel
-import java.util.UUID
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -50,7 +50,6 @@ fun HomeScreen(
     onCardClick: (Note) -> Unit,
     onSettingsClick: () -> Unit,
     onDebugClick: () -> Unit,
-    onFirstNoteSelected: (UUID) -> Unit,
 ) {
     val notes by viewModel.notes.collectAsStateWithLifecycle(emptyList())
     val images by viewModel.images.collectAsStateWithLifecycle(emptyList())
@@ -66,9 +65,8 @@ fun HomeScreen(
     var isFABExpanded by rememberSaveable { mutableStateOf(false) }
     var viewType by rememberSaveable { mutableStateOf(HomeScreenViewType.GRID) }
 
-    fun toggleNoteSelected(noteId: UUID) {
-        if (selectedNoteIds.minus(noteId).isEmpty()) navController.popBackStack()
-        viewModel.toggleNoteSelected(noteId)
+    BackHandler(isSelectEnabled) {
+        viewModel.deselectAllNotes()
     }
 
     RetainScaffold(
@@ -129,13 +127,10 @@ fun HomeScreen(
                 images = images.filter { it.noteId == note.id },
                 isDragging = isDragging,
                 onClick = {
-                    if (isSelectEnabled) toggleNoteSelected(note.id)
+                    if (isSelectEnabled) viewModel.toggleNoteSelected(note.id)
                     else onCardClick(note)
                 },
-                onLongClick = {
-                    if (!isSelectEnabled) onFirstNoteSelected(note.id)
-                    else toggleNoteSelected(note.id)
-                },
+                onLongClick = { viewModel.toggleNoteSelected(note.id) },
                 isSelected = selectedNoteIds.contains(note.id),
                 showDragHandle = viewType == HomeScreenViewType.LIST,
                 reorderableState = reorderableState,
