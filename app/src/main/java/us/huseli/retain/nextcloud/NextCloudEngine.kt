@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import androidx.preference.PreferenceManager
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
@@ -17,6 +18,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import us.huseli.retain.Constants.NEXTCLOUD_BASE_DIR
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_BASE_DIR
+import us.huseli.retain.Constants.PREF_NEXTCLOUD_ENABLED
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_PASSWORD
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_URI
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_USERNAME
@@ -48,7 +50,15 @@ class NextCloudEngine @Inject constructor(
     private var tasks: List<BaseTask<*>> = listOf()
 
     private var isTestScheduled = false
-    private var status = STATUS_READY
+    private var status = STATUS_DISABLED
+
+    private var isEnabled: Boolean = false
+        set(value) {
+            if (field != value) {
+                field = value
+                updateClient(isEnabled = value)
+            }
+        }
 
     private var uri: Uri = Uri.EMPTY
         set(value) {
@@ -76,15 +86,13 @@ class NextCloudEngine @Inject constructor(
 
     private var baseDir = NEXTCLOUD_BASE_DIR
         set(value) {
-            if (field != value.trimEnd('/')) {
-                field = value.trimEnd('/')
-                updateClient()
-            }
+            if (field != value.trimEnd('/')) field = value.trimEnd('/')
         }
 
-    internal val client: OwnCloudClient = OwnCloudClientFactory.createOwnCloudClient(uri, context, true).apply {
-        setDefaultTimeouts(120_000, 120_000)
-    }
+    internal val client: OwnCloudClient =
+        OwnCloudClientFactory.createOwnCloudClient(uri, context, true).apply {
+            setDefaultTimeouts(120_000, 120_000)
+        }
 
     private val runningTasks: List<BaseTask<*>>
         get() = tasks.filter { it.status == BaseTask.STATUS_RUNNING }
@@ -96,10 +104,13 @@ class NextCloudEngine @Inject constructor(
         get() = tasks.filter { it.status == BaseTask.STATUS_WAITING }
 
     init {
+        // These must be set here and not inline, because otherwise the set()
+        // methods are not run.
         uri = Uri.parse(preferences.getString(PREF_NEXTCLOUD_URI, "") ?: "")
         username = preferences.getString(PREF_NEXTCLOUD_USERNAME, "") ?: ""
         password = preferences.getString(PREF_NEXTCLOUD_PASSWORD, "") ?: ""
         baseDir = preferences.getString(PREF_NEXTCLOUD_BASE_DIR, NEXTCLOUD_BASE_DIR) ?: NEXTCLOUD_BASE_DIR
+        isEnabled = preferences.getBoolean(PREF_NEXTCLOUD_ENABLED, false)
         preferences.registerOnSharedPreferenceChangeListener(this)
     }
 
@@ -115,6 +126,10 @@ class NextCloudEngine @Inject constructor(
     }
 
     fun registerTask(task: BaseTask<*>, triggerStatus: Int, callback: () -> Unit) {
+        log(
+            "registerTask: task=${task.javaClass.simpleName}, triggerStatus=$triggerStatus, status=$status",
+            level = Log.DEBUG
+        )
         tasks = tasks.toMutableList().apply { add(task) }
         task.addOnFinishedListener { logTasks() }
         if (status >= triggerStatus && runningNonMetaTasks.size < 3) callback()
@@ -147,6 +162,11 @@ class NextCloudEngine @Inject constructor(
                 while (status == STATUS_TESTING) delay(100)
                 testClient(callback)
             }
+        } else if (status == STATUS_DISABLED) {
+            ioScope.launch {
+                while (status == STATUS_DISABLED) delay(10_000)
+                testClient(callback)
+            }
         } else if (status < STATUS_AUTH_ERROR) {
             // On auth error, don't even try anything until URL/username/PW has changed.
             status = STATUS_TESTING
@@ -175,18 +195,26 @@ class NextCloudEngine @Inject constructor(
         )
     }
 
-    private fun updateClient(uri: Uri? = null, username: String? = null, password: String? = null) {
-        if (username != null || password != null || uri != null) {
-            if (uri != null) client.baseUri = uri
-            if (username != null || password != null) {
-                client.credentials = OwnCloudCredentialsFactory.newBasicCredentials(
-                    username ?: this.username,
-                    password ?: this.password
-                )
-                if (username != null) client.userId = username
-            }
-            status = STATUS_READY
-            log("Client updated: baseUri=${client.baseUri}, userId=${client.userId}")
+    private fun updateClient(
+        uri: Uri? = null,
+        username: String? = null,
+        password: String? = null,
+        isEnabled: Boolean? = null
+    ) {
+        log(
+            "updateClient: uri=$uri, username=$username, password=$password, isEnabled=$isEnabled",
+            level = Log.DEBUG
+        )
+        if (uri != null) client.baseUri = uri
+        if (username != null || password != null) {
+            client.credentials = OwnCloudCredentialsFactory.newBasicCredentials(
+                username ?: this.username,
+                password ?: this.password
+            )
+            if (username != null) client.userId = username
+        }
+        if (isEnabled != null) {
+            status = if (isEnabled) STATUS_READY else STATUS_DISABLED
         }
     }
 
@@ -196,10 +224,12 @@ class NextCloudEngine @Inject constructor(
             PREF_NEXTCLOUD_USERNAME -> username = preferences.getString(key, "") ?: ""
             PREF_NEXTCLOUD_PASSWORD -> password = preferences.getString(key, "") ?: ""
             PREF_NEXTCLOUD_BASE_DIR -> baseDir = preferences.getString(key, NEXTCLOUD_BASE_DIR) ?: NEXTCLOUD_BASE_DIR
+            PREF_NEXTCLOUD_ENABLED -> isEnabled = preferences.getBoolean(key, false)
         }
     }
 
     companion object {
+        const val STATUS_DISABLED = 0
         const val STATUS_TESTING = 1
         const val STATUS_READY = 2
         const val STATUS_ERROR = 3

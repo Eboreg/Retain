@@ -70,6 +70,8 @@ fun HomeScreen(
     }
 
     RetainScaffold(
+        viewModel = viewModel,
+        settingsViewModel = settingsViewModel,
         topBar = {
             if (isSelectEnabled) SelectionTopAppBar(
                 selectedCount = selectedNoteIds.size,
@@ -129,8 +131,12 @@ fun HomeScreen(
                 onClick = {
                     if (isSelectEnabled) viewModel.toggleNoteSelected(note.id)
                     else onCardClick(note)
+                    isFABExpanded = false
                 },
-                onLongClick = { viewModel.toggleNoteSelected(note.id) },
+                onLongClick = {
+                    viewModel.toggleNoteSelected(note.id)
+                    isFABExpanded = false
+                },
                 isSelected = selectedNoteIds.contains(note.id),
                 showDragHandle = viewType == HomeScreenViewType.LIST,
                 reorderableState = reorderableState,

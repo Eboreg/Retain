@@ -4,6 +4,9 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
 import android.util.Log
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateOf
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -24,6 +27,7 @@ import us.huseli.retain.Constants.DEFAULT_MIN_COLUMN_WIDTH
 import us.huseli.retain.Constants.NEXTCLOUD_BASE_DIR
 import us.huseli.retain.Constants.PREF_MIN_COLUMN_WIDTH
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_BASE_DIR
+import us.huseli.retain.Constants.PREF_NEXTCLOUD_ENABLED
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_PASSWORD
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_URI
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_USERNAME
@@ -96,6 +100,7 @@ class SettingsViewModel @Inject constructor(
     private val _keepImportIsActive = MutableStateFlow(false)
     private val _quickNoteImportIsActive = MutableStateFlow(false)
     private var _importJob: Job? = null
+    private val _sectionsShown = mutableMapOf<String, MutableState<Boolean>>()
 
     val nextCloudUri = MutableStateFlow(preferences.getString(PREF_NEXTCLOUD_URI, "") ?: "")
     val nextCloudUsername = MutableStateFlow(preferences.getString(PREF_NEXTCLOUD_USERNAME, "") ?: "")
@@ -106,6 +111,7 @@ class SettingsViewModel @Inject constructor(
     val isNextCloudWorking = MutableStateFlow<Boolean?>(null)
     val isNextCloudUrlFail = MutableStateFlow(false)
     val isNextCloudCredentialsFail = MutableStateFlow(false)
+    val isNextCloudEnabled = MutableStateFlow(preferences.getBoolean(PREF_NEXTCLOUD_ENABLED, false))
     val nextCloudNeedsTesting = repository.nextCloudNeedsTesting.asStateFlow()
     val importActionCount = _importActionCount.asStateFlow()
     val importCurrentAction = _importCurrentAction.asStateFlow()
@@ -117,6 +123,14 @@ class SettingsViewModel @Inject constructor(
         _importJob?.cancel()
         _quickNoteImportIsActive.value = false
         _keepImportIsActive.value = false
+    }
+
+    fun getSectionShown(key: String, default: Boolean): State<Boolean> {
+        return _sectionsShown[key] ?: mutableStateOf(default).also { _sectionsShown[key] = it }
+    }
+
+    fun toggleSectionShown(key: String) {
+        _sectionsShown.getOrPut(key) { mutableStateOf(true) }.apply { value = !value }
     }
 
     private fun updateCurrentAction(action: String) {
@@ -398,6 +412,7 @@ class SettingsViewModel @Inject constructor(
             .putString(PREF_NEXTCLOUD_PASSWORD, nextCloudPassword.value)
             .putString(PREF_NEXTCLOUD_BASE_DIR, nextCloudBaseDir.value)
             .putInt(PREF_MIN_COLUMN_WIDTH, minColumnWidth.value)
+            .putBoolean(PREF_NEXTCLOUD_ENABLED, isNextCloudEnabled.value)
             .apply()
         repository.nextCloudNeedsTesting.value = true
     }
@@ -426,6 +441,7 @@ class SettingsViewModel @Inject constructor(
             PREF_NEXTCLOUD_PASSWORD -> nextCloudPassword.value = value as String
             PREF_NEXTCLOUD_BASE_DIR -> nextCloudBaseDir.value = value as String
             PREF_MIN_COLUMN_WIDTH -> minColumnWidth.value = value as Int
+            PREF_NEXTCLOUD_ENABLED -> isNextCloudEnabled.value = value as Boolean
         }
     }
 
@@ -439,6 +455,7 @@ class SettingsViewModel @Inject constructor(
             PREF_NEXTCLOUD_USERNAME -> nextCloudUsername.value = preferences.getString(key, "") ?: ""
             PREF_NEXTCLOUD_PASSWORD -> nextCloudPassword.value = preferences.getString(key, "") ?: ""
             PREF_MIN_COLUMN_WIDTH -> minColumnWidth.value = preferences.getInt(key, DEFAULT_MIN_COLUMN_WIDTH)
+            PREF_NEXTCLOUD_ENABLED -> isNextCloudEnabled.value = preferences.getBoolean(PREF_NEXTCLOUD_ENABLED, false)
             PREF_NEXTCLOUD_BASE_DIR -> nextCloudBaseDir.value =
                 preferences.getString(key, NEXTCLOUD_BASE_DIR) ?: NEXTCLOUD_BASE_DIR
         }

@@ -16,14 +16,19 @@ import us.huseli.retain.ImageCarouselDestination
 import us.huseli.retain.Logger
 import us.huseli.retain.SettingsDestination
 import us.huseli.retain.TextNoteDestination
+import us.huseli.retain.compose.notescreen.ChecklistNoteScreen
+import us.huseli.retain.compose.notescreen.TextNoteScreen
+import us.huseli.retain.compose.settings.SettingsScreen
 import us.huseli.retain.ui.theme.RetainTheme
 import us.huseli.retain.viewmodels.NoteViewModel
+import us.huseli.retain.viewmodels.SettingsViewModel
 import java.util.UUID
 
 @Composable
 fun App(
     logger: Logger,
     viewModel: NoteViewModel = hiltViewModel(),
+    settingsViewModel: SettingsViewModel = hiltViewModel(),
     navController: NavHostController = rememberNavController(),
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }
 ) {
@@ -36,6 +41,8 @@ fun App(
         ) {
             composable(route = HomeDestination.route) {
                 HomeScreen(
+                    viewModel = viewModel,
+                    settingsViewModel = settingsViewModel,
                     onAddTextNoteClick = {
                         navController.navigate(TextNoteDestination.route(UUID.randomUUID()))
                     },
@@ -67,6 +74,7 @@ fun App(
 
             composable(route = SettingsDestination.route) {
                 SettingsScreen(
+                    viewModel = settingsViewModel,
                     snackbarHostState = snackbarHostState,
                     onBackClick = onClose,
                 )

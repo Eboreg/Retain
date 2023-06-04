@@ -1,4 +1,4 @@
-package us.huseli.retain.compose
+package us.huseli.retain.compose.notescreen
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.FileProvider
 import us.huseli.retain.R
+import us.huseli.retain.compose.ColorDropdownMenu
 import us.huseli.retain.ui.theme.getNoteColors
 import java.io.File
 import java.util.UUID

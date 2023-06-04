@@ -1,4 +1,4 @@
-package us.huseli.retain.compose
+package us.huseli.retain.compose.notescreen
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Row

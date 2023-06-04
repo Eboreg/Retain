@@ -1,4 +1,4 @@
-package us.huseli.retain.compose
+package us.huseli.retain.compose.notescreen
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -71,10 +71,12 @@ fun ChecklistNoteChecklist(
         scope.item {
             val showCheckedIconRotation by animateFloatAsState(if (showChecked) 0f else 180f)
 
-            Spacer(Modifier.height(4.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().clickable { onShowCheckedClick() },
+                modifier = Modifier
+                    .padding(vertical = 8.dp)
+                    .fillMaxWidth()
+                    .clickable { onShowCheckedClick() },
             ) {
                 Icon(
                     imageVector = Icons.Sharp.ExpandMore,

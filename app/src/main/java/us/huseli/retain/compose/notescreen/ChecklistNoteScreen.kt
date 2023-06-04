@@ -1,10 +1,8 @@
-package us.huseli.retain.compose
+package us.huseli.retain.compose.notescreen
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.sharp.Add
@@ -118,7 +116,6 @@ fun ChecklistNoteScreen(
         )
 
         item {
-            Spacer(Modifier.height(4.dp))
             // "Add item" link:
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -127,7 +124,7 @@ fun ChecklistNoteScreen(
                         val index = uncheckedItems.size
                         viewModel.insertItem(text = "", checked = false, index = index)
                     }
-                    .padding(bottom = 8.dp)
+                    .padding(vertical = 8.dp)
                     .fillMaxWidth()
             ) {
                 Icon(

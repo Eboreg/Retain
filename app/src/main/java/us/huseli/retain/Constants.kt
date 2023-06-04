@@ -14,5 +14,6 @@ object Constants {
     const val PREF_NEXTCLOUD_BASE_DIR = "nextCloudBaseDir"
     const val PREF_NEXTCLOUD_URI = "nextCloudUri"
     const val PREF_NEXTCLOUD_USERNAME = "nextCloudUsername"
+    const val PREF_NEXTCLOUD_ENABLED = "nextCloudEnabled"
     const val ZIP_BUFFER_SIZE = 2048
 }

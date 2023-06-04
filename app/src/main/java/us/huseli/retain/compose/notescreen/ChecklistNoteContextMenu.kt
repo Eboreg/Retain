@@ -1,4 +1,4 @@
-package us.huseli.retain.compose
+package us.huseli.retain.compose.notescreen
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.Icons

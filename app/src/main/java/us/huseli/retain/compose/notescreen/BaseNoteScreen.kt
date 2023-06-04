@@ -1,4 +1,4 @@
-package us.huseli.retain.compose
+package us.huseli.retain.compose.notescreen
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -40,6 +40,8 @@ import androidx.navigation.NavHostController
 import org.burnoutcrew.reorderable.ReorderableLazyListState
 import org.burnoutcrew.reorderable.reorderable
 import us.huseli.retain.R
+import us.huseli.retain.compose.NoteImageGrid
+import us.huseli.retain.compose.RetainScaffold
 import us.huseli.retain.data.entities.ChecklistItem
 import us.huseli.retain.data.entities.Image
 import us.huseli.retain.data.entities.Note
