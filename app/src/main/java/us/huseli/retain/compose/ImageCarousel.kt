@@ -3,8 +3,10 @@ package us.huseli.retain.compose
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -44,6 +46,7 @@ import us.huseli.retain.data.entities.Image
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ImageCarousel(
     modifier: Modifier = Modifier,
@@ -65,7 +68,6 @@ fun ImageCarousel(
 
     val context = LocalContext.current
     val density = LocalDensity.current
-    val interactionSource = remember { MutableInteractionSource() }
     val offset by remember { mutableStateOf(Animatable(0f)) }
     val containerHeight = with(density) { maxHeightDp.toPx() }
     val containerWidth = remember { with(density) { context.resources.configuration.screenWidthDp.dp.toPx() } }
@@ -142,7 +144,7 @@ fun ImageCarousel(
             modifier = modifier
                 .fillMaxSize()
                 .transformable(state = transformableState)
-                .clickable(interactionSource = interactionSource, indication = null) { onClose() }
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onClose() }
         ) {
             OverscrollIndicatorBox(
                 leftIndicatorVisible = overScroll > 100f,
@@ -157,7 +159,12 @@ fun ImageCarousel(
                     modifier = imageModifier
                         .align(Alignment.Center)
                         .graphicsLayer(scaleX = scale, scaleY = scale, translationX = panX, translationY = panY)
-                        .clickable(enabled = false) {}
+                        .combinedClickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            onClick = {},
+                            onDoubleClick = { scale = 1f },
+                            indication = null,
+                        )
                         .absoluteOffset { IntOffset(offset.value.roundToInt(), 0) }
                 )
             }

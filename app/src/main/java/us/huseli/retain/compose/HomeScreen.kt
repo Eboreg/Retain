@@ -44,7 +44,6 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     viewModel: NoteViewModel = hiltViewModel(),
     settingsViewModel: SettingsViewModel = hiltViewModel(),
-    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     navController: NavHostController,
     onAddTextNoteClick: () -> Unit,
     onAddChecklistClick: () -> Unit,
@@ -116,7 +115,9 @@ fun HomeScreen(
         }
 
         val lazyModifier = modifier
-            .clickable(interactionSource = interactionSource, indication = null) { isFABExpanded = false }
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                isFABExpanded = false
+            }
             .fillMaxHeight()
             .padding(innerPadding)
 

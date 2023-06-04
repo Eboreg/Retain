@@ -58,7 +58,6 @@ fun BaseNoteScreen(
     reorderableState: ReorderableLazyListState? = null,
     lazyListState: LazyListState = reorderableState?.listState ?: rememberLazyListState(),
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
-    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     onTitleFieldNext: (() -> Unit)?,
     onBackClick: () -> Unit,
     onBackgroundClick: (() -> Unit)? = null,
@@ -148,7 +147,7 @@ fun BaseNoteScreen(
             .fillMaxSize()
             .padding(innerPadding)
             .background(noteColor)
-            .clickable(interactionSource = interactionSource, indication = null) {
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
                 onBackgroundClick?.invoke()
             }
         if (reorderableState != null) columnModifier = columnModifier.reorderable(reorderableState)
