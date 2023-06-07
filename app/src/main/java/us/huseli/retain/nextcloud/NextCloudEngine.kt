@@ -15,6 +15,9 @@ import com.owncloud.android.lib.common.OwnCloudCredentialsFactory
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapMerge
 import kotlinx.coroutines.launch
 import us.huseli.retain.Constants.NEXTCLOUD_BASE_DIR
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_BASE_DIR
@@ -47,10 +50,16 @@ class NextCloudEngine @Inject constructor(
     internal val listenerHandler = Handler(Looper.getMainLooper())
 
     private val preferences = PreferenceManager.getDefaultSharedPreferences(context)
-    private var tasks: List<BaseTask<*>> = listOf()
-
+    // private var _tasks: List<BaseTask<*>> = listOf()
+    private val tasks = MutableStateFlow<List<BaseTask<*>>>(emptyList())
     private var isTestScheduled = false
     private var status = STATUS_DISABLED
+
+    val hasActiveTasks = tasks.flatMapMerge { tasks ->
+        combine(*tasks.map { it.status }.toTypedArray()) { statuses ->
+            statuses.any { it != BaseTask.STATUS_FINISHED }
+        }
+    }
 
     private var isEnabled: Boolean = false
         set(value) {
@@ -95,13 +104,13 @@ class NextCloudEngine @Inject constructor(
         }
 
     private val runningTasks: List<BaseTask<*>>
-        get() = tasks.filter { it.status == BaseTask.STATUS_RUNNING }
+        get() = tasks.value.filter { it.status.value == BaseTask.STATUS_RUNNING }
 
     private val runningNonMetaTasks: List<BaseTask<*>>
         get() = runningTasks.filter { !it.isMetaTask }
 
     private val waitingTasks: List<BaseTask<*>>
-        get() = tasks.filter { it.status == BaseTask.STATUS_WAITING }
+        get() = tasks.value.filter { it.status.value == BaseTask.STATUS_WAITING }
 
     init {
         // These must be set here and not inline, because otherwise the set()
@@ -130,7 +139,7 @@ class NextCloudEngine @Inject constructor(
             "registerTask: task=${task.javaClass.simpleName}, triggerStatus=$triggerStatus, status=$status",
             level = Log.DEBUG
         )
-        tasks = tasks.toMutableList().apply { add(task) }
+        tasks.value = tasks.value.toMutableList().apply { add(task) }
         task.addOnFinishedListener { logTasks() }
         if (status >= triggerStatus && runningNonMetaTasks.size < 3) callback()
         else {
@@ -213,9 +222,8 @@ class NextCloudEngine @Inject constructor(
             )
             if (username != null) client.userId = username
         }
-        if (isEnabled != null) {
-            status = if (isEnabled) STATUS_READY else STATUS_DISABLED
-        }
+        if (isEnabled == false) status = STATUS_DISABLED
+        else if (isEnabled == true || status != STATUS_DISABLED) status = STATUS_READY
     }
 
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {

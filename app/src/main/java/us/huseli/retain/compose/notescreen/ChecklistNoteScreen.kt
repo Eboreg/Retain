@@ -24,7 +24,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavHostController
 import org.burnoutcrew.reorderable.rememberReorderableLazyListState
 import us.huseli.retain.R
 import us.huseli.retain.data.entities.ChecklistItem
@@ -37,7 +36,6 @@ import java.util.UUID
 @Composable
 fun ChecklistNoteScreen(
     modifier: Modifier = Modifier,
-    navController: NavHostController,
     viewModel: EditChecklistNoteViewModel = hiltViewModel(),
     onSave: (Note?, List<ChecklistItem>, List<Image>, List<UUID>, List<String>) -> Unit,
     onBackClick: () -> Unit,
@@ -78,9 +76,10 @@ fun ChecklistNoteScreen(
     BaseNoteScreen(
         modifier = modifier,
         viewModel = viewModel,
-        note = note,
+        noteId = note.id,
+        color = note.color,
+        title = note.title,
         reorderableState = reorderableState,
-        navController = navController,
         onTitleFieldNext = {
             if (checkedItems.isEmpty() && uncheckedItems.isEmpty()) {
                 viewModel.insertItem(text = "", checked = false, index = 0)

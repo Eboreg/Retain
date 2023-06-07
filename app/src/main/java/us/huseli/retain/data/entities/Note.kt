@@ -4,7 +4,7 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import us.huseli.retain.Enums
+import us.huseli.retain.Enums.NoteType
 import java.time.Instant
 import java.util.UUID
 
@@ -16,7 +16,7 @@ data class Note(
     @ColumnInfo(name = "noteCreated") val created: Instant = Instant.now(),
     @ColumnInfo(name = "noteUpdated") val updated: Instant = Instant.now(),
     @ColumnInfo(name = "notePosition", defaultValue = "0") val position: Int = 0,
-    @ColumnInfo(name = "noteType") val type: Enums.NoteType,
+    @ColumnInfo(name = "noteType") val type: NoteType,
     @ColumnInfo(name = "noteShowChecked", defaultValue = "1") val showChecked: Boolean = true,
     @ColumnInfo(name = "noteColor", defaultValue = "DEFAULT") val color: String = "DEFAULT",
     @ColumnInfo(name = "noteIsDeleted", defaultValue = "0") val isDeleted: Boolean = false,

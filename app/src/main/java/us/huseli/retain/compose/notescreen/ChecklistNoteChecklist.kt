@@ -27,7 +27,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.burnoutcrew.reorderable.ReorderableItem
 import org.burnoutcrew.reorderable.ReorderableLazyListState
 import us.huseli.retain.R
-import us.huseli.retain.viewmodels.ChecklistItemExtended
+import us.huseli.retain.viewmodels.ChecklistItemFlow
 import java.util.UUID
 
 fun ChecklistNoteChecklist(
@@ -36,26 +36,27 @@ fun ChecklistNoteChecklist(
     state: ReorderableLazyListState,
     focusedItemId: UUID?,
     showChecked: Boolean,
-    uncheckedItems: List<ChecklistItemExtended>,
-    checkedItems: List<ChecklistItemExtended>,
-    onItemDeleteClick: (ChecklistItemExtended) -> Unit,
-    onItemCheckedChange: (ChecklistItemExtended, Boolean) -> Unit,
-    onItemTextFieldValueChange: (ChecklistItemExtended, TextFieldValue) -> Unit,
-    onNextItem: (ChecklistItemExtended) -> Unit,
-    onItemFocus: (ChecklistItemExtended) -> Unit,
+    uncheckedItems: List<ChecklistItemFlow>,
+    checkedItems: List<ChecklistItemFlow>,
+    onItemDeleteClick: (ChecklistItemFlow) -> Unit,
+    onItemCheckedChange: (ChecklistItemFlow, Boolean) -> Unit,
+    onItemTextFieldValueChange: (ChecklistItemFlow, TextFieldValue) -> Unit,
+    onNextItem: (ChecklistItemFlow) -> Unit,
+    onItemFocus: (ChecklistItemFlow) -> Unit,
     onShowCheckedClick: () -> Unit,
     backgroundColor: Color,
 ) {
     scope.items(uncheckedItems, key = { it.id }) { item ->
         val textFieldValue by item.textFieldValue.collectAsStateWithLifecycle()
+        val checked by item.checked.collectAsStateWithLifecycle()
 
         ReorderableItem(state, key = item.id) { isDragging ->
             ChecklistNoteChecklistRow(
                 modifier = modifier.background(backgroundColor),
-                item = item,
                 isFocused = focusedItemId == item.id,
                 isDragging = isDragging,
                 textFieldValue = textFieldValue,
+                checked = checked,
                 onFocus = { onItemFocus(item) },
                 onDeleteClick = { onItemDeleteClick(item) },
                 onCheckedChange = { onItemCheckedChange(item, it) },
@@ -95,14 +96,15 @@ fun ChecklistNoteChecklist(
         if (showChecked) {
             scope.items(checkedItems, key = { it.id }) { item ->
                 val textFieldValue by item.textFieldValue.collectAsStateWithLifecycle()
+                val checked by item.checked.collectAsStateWithLifecycle()
 
                 ReorderableItem(state, key = item.id) { isDragging ->
                     ChecklistNoteChecklistRow(
                         modifier = modifier.background(backgroundColor),
-                        item = item,
                         isFocused = focusedItemId == item.id,
                         isDragging = isDragging,
                         textFieldValue = textFieldValue,
+                        checked = checked,
                         onFocus = { onItemFocus(item) },
                         onDeleteClick = { onItemDeleteClick(item) },
                         onCheckedChange = { onItemCheckedChange(item, it) },

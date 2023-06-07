@@ -61,7 +61,6 @@ fun App(
                     onDebugClick = {
                         navController.navigate(DebugDestination.route)
                     },
-                    navController = navController,
                 )
             }
 
@@ -85,7 +84,6 @@ fun App(
                 arguments = TextNoteDestination.arguments,
             ) {
                 TextNoteScreen(
-                    navController = navController,
                     onSave = { dirtyNote, dirtyChecklistItems, dirtyImages, deletedChecklistItemIds, deletedImageIds ->
                         viewModel.save(
                             dirtyNote,
@@ -108,7 +106,6 @@ fun App(
                 arguments = ChecklistNoteDestination.arguments,
             ) {
                 ChecklistNoteScreen(
-                    navController = navController,
                     onSave = { dirtyNote, dirtyChecklistItems, dirtyImages, deletedChecklistItemIds, deletedImageIds ->
                         viewModel.save(
                             dirtyNote,

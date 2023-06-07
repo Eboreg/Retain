@@ -7,19 +7,14 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavHostController
 import us.huseli.retain.R
 import us.huseli.retain.data.entities.ChecklistItem
 import us.huseli.retain.data.entities.Image
@@ -31,7 +26,6 @@ import java.util.UUID
 @Composable
 fun TextNoteScreen(
     modifier: Modifier = Modifier,
-    navController: NavHostController,
     viewModel: EditTextNoteViewModel = hiltViewModel(),
     onSave: (Note?, List<ChecklistItem>, List<Image>, List<UUID>, List<String>) -> Unit,
     onBackClick: () -> Unit,
@@ -39,21 +33,19 @@ fun TextNoteScreen(
 ) {
     val note by viewModel.note.collectAsStateWithLifecycle()
     val focusRequester = remember { FocusRequester() }
-    var selection by remember { mutableStateOf(TextRange(0)) }
-    var textFieldValue by remember(note.text) {
-        mutableStateOf(TextFieldValue(text = note.text, selection = selection))
-    }
+    val textFieldValue by viewModel.textFieldValue.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     BaseNoteScreen(
         modifier = modifier,
         viewModel = viewModel,
-        note = note,
-        navController = navController,
+        noteId = note.id,
+        color = note.color,
+        title = note.title,
         onTitleFieldNext = null,
         onBackClick = onBackClick,
         onBackgroundClick = {
-            selection = TextRange(note.text.length)
+            viewModel.moveCursorLast()
             focusRequester.requestFocus()
         },
         onSave = onSave,
@@ -63,11 +55,7 @@ fun TextNoteScreen(
         item {
             OutlinedTextField(
                 value = textFieldValue,
-                onValueChange = {
-                    selection = it.selection
-                    textFieldValue = it
-                    viewModel.setText(it.text)
-                },
+                onValueChange = { viewModel.setTextFieldValue(it) },
                 modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
                 placeholder = { Text(text = stringResource(R.string.note)) },
                 colors = outlinedTextFieldColors(),

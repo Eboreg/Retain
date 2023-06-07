@@ -23,25 +23,42 @@ import us.huseli.retain.data.entities.Image
 import us.huseli.retain.data.entities.Note
 import java.util.UUID
 
-class ChecklistItemExtended(
-    item: ChecklistItem,
+data class ChecklistItemFlow(
+    val item: ChecklistItem,
+    val id: UUID = item.id,
+    val checked: MutableStateFlow<Boolean> = MutableStateFlow(item.checked),
+    val position: MutableStateFlow<Int> = MutableStateFlow(item.position),
     val textFieldValue: MutableStateFlow<TextFieldValue> = MutableStateFlow(
         TextFieldValue(
             addNullChar(item.text),
             TextRange(1)
         )
     )
-) : ChecklistItem(
-    id = item.id,
-    text = item.text,
-    noteId = item.noteId,
-    checked = item.checked,
-    position = item.position,
 ) {
-    override fun copy(text: String, checked: Boolean, position: Int): ChecklistItemExtended {
-        return ChecklistItemExtended(super.copy(text, checked, position), textFieldValue).also {
-            it.textFieldValue.value = it.textFieldValue.value.copy(text = addNullChar(text))
+    override fun equals(other: Any?): Boolean {
+        return when (other) {
+            is ChecklistItemFlow ->
+                other.position.value == position.value &&
+                other.checked.value == checked.value &&
+                other.id == id &&
+                other.textFieldValue.value.text == textFieldValue.value.text
+
+            is ChecklistItem ->
+                other.id == id &&
+                other.position == position.value &&
+                other.checked == checked.value &&
+                other.text == textFieldValue.value.text
+
+            else -> false
         }
+    }
+
+    override fun hashCode(): Int {
+        var result = id.hashCode()
+        result = 31 * result + checked.hashCode()
+        result = 31 * result + position.hashCode()
+        result = 31 * result + textFieldValue.hashCode()
+        return result
     }
 }
 
@@ -60,45 +77,53 @@ abstract class BaseEditNoteViewModel(
     private val _selectedImages = MutableStateFlow<Set<String>>(emptySet())
 
     protected val _deletedChecklistItemIds = mutableListOf<UUID>()
-    protected val _checklistItems = MutableStateFlow<List<ChecklistItemExtended>>(emptyList())
-    protected val _dirtyChecklistItems = mutableListOf<ChecklistItem>()
+    protected val _checklistItems = MutableStateFlow<List<ChecklistItemFlow>>(emptyList())
+    protected val _dirtyChecklistItems = mutableListOf<ChecklistItemFlow>()
     protected val _noteId: UUID = UUID.fromString(savedStateHandle.get<String>(NAV_ARG_NOTE_ID)!!)
-    protected val _originalChecklistItems = mutableListOf<ChecklistItemExtended>()
+    protected val _originalChecklistItems = mutableListOf<ChecklistItem>()
 
     private var _originalNote: Note = Note(type = type, id = _noteId)
     protected val _note = MutableStateFlow(_originalNote)
+    private val _textFieldValue = MutableStateFlow(TextFieldValue(_note.value.text))
 
     val deletedChecklistItemIds: List<UUID>
         get() = _deletedChecklistItemIds.toImmutableList()
     val deletedImageIds: List<String>
         get() = _deletedImageIds.toImmutableList()
     val dirtyChecklistItems: List<ChecklistItem>
-        get() = _dirtyChecklistItems.toImmutableList()
+        get() = _dirtyChecklistItems.map {
+            it.item.copy(text = it.textFieldValue.value.text, checked = it.checked.value, position = it.position.value)
+        }
     val dirtyImages: List<Image>
         get() = _dirtyImages.toImmutableList()
     val dirtyNote: Note?
-        get() =
-            if (
+        get() {
+            _note.value = _note.value.copy(text = _textFieldValue.value.text)
+            return if (
                 _originalNote != _note.value ||
                 (_isNew && (_dirtyChecklistItems.isNotEmpty() || _dirtyImages.isNotEmpty()))
             ) _note.value else null
+        }
     val images = _images.asStateFlow()
     val note = _note.asStateFlow()
     val trashedImageCount = _trashedImages.map { it.size }
     val selectedImages = _selectedImages.asStateFlow()
     val imageAdded = _imageAdded.asSharedFlow()
+    val textFieldValue = _textFieldValue.asStateFlow()
 
     init {
         viewModelScope.launch {
-            repository.getCombo(_noteId)?.also { (note, checklistItems, images, _) ->
+            @Suppress("Destructure")
+            repository.getCombo(_noteId)?.also { combo ->
                 _isNew = false
-                _originalNote = note
-                _note.value = note
-                _originalImages.addAll(images)
-                _images.value = images
+                _originalNote = combo.note
+                _note.value = combo.note
+                _textFieldValue.value = TextFieldValue(combo.note.text)
+                _originalImages.addAll(combo.images)
+                _images.value = combo.images
                 if (type == NoteType.CHECKLIST) {
-                    _originalChecklistItems.addAll(checklistItems.map { ChecklistItemExtended(it) })
-                    _checklistItems.value = _originalChecklistItems
+                    _originalChecklistItems.addAll(combo.checklistItems)
+                    _checklistItems.value = combo.checklistItems.map { ChecklistItemFlow(it) }
                 }
             }
         }
@@ -128,6 +153,10 @@ abstract class BaseEditNoteViewModel(
         }
     }
 
+    fun moveCursorLast() {
+        _textFieldValue.value = _textFieldValue.value.copy(selection = TextRange(_textFieldValue.value.text.length))
+    }
+
     fun selectAllImages() {
         _selectedImages.value = _images.value.map { it.filename }.toSet()
     }
@@ -136,8 +165,8 @@ abstract class BaseEditNoteViewModel(
         if (value != _note.value.color) _note.value = _note.value.copy(color = value)
     }
 
-    fun setText(value: String) {
-        if (value != _note.value.text) _note.value = _note.value.copy(text = value)
+    fun setTextFieldValue(value: TextFieldValue) {
+        if (value != _textFieldValue.value) _textFieldValue.value = value
     }
 
     fun setTitle(value: String) {

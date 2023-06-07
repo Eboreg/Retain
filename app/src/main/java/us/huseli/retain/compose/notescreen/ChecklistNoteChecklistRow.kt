@@ -33,7 +33,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.burnoutcrew.reorderable.ReorderableLazyListState
 import org.burnoutcrew.reorderable.detectReorder
-import us.huseli.retain.data.entities.ChecklistItem
 
 /**
  * A row with a checkbox and a textfield. Multiple rows of these emulate
@@ -51,10 +50,10 @@ import us.huseli.retain.data.entities.ChecklistItem
 @Composable
 fun ChecklistNoteChecklistRow(
     modifier: Modifier = Modifier,
-    item: ChecklistItem,
     isFocused: Boolean,
     isDragging: Boolean,
     textFieldValue: TextFieldValue,
+    checked: Boolean,
     onFocus: () -> Unit,
     onDeleteClick: () -> Unit,
     onCheckedChange: (Boolean) -> Unit,
@@ -62,7 +61,7 @@ fun ChecklistNoteChecklistRow(
     reorderableState: ReorderableLazyListState,
     onTextFieldValueChange: (TextFieldValue) -> Unit,
 ) {
-    val alpha = if (item.checked) 0.5f else 1f
+    val alpha = if (checked) 0.5f else 1f
     val focusRequester = remember { FocusRequester() }
 
     val realModifier =
@@ -87,7 +86,7 @@ fun ChecklistNoteChecklistRow(
         )
         Checkbox(
             modifier = Modifier.padding(start = 0.dp),
-            checked = item.checked,
+            checked = checked,
             onCheckedChange = onCheckedChange,
             colors = CheckboxDefaults.colors(
                 checkedColor = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
@@ -105,7 +104,9 @@ fun ChecklistNoteChecklistRow(
             onValueChange = onTextFieldValueChange,
             keyboardOptions = KeyboardOptions.Default.copy(
                 imeAction = ImeAction.Next,
-                capitalization = KeyboardCapitalization.Sentences,
+                capitalization =
+                if (textFieldValue.selection.start == 1) KeyboardCapitalization.Characters
+                else KeyboardCapitalization.Sentences,
             ),
             keyboardActions = KeyboardActions(
                 onNext = { onNext() }

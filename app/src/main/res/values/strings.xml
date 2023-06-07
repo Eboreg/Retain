@@ -54,6 +54,7 @@
     <string name="quicknote_import">Quicknote import</string>
     <string name="quicknote_import_about">Import from a zip file of Quicknote notes. Only tested with Carnet exports.</string>
     <string name="enable_nextcloud_sync">Enable Nextcloud sync</string>
+    <string name="syncing_with_nextcloud">Syncing with Nextcloud</string>
     <plurals name="plus_x_items">
         <item quantity="one">+ 1 item</item>
         <item quantity="other">+ %1$d items</item>

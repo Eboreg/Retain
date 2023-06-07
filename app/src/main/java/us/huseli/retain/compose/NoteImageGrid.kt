@@ -10,12 +10,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
@@ -99,9 +96,7 @@ fun NoteImageGrid(
                             modifier = imageModifier,
                         )
                     } ?: kotlin.run {
-                        CircularProgressIndicator(
-                            modifier = Modifier.align(Alignment.Center).widthIn(max = 20.dp).aspectRatio(1f)
-                        )
+                        RadarLoadingOverlay()
                     }
                 }
             }

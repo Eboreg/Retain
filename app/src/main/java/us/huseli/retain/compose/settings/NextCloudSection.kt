@@ -2,6 +2,8 @@ package us.huseli.retain.compose.settings
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,7 +16,6 @@ import androidx.compose.material.icons.sharp.VisibilityOff
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.ShapeDefaults
@@ -45,6 +46,8 @@ import us.huseli.retain.Constants.PREF_NEXTCLOUD_URI
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_USERNAME
 import us.huseli.retain.R
 import us.huseli.retain.cleanUri
+import us.huseli.retain.compose.RadarLoadingOverlay
+import us.huseli.retain.compose.SweepLoadingOverlay
 import us.huseli.retain.nextcloud.tasks.TestNextCloudTaskResult
 import us.huseli.retain.ui.theme.RetainColorDark
 import us.huseli.retain.ui.theme.RetainColorLight
@@ -123,94 +126,100 @@ fun NextCloudSection(
             )
         }
         if (isEnabled) {
-            Row(modifier = Modifier.fillMaxWidth()) {
-                OutlinedTextField(
-                    modifier = Modifier
-                        .onFocusChanged {
-                            if (!it.isFocused) {
-                                if (uriState.isNotEmpty()) {
-                                    uriState = cleanUri(uriState)
-                                    viewModel.updateField(PREF_NEXTCLOUD_URI, uriState)
+            BoxWithConstraints {
+                Column {
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(
+                            modifier = Modifier
+                                .onFocusChanged {
+                                    if (!it.isFocused) {
+                                        if (uriState.isNotEmpty()) {
+                                            uriState = cleanUri(uriState)
+                                            viewModel.updateField(PREF_NEXTCLOUD_URI, uriState)
+                                        }
+                                    }
                                 }
+                                .fillMaxWidth(),
+                            label = { Text(stringResource(R.string.nextcloud_uri)) },
+                            singleLine = true,
+                            value = uriState,
+                            onValueChange = {
+                                uriState = it
+                                viewModel.updateField(PREF_NEXTCLOUD_URI, it)
+                            },
+                            keyboardOptions = KeyboardOptions.Default.copy(
+                                imeAction = ImeAction.Next,
+                                keyboardType = KeyboardType.Uri
+                            ),
+                            enabled = !isTesting,
+                            trailingIcon = {
+                                if (isWorking == true) workingIcon()
+                                else if (isUrlFail) failIcon()
                             }
-                        }
-                        .fillMaxWidth(),
-                    label = { Text(stringResource(R.string.nextcloud_uri)) },
-                    singleLine = true,
-                    value = uriState,
-                    onValueChange = {
-                        uriState = it
-                        viewModel.updateField(PREF_NEXTCLOUD_URI, it)
-                    },
-                    keyboardOptions = KeyboardOptions.Default.copy(
-                        imeAction = ImeAction.Next,
-                        keyboardType = KeyboardType.Uri
-                    ),
-                    enabled = !isTesting,
-                    trailingIcon = {
-                        if (isWorking == true) workingIcon()
-                        else if (isUrlFail) failIcon()
+                        )
                     }
-                )
-            }
-            Row(modifier = Modifier.fillMaxWidth()) {
-                OutlinedTextField(
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(R.string.nextcloud_username)) },
-                    singleLine = true,
-                    value = username,
-                    enabled = !isTesting,
-                    onValueChange = { viewModel.updateField(PREF_NEXTCLOUD_USERNAME, it) },
-                    keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
-                    trailingIcon = {
-                        if (isWorking == true) workingIcon()
-                        else if (isCredentialsFail) failIcon()
-                    }
-                )
-            }
-            Row(modifier = Modifier.fillMaxWidth()) {
-                OutlinedTextField(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onFocusChanged { isPasswordFieldFocused = it.isFocused },
-                    label = { Text(stringResource(R.string.nextcloud_password)) },
-                    singleLine = true,
-                    value = password,
-                    onValueChange = { viewModel.updateField(PREF_NEXTCLOUD_PASSWORD, it) },
-                    visualTransformation = if (isPasswordShown) VisualTransformation.None else PasswordVisualTransformation(),
-                    enabled = !isTesting,
-                    keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
-                    trailingIcon = {
-                        if (isPasswordFieldFocused && isPasswordShown)
-                            IconButton(onClick = { isPasswordShown = false }) {
-                                Icon(
-                                    imageVector = Icons.Sharp.VisibilityOff,
-                                    contentDescription = stringResource(R.string.hide_password),
-                                )
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text(stringResource(R.string.nextcloud_username)) },
+                            singleLine = true,
+                            value = username,
+                            enabled = !isTesting,
+                            onValueChange = { viewModel.updateField(PREF_NEXTCLOUD_USERNAME, it) },
+                            keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
+                            trailingIcon = {
+                                if (isWorking == true) workingIcon()
+                                else if (isCredentialsFail) failIcon()
                             }
-                        else if (isPasswordFieldFocused)
-                            IconButton(onClick = { isPasswordShown = true }) {
-                                Icon(
-                                    imageVector = Icons.Sharp.Visibility,
-                                    contentDescription = stringResource(R.string.show_password),
-                                )
-                            }
-                        else if (isWorking == true) workingIcon()
-                        else if (isCredentialsFail) failIcon()
+                        )
                     }
-                )
-            }
-            Row(modifier = Modifier.fillMaxWidth()) {
-                OutlinedTextField(
-                    modifier = Modifier.fillMaxWidth(),
-                    value = baseDir,
-                    label = { Text(stringResource(R.string.nextcloud_base_path)) },
-                    singleLine = true,
-                    onValueChange = { viewModel.updateField(PREF_NEXTCLOUD_BASE_DIR, it) },
-                    enabled = !isTesting,
-                    keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
-                    trailingIcon = { if (isWorking == true) workingIcon() },
-                )
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onFocusChanged { isPasswordFieldFocused = it.isFocused },
+                            label = { Text(stringResource(R.string.nextcloud_password)) },
+                            singleLine = true,
+                            value = password,
+                            onValueChange = { viewModel.updateField(PREF_NEXTCLOUD_PASSWORD, it) },
+                            visualTransformation = if (isPasswordShown) VisualTransformation.None else PasswordVisualTransformation(),
+                            enabled = !isTesting,
+                            keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
+                            trailingIcon = {
+                                if (isPasswordFieldFocused && isPasswordShown)
+                                    IconButton(onClick = { isPasswordShown = false }) {
+                                        Icon(
+                                            imageVector = Icons.Sharp.VisibilityOff,
+                                            contentDescription = stringResource(R.string.hide_password),
+                                        )
+                                    }
+                                else if (isPasswordFieldFocused)
+                                    IconButton(onClick = { isPasswordShown = true }) {
+                                        Icon(
+                                            imageVector = Icons.Sharp.Visibility,
+                                            contentDescription = stringResource(R.string.show_password),
+                                        )
+                                    }
+                                else if (isWorking == true) workingIcon()
+                                else if (isCredentialsFail) failIcon()
+                            }
+                        )
+                    }
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(
+                            modifier = Modifier.fillMaxWidth(),
+                            value = baseDir,
+                            label = { Text(stringResource(R.string.nextcloud_base_path)) },
+                            singleLine = true,
+                            onValueChange = { viewModel.updateField(PREF_NEXTCLOUD_BASE_DIR, it) },
+                            enabled = !isTesting,
+                            keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
+                            trailingIcon = { if (isWorking == true) workingIcon() },
+                        )
+                    }
+                }
+                // if (isTesting) RadarLoadingOverlay(modifier = Modifier.matchParentSize())
+                if (isTesting) SweepLoadingOverlay(modifier = Modifier.matchParentSize())
             }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -226,9 +235,6 @@ fun NextCloudSection(
                     Text(
                         text = if (isTesting) stringResource(R.string.testing) else stringResource(R.string.test_connection),
                     )
-                }
-                if (isTesting) {
-                    LinearProgressIndicator()
                 }
             }
         }

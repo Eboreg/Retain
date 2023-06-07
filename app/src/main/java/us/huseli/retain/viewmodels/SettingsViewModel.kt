@@ -101,6 +101,7 @@ class SettingsViewModel @Inject constructor(
     private val _quickNoteImportIsActive = MutableStateFlow(false)
     private var _importJob: Job? = null
     private val _sectionsShown = mutableMapOf<String, MutableState<Boolean>>()
+    private var _nextCloudDataChanged = false
 
     val nextCloudUri = MutableStateFlow(preferences.getString(PREF_NEXTCLOUD_URI, "") ?: "")
     val nextCloudUsername = MutableStateFlow(preferences.getString(PREF_NEXTCLOUD_USERNAME, "") ?: "")
@@ -119,85 +120,23 @@ class SettingsViewModel @Inject constructor(
     val keepImportIsActive = _keepImportIsActive.asStateFlow()
     val quickNoteImportIsActive = _quickNoteImportIsActive.asStateFlow()
 
+    init {
+        preferences.registerOnSharedPreferenceChangeListener(this)
+    }
+
     fun cancelImport() {
         _importJob?.cancel()
         _quickNoteImportIsActive.value = false
         _keepImportIsActive.value = false
     }
 
-    fun getSectionShown(key: String, default: Boolean): State<Boolean> {
-        return _sectionsShown[key] ?: mutableStateOf(default).also { _sectionsShown[key] = it }
-    }
-
-    fun toggleSectionShown(key: String) {
-        _sectionsShown.getOrPut(key) { mutableStateOf(true) }.apply { value = !value }
-    }
-
-    private fun updateCurrentAction(action: String) {
-        _importCurrentActionIndex.value++
-        _importCurrentAction.value = action
-    }
-
-    fun quickNoteImport(zipUri: Uri, context: Context) {
-        _quickNoteImportIsActive.value = true
-        _importCurrentActionIndex.value = 0
-        _importCurrentAction.value = ""
-
-        viewModelScope.launch {
-            try {
-                val tempDir = File(context.cacheDir, "quicknote").apply { mkdirs() }
-                val quickNoteFile = File(
-                    tempDir,
-                    zipUri.lastPathSegment?.substringAfterLast('/') ?: "quicknote.zip"
-                ).apply { deleteOnExit() }
-
-                updateCurrentAction("Copying and opening ${quickNoteFile.name}")
-                copyFileToLocal(context, zipUri, quickNoteFile)
-
-                val zipFile = withContext(Dispatchers.IO) { ZipFile(quickNoteFile) }
-                val combos = mutableListOf<NoteCombo>()
-                val sqdDirs = mutableListOf<String>()
-                val sqdDirRegex = Regex("^.*\\.sqd/$")
-                var notePosition = repository.getMaxNotePosition() + 1
-
-                zipFile.entries().iterator().forEach { zipEntry ->
-                    if (zipEntry != null) {
-                        if (zipEntry.name.endsWith(".sqd") && !zipEntry.isDirectory) {
-                            val sqdFile = File(tempDir, zipEntry.name.substringAfterLast('/'))
-                            updateCurrentAction("Extracting ${sqdFile.name}")
-                            extractFileFromZip(zipFile, zipEntry, sqdFile)
-                            extractSqd(sqdFile, context, notePosition)?.let {
-                                combos.add(it)
-                                notePosition++
-                            }
-                        } else sqdDirRegex.find(zipEntry.name)?.let { result ->
-                            result.groups[0]?.value?.let { dirname -> sqdDirs.add(dirname) }
-                        }
-                    }
-                }
-
-                sqdDirs.forEach { dirname ->
-                    extractSqd(quickNoteFile, context, notePosition, dirname)?.let {
-                        combos.add(it)
-                        notePosition++
-                    }
-                }
-
-                if (combos.isNotEmpty()) {
-                    updateCurrentAction("Saving to database")
-                    repository.insertCombos(combos)
-                }
-                log("Imported ${combos.size} notes.", showInSnackbar = true)
-            } catch (e: Exception) {
-                log("Error: $e", level = Log.ERROR, showInSnackbar = true)
-            } finally {
-                _quickNoteImportIsActive.value = false
-            }
-        }
-    }
-
     @Suppress("SameReturnValue")
-    private suspend fun extractSqd(file: File, context: Context, notePosition: Int, baseDir: String = ""): NoteCombo? {
+    private suspend fun extractQuickNoteSqd(
+        file: File,
+        context: Context,
+        notePosition: Int,
+        baseDir: String = ""
+    ): NoteCombo? {
         val zipFile = withContext(Dispatchers.IO) { ZipFile(file) }
         var quickNoteEntry: QuickNoteEntry? = null
         var text = ""
@@ -293,6 +232,10 @@ class SettingsViewModel @Inject constructor(
         }
 
         return null
+    }
+
+    fun getSectionShown(key: String, default: Boolean): State<Boolean> {
+        return _sectionsShown[key] ?: mutableStateOf(default).also { _sectionsShown[key] = it }
     }
 
     @Suppress("destructure")
@@ -405,6 +348,70 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun quickNoteImport(zipUri: Uri, context: Context) {
+        _quickNoteImportIsActive.value = true
+        _importCurrentActionIndex.value = 0
+        _importCurrentAction.value = ""
+
+        viewModelScope.launch {
+            try {
+                val tempDir = File(context.cacheDir, "quicknote").apply { mkdirs() }
+                val quickNoteFile = File(
+                    tempDir,
+                    zipUri.lastPathSegment?.substringAfterLast('/') ?: "quicknote.zip"
+                ).apply { deleteOnExit() }
+
+                updateCurrentAction("Copying and opening ${quickNoteFile.name}")
+                copyFileToLocal(context, zipUri, quickNoteFile)
+
+                val zipFile = withContext(Dispatchers.IO) { ZipFile(quickNoteFile) }
+                val combos = mutableListOf<NoteCombo>()
+                val sqdDirs = mutableListOf<String>()
+                val sqdDirRegex = Regex("^.*\\.sqd/$")
+                var notePosition = repository.getMaxNotePosition() + 1
+
+                zipFile.entries().iterator().forEach { zipEntry ->
+                    if (zipEntry != null) {
+                        if (zipEntry.name.endsWith(".sqd") && !zipEntry.isDirectory) {
+                            val sqdFile = File(tempDir, zipEntry.name.substringAfterLast('/'))
+                            updateCurrentAction("Extracting ${sqdFile.name}")
+                            extractFileFromZip(zipFile, zipEntry, sqdFile)
+                            extractQuickNoteSqd(sqdFile, context, notePosition)?.let {
+                                combos.add(it)
+                                notePosition++
+                            }
+                        } else sqdDirRegex.find(zipEntry.name)?.let { result ->
+                            result.groups[0]?.value?.let { dirname -> sqdDirs.add(dirname) }
+                        }
+                    }
+                }
+
+                sqdDirs.forEach { dirname ->
+                    extractQuickNoteSqd(quickNoteFile, context, notePosition, dirname)?.let {
+                        combos.add(it)
+                        notePosition++
+                    }
+                }
+
+                if (combos.isNotEmpty()) {
+                    updateCurrentAction("Saving to database")
+                    repository.insertCombos(combos)
+                }
+                log("Imported ${combos.size} notes.", showInSnackbar = true)
+            } catch (e: Exception) {
+                log("Error: $e", level = Log.ERROR, showInSnackbar = true)
+            } finally {
+                _quickNoteImportIsActive.value = false
+            }
+        }
+    }
+
+    private fun resetNextCloudStatus() {
+        isNextCloudWorking.value = null
+        isNextCloudUrlFail.value = false
+        isNextCloudCredentialsFail.value = false
+    }
+
     fun save() {
         preferences.edit()
             .putString(PREF_NEXTCLOUD_URI, nextCloudUri.value)
@@ -414,39 +421,70 @@ class SettingsViewModel @Inject constructor(
             .putInt(PREF_MIN_COLUMN_WIDTH, minColumnWidth.value)
             .putBoolean(PREF_NEXTCLOUD_ENABLED, isNextCloudEnabled.value)
             .apply()
-        repository.nextCloudNeedsTesting.value = true
+        if (_nextCloudDataChanged) {
+            repository.nextCloudNeedsTesting.value = true
+            _nextCloudDataChanged = false
+        }
     }
 
     fun testNextCloud(onResult: (TestNextCloudTaskResult) -> Unit) = viewModelScope.launch {
-        repository.nextCloudNeedsTesting.value = false
-        isNextCloudTesting.value = true
-        nextCloudRepository.test(
-            Uri.parse(nextCloudUri.value),
-            nextCloudUsername.value,
-            nextCloudPassword.value,
-            nextCloudBaseDir.value,
-        ) { result ->
-            isNextCloudTesting.value = false
-            isNextCloudWorking.value = result.success
-            isNextCloudUrlFail.value = result.isUrlFail
-            isNextCloudCredentialsFail.value = result.isCredentialsFail
-            onResult(result)
+        if (isNextCloudEnabled.value) {
+            repository.nextCloudNeedsTesting.value = false
+            isNextCloudTesting.value = true
+            nextCloudRepository.test(
+                Uri.parse(nextCloudUri.value),
+                nextCloudUsername.value,
+                nextCloudPassword.value,
+                nextCloudBaseDir.value,
+            ) { result ->
+                isNextCloudTesting.value = false
+                isNextCloudWorking.value = result.success
+                isNextCloudUrlFail.value = result.isUrlFail
+                isNextCloudCredentialsFail.value = result.isCredentialsFail
+                onResult(result)
+            }
         }
+    }
+
+    fun toggleSectionShown(key: String) {
+        _sectionsShown.getOrPut(key) { mutableStateOf(true) }.apply { value = !value }
+    }
+
+    private fun updateCurrentAction(action: String) {
+        _importCurrentActionIndex.value++
+        _importCurrentAction.value = action
     }
 
     fun updateField(field: String, value: Any) {
         when (field) {
-            PREF_NEXTCLOUD_URI -> nextCloudUri.value = value as String
-            PREF_NEXTCLOUD_USERNAME -> nextCloudUsername.value = value as String
-            PREF_NEXTCLOUD_PASSWORD -> nextCloudPassword.value = value as String
+            PREF_NEXTCLOUD_URI -> {
+                if (value != nextCloudUri.value) {
+                    nextCloudUri.value = value as String
+                    _nextCloudDataChanged = true
+                    resetNextCloudStatus()
+                }
+            }
+
+            PREF_NEXTCLOUD_USERNAME -> {
+                if (value != nextCloudUsername.value) {
+                    nextCloudUsername.value = value as String
+                    _nextCloudDataChanged = true
+                    resetNextCloudStatus()
+                }
+            }
+
+            PREF_NEXTCLOUD_PASSWORD -> {
+                if (value != nextCloudPassword.value) {
+                    nextCloudPassword.value = value as String
+                    _nextCloudDataChanged = true
+                    resetNextCloudStatus()
+                }
+            }
+
             PREF_NEXTCLOUD_BASE_DIR -> nextCloudBaseDir.value = value as String
             PREF_MIN_COLUMN_WIDTH -> minColumnWidth.value = value as Int
             PREF_NEXTCLOUD_ENABLED -> isNextCloudEnabled.value = value as Boolean
         }
-    }
-
-    init {
-        preferences.registerOnSharedPreferenceChangeListener(this)
     }
 
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {

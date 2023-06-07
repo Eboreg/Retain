@@ -7,7 +7,6 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.burnoutcrew.reorderable.ItemPosition
 import us.huseli.retain.Enums.NoteType
@@ -18,9 +17,10 @@ import java.util.UUID
 import javax.inject.Inject
 import kotlin.math.max
 
+const val INVISIBLE_CHAR = '\u0000'
 fun adjustSelection(range: TextRange): TextRange = if (range.start < 1) TextRange(1, max(range.end, 1)) else range
-fun stripNullChar(str: String): String = str.filter { it != Char.MIN_VALUE }
-fun addNullChar(str: String): String = Char.MIN_VALUE + stripNullChar(str)
+fun stripNullChar(str: String): String = str.filter { it != INVISIBLE_CHAR }
+fun addNullChar(str: String): String = INVISIBLE_CHAR + stripNullChar(str)
 
 @HiltViewModel
 class EditChecklistNoteViewModel @Inject constructor(
@@ -29,16 +29,28 @@ class EditChecklistNoteViewModel @Inject constructor(
     override val logger: Logger,
 ) : BaseEditNoteViewModel(savedStateHandle, repository, NoteType.CHECKLIST) {
     private val _focusedItemId = MutableStateFlow<UUID?>(null)
-    private val _trashedItems = MutableStateFlow<List<ChecklistItemExtended>>(emptyList())
+    private val _trashedItems = MutableStateFlow<List<ChecklistItemFlow>>(emptyList())
+    private val _checkedItems = MutableStateFlow<List<ChecklistItemFlow>>(emptyList())
+    private val _uncheckedItems = MutableStateFlow<List<ChecklistItemFlow>>(emptyList())
 
-    val checkedItems = _checklistItems.map { items -> items.filter { item -> item.checked } }
+    val checkedItems = _checkedItems.asStateFlow()
     val focusedItemId = _focusedItemId.asStateFlow()
     val trashedItems = _trashedItems.asStateFlow()
-    val uncheckedItems = _checklistItems.map { items -> items.filter { item -> !item.checked } }
+    val uncheckedItems = _uncheckedItems.asStateFlow()
 
-    private fun addDirtyItem(item: ChecklistItem) {
+    init {
+        viewModelScope.launch {
+            _checklistItems.collect { items ->
+                _checkedItems.value = items.filter { it.checked.value }
+                _uncheckedItems.value = items.filter { !it.checked.value }
+            }
+        }
+    }
+
+    // private fun addDirtyItem(item: ChecklistItem) {
+    private fun addDirtyItem(item: ChecklistItemFlow) {
         _dirtyChecklistItems.removeIf { it.id == item.id }
-        if (_originalChecklistItems.none { it == item }) _dirtyChecklistItems.add(item)
+        if (_originalChecklistItems.none { item.equals(it) }) _dirtyChecklistItems.add(item)
     }
 
     fun clearTrashedItems() {
@@ -47,85 +59,87 @@ class EditChecklistNoteViewModel @Inject constructor(
 
     fun deleteCheckedItems() {
         clearTrashedItems()
-        _trashedItems.value = _checklistItems.value.filter { it.checked }
+        _trashedItems.value = _checklistItems.value.filter { it.checked.value }
+        val trashedItemIds = _trashedItems.value.map { it.id }
         _checklistItems.value = _checklistItems.value.toMutableList().apply {
-            removeAll(_trashedItems.value)
+            removeAll { trashedItemIds.contains(it.id) }
         }
-        _deletedChecklistItemIds.addAll(_trashedItems.value.map { it.id })
+        _deletedChecklistItemIds.addAll(trashedItemIds)
+        _dirtyChecklistItems.removeAll { trashedItemIds.contains(it.id) }
     }
 
-    fun deleteItem(item: ChecklistItemExtended, permanent: Boolean = false) {
+    fun deleteItem(item: ChecklistItemFlow, permanent: Boolean = false) {
+        if (!permanent) _trashedItems.value = listOf(item)
         _checklistItems.value = _checklistItems.value.toMutableList().apply {
             removeIf { it.id == item.id }
         }
-        if (!permanent) _trashedItems.value = listOf(item)
         _deletedChecklistItemIds.add(item.id)
+        _dirtyChecklistItems.removeIf { it.id == item.id }
     }
 
-    private fun insertItem(item: ChecklistItem) {
-        val itemExtended = ChecklistItemExtended(item)
-
-        log("insertItem: inserting $itemExtended with textFieldValue=${itemExtended.textFieldValue.value}")
-        _checklistItems.value = _checklistItems.value.toMutableList().apply { add(item.position, itemExtended) }
+    private fun insertItem(item: ChecklistItemFlow) {
+        log("insertItem: inserting $item with textFieldValue=${item.textFieldValue.value}")
+        _checklistItems.value = _checklistItems.value.toMutableList().apply { add(item.position.value, item) }
         _focusedItemId.value = item.id
         addDirtyItem(item)
         updatePositions()
     }
 
     fun insertItem(text: String, checked: Boolean, index: Int) =
-        insertItem(ChecklistItem(text = text, checked = checked, noteId = _noteId, position = index))
+        insertItem(ChecklistItemFlow(ChecklistItem(text = text, checked = checked, noteId = _noteId, position = index)))
 
-    private fun mergeItemWithPrevious(item: ChecklistItemExtended) {
-        val items = _checklistItems.value.filter { it.checked == item.checked }.toMutableList()
-        val index = items.indexOf(item)
+    private fun mergeItemWithPrevious(item: ChecklistItemFlow) {
+        val items = _checklistItems.value.filter { it.checked.value == item.checked.value }.toMutableList()
+        val index = items.indexOfFirst { it.id == item.id }
         val previousItem = items[index - 1]
 
-        log("mergeItemWithPrevious: item=$item, item.textFieldValue=${item.textFieldValue.value} previousItem=$previousItem, previousItem.textFieldValue=${previousItem.textFieldValue.value}")
-
-        if (item.text.isNotEmpty()) {
-            updateItemText(previousItem, previousItem.text + stripNullChar(item.text), previousItem.text.length + 1)
+        if (item.textFieldValue.value.text.isNotEmpty()) {
+            updateItemTextFieldValue(
+                item = previousItem,
+                text = previousItem.textFieldValue.value.text + stripNullChar(item.textFieldValue.value.text),
+                selection = TextRange(previousItem.textFieldValue.value.text.length),
+            )
         }
         _focusedItemId.value = previousItem.id
         deleteItem(item, true)
     }
 
-    fun onItemFocus(item: ChecklistItemExtended) {
+    fun onItemFocus(item: ChecklistItemFlow) {
         _focusedItemId.value = item.id
     }
 
-    fun onNextItem(item: ChecklistItemExtended) {
-        val index = _checklistItems.value.indexOf(item)
+    fun onNextItem(item: ChecklistItemFlow) {
+        val index = _checklistItems.value.indexOf(item)  // todo: go after id
         val textFieldValue = item.textFieldValue.value
         val head = textFieldValue.text.substring(0, textFieldValue.selection.start)
         val tail = textFieldValue.text.substring(textFieldValue.selection.start)
 
         log("onNextItem: item=$item, head=$head, tail=$tail")
-        insertItem(tail, item.checked, index + 1)
-        if (tail.isNotEmpty()) updateItemText(item, head)
+        insertItem(tail, item.checked.value, index + 1)
+        if (tail.isNotEmpty()) updateItemTextFieldValue(item = item, text = head)
     }
 
-    fun onTextFieldValueChange(item: ChecklistItemExtended, textFieldValue: TextFieldValue) {
+    fun onTextFieldValueChange(item: ChecklistItemFlow, textFieldValue: TextFieldValue) {
         /**
          * If the new TextFieldValue does not start with the null character,
          * that must mean the user has just erased it by inputting a backspace
          * at the beginning of the field. In that case, join this row with the
          * one above. If this is the first row: just re-insert the null
-         * character move the selection start to after it.
+         * character and move the selection start to after it.
          */
         val index = _checklistItems.value.indexOfFirst { it.id == item.id }
 
-        if (
-            stripNullChar(textFieldValue.text) != item.textFieldValue.value.text &&
-            (textFieldValue.text.isEmpty() || textFieldValue.text[0] != Char.MIN_VALUE)
-        ) {
-            if (index > 0) mergeItemWithPrevious(item)
-            else if (textFieldValue.text.isEmpty()) deleteItem(item, true)
-        } else {
-            updateItemText(item, stripNullChar(textFieldValue.text))
-            item.textFieldValue.value = textFieldValue.copy(
-                text = addNullChar(textFieldValue.text),
-                selection = adjustSelection(textFieldValue.selection)
-            )
+        if (index > -1) {
+            if (textFieldValue.text.isEmpty() || textFieldValue.text[0] != INVISIBLE_CHAR) {
+                if (index > 0) mergeItemWithPrevious(item)
+                else if (textFieldValue.text.isEmpty()) deleteItem(item, true)
+            } else {
+                updateItemTextFieldValue(
+                    item = item,
+                    text = textFieldValue.text,
+                    selection = textFieldValue.selection,
+                )
+            }
         }
     }
 
@@ -150,55 +164,61 @@ class EditChecklistNoteViewModel @Inject constructor(
     }
 
     fun uncheckAllItems() {
-        if (_checklistItems.value.any { it.checked }) {
-            _checklistItems.value = _checklistItems.value.map { item ->
-                if (item.checked) {
-                    addDirtyItem(item.copy(checked = false))
-                    item.copy(checked = false)
-                } else item
-            }
-            updatePositions()
+        _checklistItems.value.filter { it.checked.value }.forEach {
+            it.checked.value = false
+            addDirtyItem(it)
         }
+        updatePositions()
+        updateItemListFlows()
     }
 
-    fun undoDeleteItems() = viewModelScope.launch {
+    fun undoDeleteItems() {
         _checklistItems.value = _checklistItems.value.toMutableList().apply {
-            _trashedItems.value.forEach { add(it.position, it) }
+            _trashedItems.value.forEach {
+                add(it.position.value, it)
+                addDirtyItem(it)
+            }
         }
         _deletedChecklistItemIds.removeAll(_trashedItems.value.map { it.id })
         clearTrashedItems()
     }
 
-    private fun updateItem(old: ChecklistItemExtended, new: ChecklistItemExtended) {
-        val index = _checklistItems.value.indexOfFirst { it.id == old.id }
+    fun updateItemChecked(item: ChecklistItemFlow, checked: Boolean) {
+        val index = _checklistItems.value.indexOfFirst { it.id == item.id }
 
         if (index > -1) {
-            log("updateItem: old=$old, new=$new")
-            addDirtyItem(new)
-            _checklistItems.value = _checklistItems.value.toMutableList().apply { set(index, new) }
+            item.checked.value = checked
+            addDirtyItem(item)
+            updatePositions()
+            updateItemListFlows()
         }
     }
 
-    fun updateItemChecked(item: ChecklistItemExtended, checked: Boolean) {
-        updateItem(item, item.copy(checked = checked))
-        updatePositions()
-    }
-
-    private fun updateItemText(item: ChecklistItemExtended, text: String, selectionStart: Int? = null) {
-        updateItem(
-            old = item,
-            new = item.copy(text = stripNullChar(text)).also {
-                if (selectionStart != null) it.textFieldValue.value =
-                    it.textFieldValue.value.copy(selection = TextRange(selectionStart))
-            }
+    private fun updateItemTextFieldValue(
+        item: ChecklistItemFlow,
+        text: String? = null,
+        selection: TextRange? = null,
+    ) {
+        item.textFieldValue.value = item.textFieldValue.value.copy(
+            text = text?.let { addNullChar(it) } ?: item.textFieldValue.value.text,
+            selection = selection?.let { adjustSelection(it) } ?: item.textFieldValue.value.selection,
         )
+        _dirtyChecklistItems.removeIf { it.id == item.id }
+        if (_originalChecklistItems.none { it.id == item.id && it.text == stripNullChar(item.textFieldValue.value.text) })
+            _dirtyChecklistItems.add(item)
     }
 
     private fun updatePositions() {
-        _checklistItems.value = _checklistItems.value.mapIndexed { index, item ->
-            if (item.position != index) {
-                item.copy(position = index).also { addDirtyItem(it) }
-            } else item
+        _checklistItems.value.forEachIndexed { index, item ->
+            if (item.position.value != index) {
+                item.position.value = index
+                addDirtyItem(item)
+            }
         }
+    }
+
+    private fun updateItemListFlows() {
+        _checkedItems.value = _checklistItems.value.filter { it.checked.value }
+        _uncheckedItems.value = _checklistItems.value.filter { !it.checked.value }
     }
 }

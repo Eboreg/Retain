@@ -36,7 +36,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavHostController
 import org.burnoutcrew.reorderable.ReorderableLazyListState
 import org.burnoutcrew.reorderable.reorderable
 import us.huseli.retain.R
@@ -56,8 +55,9 @@ import java.util.UUID
 fun BaseNoteScreen(
     modifier: Modifier = Modifier,
     viewModel: BaseEditNoteViewModel,
-    navController: NavHostController,
-    note: Note,
+    noteId: UUID,
+    title: String,
+    color: String,
     reorderableState: ReorderableLazyListState? = null,
     lazyListState: LazyListState = reorderableState?.listState ?: rememberLazyListState(),
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
@@ -72,8 +72,8 @@ fun BaseNoteScreen(
     val context = LocalContext.current
     val images by viewModel.images.collectAsStateWithLifecycle()
     val trashedImageCount by viewModel.trashedImageCount.collectAsStateWithLifecycle(0)
-    val noteColor by remember(note.color) { mutableStateOf(getNoteColor(context, note.color)) }
-    val appBarColor by remember(note.color) { mutableStateOf(getAppBarColor(context, note.color)) }
+    val noteColor by remember(color) { mutableStateOf(getNoteColor(context, color)) }
+    val appBarColor by remember(color) { mutableStateOf(getAppBarColor(context, color)) }
     val selectedImages by viewModel.selectedImages.collectAsStateWithLifecycle()
     val imageAdded by viewModel.imageAdded.collectAsStateWithLifecycle(null)
     val isImageSelectEnabled = selectedImages.isNotEmpty()
@@ -127,10 +127,7 @@ fun BaseNoteScreen(
                 ImageSelectionTopAppBar(
                     backgroundColor = appBarColor,
                     selectedImageCount = selectedImages.size,
-                    onCloseClick = {
-                        navController.popBackStack()
-                        viewModel.deselectAllImages()
-                    },
+                    onCloseClick = { viewModel.deselectAllImages() },
                     onSelectAllClick = { viewModel.selectAllImages() },
                     onTrashClick = { viewModel.trashSelectedImages() },
                 )
@@ -163,7 +160,7 @@ fun BaseNoteScreen(
                     secondaryRowHeight = 200.dp,
                     onImageClick = {
                         if (isImageSelectEnabled) viewModel.toggleImageSelected(it)
-                        else onImageCarouselStart(note.id, it)
+                        else onImageCarouselStart(noteId, it)
                     },
                     onImageLongClick = { viewModel.toggleImageSelected(it) },
                     selectedImages = selectedImages,
@@ -176,7 +173,7 @@ fun BaseNoteScreen(
                 ) {
                     NoteTitleField(
                         modifier = Modifier.weight(1f),
-                        value = note.title,
+                        value = title,
                         onValueChange = { viewModel.setTitle(it) },
                         onNext = onTitleFieldNext,
                     )

@@ -1,6 +1,8 @@
 package us.huseli.retain.nextcloud.tasks
 
 import android.util.Log
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import us.huseli.retain.LogInterface
 import us.huseli.retain.LogMessage
 import us.huseli.retain.Logger
@@ -12,7 +14,7 @@ abstract class BaseTask<RT : TaskResult>(protected val engine: NextCloudEngine) 
     override val logger: Logger = engine.logger
 
     private var hasNotified = false
-    private var _status = STATUS_WAITING
+    private var _status = MutableStateFlow(STATUS_WAITING)
     private val onFinishedListeners = mutableListOf<(RT) -> Unit>()
 
     protected var success: Boolean = true
@@ -23,8 +25,9 @@ abstract class BaseTask<RT : TaskResult>(protected val engine: NextCloudEngine) 
     open val successMessageString: String? = null
     open val isMetaTask: Boolean = false
 
-    val status: Int
-        get() = _status
+    val status = _status.asStateFlow()
+    // val status: Int
+    //     get() = _status
 
     abstract fun start()
     abstract fun getResult(): RT
@@ -36,7 +39,7 @@ abstract class BaseTask<RT : TaskResult>(protected val engine: NextCloudEngine) 
         this.triggerStatus = triggerStatus
         if (onFinishedListener != null) onFinishedListeners.add(onFinishedListener)
         engine.registerTask(this, triggerStatus) {
-            _status = STATUS_RUNNING
+            _status.value = STATUS_RUNNING
             log("${javaClass.simpleName}: START", level = Log.DEBUG)
             startMessageString?.let { log(it) }
             start()
@@ -46,7 +49,7 @@ abstract class BaseTask<RT : TaskResult>(protected val engine: NextCloudEngine) 
 
     fun notifyIfFinished(successMessage: String? = null) {
         if (isFinished() && !hasNotified) {
-            _status = STATUS_FINISHED
+            _status.value = STATUS_FINISHED
             val result = getResult()
 
             hasNotified = true

@@ -12,14 +12,10 @@ import us.huseli.retain.LogInterface
 import us.huseli.retain.Logger
 import us.huseli.retain.data.entities.Image
 import us.huseli.retain.nextcloud.NextCloudEngine
-import us.huseli.retain.nextcloud.tasks.DownloadMissingImagesTask
-import us.huseli.retain.nextcloud.tasks.DownloadNoteCombosJSONTask
-import us.huseli.retain.nextcloud.tasks.DownloadNoteImagesTask
 import us.huseli.retain.nextcloud.tasks.RemoveImagesTask
 import us.huseli.retain.nextcloud.tasks.RemoveNotesTask
-import us.huseli.retain.nextcloud.tasks.RemoveOrphanImagesTask
+import us.huseli.retain.nextcloud.tasks.SyncTask
 import us.huseli.retain.nextcloud.tasks.TestNextCloudTaskResult
-import us.huseli.retain.nextcloud.tasks.UploadMissingImagesTask
 import us.huseli.retain.nextcloud.tasks.UploadNoteCombosTask
 import java.io.File
 import java.util.UUID
@@ -39,6 +35,7 @@ class NextCloudRepository @Inject constructor(
 ) : SharedPreferences.OnSharedPreferenceChangeListener, LogInterface {
     private val imageDir = File(context.filesDir, Constants.IMAGE_SUBDIR).apply { mkdirs() }
     private val preferences = PreferenceManager.getDefaultSharedPreferences(context)
+    val hasActiveTasks = nextCloudEngine.hasActiveTasks
 
     init {
         sync()
@@ -55,86 +52,23 @@ class NextCloudRepository @Inject constructor(
         RemoveImagesTask(nextCloudEngine, images).run()
     }
 
-    private suspend fun syncImages() {
-        val images = imageDao.listAll()
-        val imageFilenames = images.map { it.filename }
-
-        // Upload any images that are missing/wrong on remote:
-        UploadMissingImagesTask(nextCloudEngine, images).run { result ->
-            if (!result.success) logError("Failed to upload image to Nextcloud", result.error)
-        }
-        // Delete any orphan image files, both locally and on Nextcloud:
-        imageDir.listFiles()?.forEach { file ->
-            if (!imageFilenames.contains(file.name)) file.delete()
-        }
-        RemoveOrphanImagesTask(nextCloudEngine, keep = imageFilenames).run()
-    }
-
-    private fun sync() {
-        // First try to download any locally missing images, because this has
-        // highest prio:
+    fun sync() {
         ioScope.launch {
-            val images = imageDao.listAll()
-            val missingImages = images.filter { !File(imageDir, it.filename).exists() }
-
-            DownloadMissingImagesTask(nextCloudEngine, missingImages).run()
-        }
-
-        DownloadNoteCombosJSONTask(nextCloudEngine).run { downTaskResult ->
-            if (!downTaskResult.success) logError("Failed to download notes from Nextcloud", downTaskResult.error)
-
-            ioScope.launch {
-                val remoteCombos = downTaskResult.objects ?: emptyList()
-                val localCombos = noteDao.listAllCombos().map {
+            @Suppress("Destructure")
+            SyncTask(
+                engine = nextCloudEngine,
+                localCombos = noteDao.listAllCombos().map {
                     it.copy(databaseVersion = database.openHelper.readableDatabase.version)
-                }
-
-                // All notes on remote that either don't exist locally, or
-                // have a newer timestamp than their local counterparts:
-                @Suppress("destructure")
-                val remoteUpdated = remoteCombos.filter { remote ->
-                    localCombos
-                        .find { it.note.id == remote.note.id }
-                        ?.let { local -> local.note < remote.note }
-                    ?: true
-                }
-
-                // All local notes that either don't exist on remote, or
-                // have a newer timestamp than their remote counterparts:
-                @Suppress("destructure")
-                val localUpdated = localCombos.filter { local ->
-                    remoteCombos
-                        .find { it.note.id == local.note.id }
-                        ?.let { remote -> remote.note < local.note }
-                    ?: true
-                }
-
-                remoteUpdated.forEach {
-                    noteDao.upsert(it.note)
-                    checklistItemDao.replace(it.note.id, it.checklistItems)
-                    imageDao.replace(it.note.id, it.images)
-                    DownloadNoteImagesTask(nextCloudEngine, it).run(
-                        onEachCallback = { _, result ->
-                            if (!result.success)
-                                logError("Failed to download image from Nextcloud", result.error)
-                        },
-                        onReadyCallback = null
-                    )
-                }
-                if (remoteUpdated.isNotEmpty()) {
-                    log(
-                        message = "${remoteUpdated.size} new or updated notes synced from Nextcloud.",
-                        showInSnackbar = true,
-                    )
-                }
-
-                // Now upload all notes that are new or updated locally:
-                UploadNoteCombosTask(nextCloudEngine, localUpdated).run { result ->
-                    if (!result.success) logError("Failed to upload notes to Nextcloud", result.error)
-                }
-
-                syncImages()
-            }
+                },
+                onRemoteComboUpdated = { combo ->
+                    ioScope.launch {
+                        noteDao.upsert(combo.note)
+                        checklistItemDao.replace(combo.note.id, combo.checklistItems)
+                        imageDao.replace(combo.note.id, combo.images)
+                    }
+                },
+                localImageDir = imageDir,
+            ).run()
         }
     }
 

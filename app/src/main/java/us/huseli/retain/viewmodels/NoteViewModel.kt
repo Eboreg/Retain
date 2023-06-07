@@ -40,6 +40,7 @@ class NoteViewModel @Inject constructor(
     private val _notes = MutableStateFlow<List<Note>>(emptyList())
     private val _showArchive = MutableStateFlow(false)
 
+    val isNextCloudRefreshing = nextCloudRepository.hasActiveTasks
     val showArchive = _showArchive.asStateFlow()
     val trashedNoteCount = _trashedNotes.map { it.size }
     val isSelectEnabled = _selectedNoteIds.map { it.isNotEmpty() }
@@ -143,6 +144,8 @@ class NoteViewModel @Inject constructor(
     fun switchNotePositions(from: ItemPosition, to: ItemPosition) {
         _notes.value = _notes.value.toMutableList().apply { add(to.index, removeAt(from.index)) }
     }
+
+    fun syncNextCloud() = nextCloudRepository.sync()
 
     fun toggleNoteSelected(noteId: UUID) {
         if (_selectedNoteIds.value.contains(noteId)) _selectedNoteIds.value -= noteId
