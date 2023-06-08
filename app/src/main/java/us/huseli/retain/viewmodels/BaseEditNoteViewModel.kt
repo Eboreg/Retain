@@ -185,7 +185,7 @@ abstract class BaseEditNoteViewModel(
         _trashedImages.value = _images.value.filter { _selectedImages.value.contains(it.filename) }
         _deletedImageIds.addAll(_selectedImages.value)
         _images.value = _images.value.toMutableList().apply {
-            removeAll(_trashedImages.value)
+            removeAll(_trashedImages.value.toSet())
         }
         deselectAllImages()
     }
@@ -194,7 +194,7 @@ abstract class BaseEditNoteViewModel(
         _images.value = _images.value.toMutableList().apply {
             _trashedImages.value.forEach { add(it.position, it) }
         }
-        _deletedImageIds.removeAll(_trashedImages.value.map { it.filename })
+        _deletedImageIds.removeAll(_trashedImages.value.map { it.filename }.toSet())
         clearTrashedImages()
     }
 

@@ -13,14 +13,15 @@ import us.huseli.retain.BuildConfig
 import us.huseli.retain.LogMessage
 import us.huseli.retain.Logger
 import us.huseli.retain.data.entities.ChecklistItem
+import us.huseli.retain.data.entities.DeletedNote
 import us.huseli.retain.data.entities.Image
 import us.huseli.retain.data.entities.Note
 import java.util.concurrent.Executors
 
 @androidx.room.Database(
-    entities = [Note::class, ChecklistItem::class, Image::class],
+    entities = [Note::class, ChecklistItem::class, Image::class, DeletedNote::class],
     exportSchema = false,
-    version = 13,
+    version = 14,
 )
 @TypeConverters(Converters::class)
 abstract class Database : RoomDatabase() {

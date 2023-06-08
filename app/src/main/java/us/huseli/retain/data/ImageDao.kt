@@ -30,9 +30,6 @@ interface ImageDao {
     @Query("SELECT * FROM image WHERE imageNoteId = :noteId ORDER BY imagePosition")
     suspend fun listByNoteId(noteId: UUID): List<Image>
 
-    @Query("SELECT * FROM image ORDER BY imagePosition")
-    suspend fun listAll(): List<Image>
-
     @Transaction
     suspend fun replace(noteId: UUID, images: Collection<Image>) {
         deleteByNoteId(noteId, except = images.map { it.filename })

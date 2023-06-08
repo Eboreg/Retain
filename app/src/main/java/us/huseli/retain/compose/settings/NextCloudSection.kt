@@ -46,7 +46,6 @@ import us.huseli.retain.Constants.PREF_NEXTCLOUD_URI
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_USERNAME
 import us.huseli.retain.R
 import us.huseli.retain.cleanUri
-import us.huseli.retain.compose.RadarLoadingOverlay
 import us.huseli.retain.compose.SweepLoadingOverlay
 import us.huseli.retain.nextcloud.tasks.TestNextCloudTaskResult
 import us.huseli.retain.ui.theme.RetainColorDark

@@ -47,7 +47,6 @@ class EditChecklistNoteViewModel @Inject constructor(
         }
     }
 
-    // private fun addDirtyItem(item: ChecklistItem) {
     private fun addDirtyItem(item: ChecklistItemFlow) {
         _dirtyChecklistItems.removeIf { it.id == item.id }
         if (_originalChecklistItems.none { item.equals(it) }) _dirtyChecklistItems.add(item)
@@ -179,7 +178,7 @@ class EditChecklistNoteViewModel @Inject constructor(
                 addDirtyItem(it)
             }
         }
-        _deletedChecklistItemIds.removeAll(_trashedItems.value.map { it.id })
+        _deletedChecklistItemIds.removeAll(_trashedItems.value.map { it.id }.toSet())
         clearTrashedItems()
     }
 

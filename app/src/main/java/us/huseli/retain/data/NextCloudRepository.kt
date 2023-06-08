@@ -13,12 +13,10 @@ import us.huseli.retain.Logger
 import us.huseli.retain.data.entities.Image
 import us.huseli.retain.nextcloud.NextCloudEngine
 import us.huseli.retain.nextcloud.tasks.RemoveImagesTask
-import us.huseli.retain.nextcloud.tasks.RemoveNotesTask
 import us.huseli.retain.nextcloud.tasks.SyncTask
 import us.huseli.retain.nextcloud.tasks.TestNextCloudTaskResult
 import us.huseli.retain.nextcloud.tasks.UploadNoteCombosTask
 import java.io.File
-import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -46,12 +44,6 @@ class NextCloudRepository @Inject constructor(
         if (key == Constants.PREF_NEXTCLOUD_BASE_DIR) sync()
     }
 
-    @Suppress("unused")
-    fun deleteNotes(ids: Collection<UUID>, images: Collection<Image>) {
-        RemoveNotesTask(nextCloudEngine, ids).run()
-        RemoveImagesTask(nextCloudEngine, images).run()
-    }
-
     fun sync() {
         ioScope.launch {
             @Suppress("Destructure")
@@ -68,6 +60,7 @@ class NextCloudRepository @Inject constructor(
                     }
                 },
                 localImageDir = imageDir,
+                deletedNoteIds = noteDao.listDeletedIds(),
             ).run()
         }
     }
