@@ -1,17 +1,17 @@
-package us.huseli.retain.nextcloud.tasks
+package us.huseli.retain.syncbackend.tasks
 
 import us.huseli.retain.data.entities.NoteCombo
-import us.huseli.retain.nextcloud.NextCloudEngine
+import us.huseli.retain.syncbackend.Engine
 import java.io.File
 import java.util.UUID
 
-class SyncTask(
-    engine: NextCloudEngine,
+class SyncTask<ET : Engine>(
+    engine: ET,
     private val localCombos: Collection<NoteCombo>,
     private val deletedNoteIds: Collection<UUID>,
     private val onRemoteComboUpdated: (NoteCombo) -> Unit,
     private val localImageDir: File,
-) : BaseTask<TaskResult>(engine = engine) {
+) : Task<ET, TaskResult>(engine = engine) {
     private val images = mutableListOf(*localCombos.map { it.images }.flatten().toTypedArray())
     private var downloadNoteCombosJSONTaskFinished = false
     private var downloadMissingImagesTaskFinished = false
@@ -21,9 +21,7 @@ class SyncTask(
     private var removeOrphanImagesTaskFinished = false
     private var remoteUpdatedCombos: List<NoteCombo> = emptyList()
 
-    override fun getResult() = TaskResult(success, error)
-
-    override fun isFinished() =
+    private fun isFinished() =
         downloadNoteImagesTasksFinished == remoteUpdatedCombos.size &&
         downloadNoteCombosJSONTaskFinished &&
         uploadNoteCombosTaskFinished &&
@@ -31,13 +29,18 @@ class SyncTask(
         removeOrphanImagesTaskFinished &&
         downloadMissingImagesTaskFinished
 
-    override fun start() {
-        DownloadMissingImagesTask(engine, images.filter { !File(localImageDir, it.filename).exists() }).run {
+    private fun notifyIfFinished(onResult: (TaskResult) -> Unit) {
+        if (isFinished()) onResult(TaskResult(status = TaskResult.Status.OK))
+    }
+
+    override fun start(onResult: (TaskResult) -> Unit) {
+        DownloadImagesTask(engine, images.filter { !File(localImageDir, it.filename).exists() }).run {
             downloadMissingImagesTaskFinished = true
+            notifyIfFinished(onResult)
         }
 
         DownloadNoteCombosJSONTask(engine, deletedNoteIds).run { downTaskResult ->
-            val remoteCombos = downTaskResult.objects ?: emptyList()
+            val remoteCombos = downTaskResult.objects
             downloadNoteCombosJSONTaskFinished = true
 
             // All notes on remote that either don't exist locally, or
@@ -53,13 +56,13 @@ class SyncTask(
             remoteUpdatedCombos.forEach { combo ->
                 images.addAll(combo.images)
                 onRemoteComboUpdated(combo)
-                DownloadNoteImagesTask(engine, combo).run(
+                DownloadImagesTask(engine, combo.images).run(
                     onEachCallback = { _, result ->
-                        if (!result.success) logError("Failed to download image from Nextcloud", result.error)
+                        if (!result.success) logError("Failed to download image: ${result.message}")
                     },
                     onReadyCallback = {
                         downloadNoteImagesTasksFinished++
-                        notifyIfFinished()
+                        notifyIfFinished(onResult)
                     }
                 )
             }
@@ -74,18 +77,18 @@ class SyncTask(
             // Now upload all notes (i.e. the pre-existing local notes joined with the updated remote ones):
             val combos = localCombos.toSet().union(remoteUpdatedCombos.toSet())
             UploadNoteCombosTask(engine, combos).run { result ->
-                if (!result.success) logError("Failed to upload notes to Nextcloud", result.error)
+                if (!result.success) logError("Failed to upload notes: ${result.message}")
                 uploadNoteCombosTaskFinished = true
-                notifyIfFinished()
+                notifyIfFinished(onResult)
             }
 
             // Upload any images that are missing/wrong on remote:
             val imageFilenames = images.map { it.filename }
 
             UploadMissingImagesTask(engine, images).run { result ->
-                if (!result.success) logError("Failed to upload image to Nextcloud", result.error)
+                if (!result.success) logError("Failed to upload image: ${result.message}")
                 uploadMissingImagesTaskFinished = true
-                notifyIfFinished()
+                notifyIfFinished(onResult)
             }
 
             // Delete any orphan image files, both locally and on Nextcloud:
@@ -94,8 +97,10 @@ class SyncTask(
             }
             RemoveOrphanImagesTask(engine, keep = imageFilenames).run {
                 removeOrphanImagesTaskFinished = true
-                notifyIfFinished()
+                notifyIfFinished(onResult)
             }
+
+            notifyIfFinished(onResult)
         }
     }
 }

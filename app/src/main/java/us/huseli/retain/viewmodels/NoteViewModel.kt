@@ -13,8 +13,8 @@ import kotlinx.coroutines.launch
 import org.burnoutcrew.reorderable.ItemPosition
 import us.huseli.retain.LogInterface
 import us.huseli.retain.Logger
-import us.huseli.retain.data.NextCloudRepository
 import us.huseli.retain.data.NoteRepository
+import us.huseli.retain.data.SyncBackendRepository
 import us.huseli.retain.data.entities.ChecklistItem
 import us.huseli.retain.data.entities.Image
 import us.huseli.retain.data.entities.Note
@@ -32,7 +32,7 @@ data class NoteCardChecklistData(
 @HiltViewModel
 class NoteViewModel @Inject constructor(
     private val repository: NoteRepository,
-    private val nextCloudRepository: NextCloudRepository,
+    private val syncBackendRepository: SyncBackendRepository,
     override val logger: Logger
 ) : ViewModel(), LogInterface {
     private val _selectedNoteIds = MutableStateFlow<Set<UUID>>(emptySet())
@@ -40,7 +40,8 @@ class NoteViewModel @Inject constructor(
     private val _notes = MutableStateFlow<List<Note>>(emptyList())
     private val _showArchive = MutableStateFlow(false)
 
-    val isNextCloudRefreshing = nextCloudRepository.hasActiveTasks
+    val syncBackend = syncBackendRepository.syncBackend
+    val isSyncBackendRefreshing = syncBackendRepository.hasActiveTasks
     val showArchive = _showArchive.asStateFlow()
     val trashedNoteCount = _trashedNotes.map { it.size }
     val isSelectEnabled = _selectedNoteIds.map { it.isNotEmpty() }
@@ -106,7 +107,7 @@ class NoteViewModel @Inject constructor(
         _trashedNotes.value = emptySet()
         viewModelScope.launch {
             repository.deleteTrashedNotes()
-            nextCloudRepository.uploadNotes()
+            syncBackendRepository.uploadNotes()
         }
     }
 
@@ -124,7 +125,7 @@ class NoteViewModel @Inject constructor(
         if (deletedChecklistItemIds.isNotEmpty()) repository.deleteChecklistItems(deletedChecklistItemIds)
         if (deletedImageIds.isNotEmpty()) {
             val deletedImages = repository.listImages(deletedImageIds)
-            nextCloudRepository.removeImages(deletedImages)
+            syncBackendRepository.removeImages(deletedImages)
             repository.deleteImages(deletedImages)
         }
     }
@@ -145,7 +146,7 @@ class NoteViewModel @Inject constructor(
         _notes.value = _notes.value.toMutableList().apply { add(to.index, removeAt(from.index)) }
     }
 
-    fun syncNextCloud() = nextCloudRepository.sync()
+    fun syncBackend() = viewModelScope.launch { syncBackendRepository.sync() }
 
     fun toggleNoteSelected(noteId: UUID) {
         if (_selectedNoteIds.value.contains(noteId)) _selectedNoteIds.value -= noteId
@@ -182,6 +183,6 @@ class NoteViewModel @Inject constructor(
     }
 
     fun uploadNotes() = viewModelScope.launch {
-        nextCloudRepository.uploadNotes()
+        syncBackendRepository.uploadNotes()
     }
 }

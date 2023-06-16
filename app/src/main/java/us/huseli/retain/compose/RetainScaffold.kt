@@ -36,7 +36,7 @@ fun RetainScaffold(
     content: @Composable (PaddingValues) -> Unit
 ) {
     val context = LocalContext.current
-    val nextCloudNeedsTesting by settingsViewModel.nextCloudNeedsTesting.collectAsStateWithLifecycle()
+    val syncBackendNeedsTesting by settingsViewModel.syncBackendNeedsTesting.collectAsStateWithLifecycle()
     val snackbarMessage by viewModel.logger.snackbarMessage.collectAsStateWithLifecycle(null)
     val scope = rememberCoroutineScope()
     val trashedNoteCount by viewModel.trashedNoteCount.collectAsStateWithLifecycle(0)
@@ -79,11 +79,9 @@ fun RetainScaffold(
         }
     }
 
-    LaunchedEffect(nextCloudNeedsTesting) {
-        if (nextCloudNeedsTesting) settingsViewModel.testNextCloud { result ->
-            scope.launch {
-                if (!result.success) snackbarHostState.showSnackbar(result.getErrorMessage(context))
-            }
+    LaunchedEffect(syncBackendNeedsTesting) {
+        if (syncBackendNeedsTesting) settingsViewModel.testSyncBackend { result ->
+            if (!result.success) scope.launch { snackbarHostState.showSnackbar(result.getErrorMessage(context)) }
         }
     }
 

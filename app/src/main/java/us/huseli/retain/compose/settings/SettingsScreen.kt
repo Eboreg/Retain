@@ -66,7 +66,7 @@ fun SettingsScreen(
                 GeneralSection(modifier = Modifier.fillMaxWidth(), viewModel = viewModel)
             }
             item {
-                NextCloudSection(
+                SyncBackendSection(
                     modifier = Modifier.fillMaxWidth(),
                     viewModel = viewModel,
                     snackbarHostState = snackbarHostState,

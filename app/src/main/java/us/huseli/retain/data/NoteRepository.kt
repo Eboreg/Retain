@@ -53,7 +53,6 @@ class NoteRepository @Inject constructor(
         }
     }
 
-    val nextCloudNeedsTesting = MutableStateFlow(true)
     val checklistItems: Flow<List<ChecklistItem>> = checklistItemDao.flowList()
     val images: Flow<List<Image>> = imageDao.flowList().map { images ->
         images.map { it.copy(imageBitmap = getImageBitmap(it.filename)) }

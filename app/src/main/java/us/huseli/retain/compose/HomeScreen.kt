@@ -57,8 +57,9 @@ fun HomeScreen(
     onSettingsClick: () -> Unit,
     onDebugClick: () -> Unit,
 ) {
-    val isNextCloudRefreshing by viewModel.isNextCloudRefreshing.collectAsStateWithLifecycle(false)
-    val isNextCloudEnabled by settingsViewModel.isNextCloudEnabled.collectAsStateWithLifecycle()
+    val syncBackend by viewModel.syncBackend.collectAsStateWithLifecycle()
+    val isSyncBackendRefreshing by viewModel.isSyncBackendRefreshing.collectAsStateWithLifecycle(false)
+    val isSyncBackendEnabled by settingsViewModel.isSyncBackendEnabled.collectAsStateWithLifecycle(false)
     val notes by viewModel.notes.collectAsStateWithLifecycle(emptyList())
     val images by viewModel.images.collectAsStateWithLifecycle(emptyList())
     val checklistData by viewModel.checklistData.collectAsStateWithLifecycle(emptyList())
@@ -78,10 +79,10 @@ fun HomeScreen(
         }
         .fillMaxHeight()
 
-    if (isNextCloudEnabled) {
+    if (isSyncBackendEnabled) {
         val refreshState = rememberPullRefreshState(
-            refreshing = isNextCloudRefreshing,
-            onRefresh = { viewModel.syncNextCloud() },
+            refreshing = isSyncBackendRefreshing,
+            onRefresh = { viewModel.syncBackend() },
         )
         lazyModifier = lazyModifier.pullRefresh(state = refreshState)
     }
@@ -155,14 +156,17 @@ fun HomeScreen(
         }
 
         Column(modifier = lazyModifier.padding(innerPadding).fillMaxWidth()) {
-            if (isNextCloudRefreshing) {
+            if (isSyncBackendRefreshing) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = stringResource(R.string.syncing_with_nextcloud),
+                        text = stringResource(
+                            R.string.syncing_with,
+                            syncBackend?.displayName ?: stringResource(R.string.backend)
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(end = 4.dp),
                     )
