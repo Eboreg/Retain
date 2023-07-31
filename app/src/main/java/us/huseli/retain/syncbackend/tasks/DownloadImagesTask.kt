@@ -5,26 +5,12 @@ import us.huseli.retain.data.entities.Image
 import us.huseli.retain.syncbackend.Engine
 import java.io.File
 
-class DownloadImageTask<ET : Engine>(engine: ET, remotePath: String, private val localFile: File) :
-    DownloadFileTask<ET, OperationTaskResult>(engine, remotePath) {
-    override fun handleDownloadedFile(
-        file: File,
-        result: OperationTaskResult,
-        onResult: (OperationTaskResult) -> Unit
-    ) {
-        file.renameTo(localFile)
-        onResult(result.copy(localFiles = listOf(localFile)))
-    }
-}
-
 /** Down: 0..n images */
-class DownloadImagesTask<ET : Engine>(
-    engine: ET,
-    images: Collection<Image>
-) : ListTask<ET, OperationTaskResult, DownloadImageTask<ET>, Image>(
-    engine = engine,
-    objects = images
-) {
+class DownloadImagesTask<ET : Engine>(engine: ET, images: Collection<Image>) :
+    ListTask<ET, OperationTaskResult, DownloadFileTask<ET, OperationTaskResult>, Image>(
+        engine = engine,
+        objects = images
+    ) {
     override fun getResultForEmptyList() = TaskResult(status = TaskResult.Status.OK)
 
     override fun processChildTaskResult(obj: Image, result: OperationTaskResult, onResult: (TaskResult) -> Unit) {
@@ -33,7 +19,7 @@ class DownloadImagesTask<ET : Engine>(
         }
     }
 
-    override fun getChildTask(obj: Image) = DownloadImageTask(
+    override fun getChildTask(obj: Image) = DownloadFileTask<ET, OperationTaskResult>(
         engine = engine,
         remotePath = engine.getAbsolutePath(SYNCBACKEND_IMAGE_SUBDIR, obj.filename),
         localFile = File(File(engine.context.filesDir, "images"), obj.filename),

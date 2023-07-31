@@ -1,6 +1,7 @@
 package us.huseli.retain.data
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Transaction
@@ -13,14 +14,14 @@ import java.util.UUID
 
 @Dao
 interface NoteDao {
-    @Query("DELETE FROM note WHERE noteId IN (:ids)")
-    suspend fun delete(ids: Collection<UUID>)
+    @Delete
+    suspend fun delete(notes: Collection<Note>)
 
     @Transaction
     suspend fun deleteTrashed() {
-        val ids = listDeletedIds()
-        insertDeletedNotes(ids.map { DeletedNote(it) })
-        delete(ids)
+        val notes = listDeletedNotes()
+        insertDeletedNotes(notes.map { DeletedNote(it.id) })
+        delete(notes)
     }
 
     @Query("SELECT * FROM note WHERE noteIsDeleted = 0 ORDER BY notePosition")
@@ -45,8 +46,11 @@ interface NoteDao {
     @Query("SELECT * FROM note")
     suspend fun listAllCombos(): List<NoteCombo>
 
-    @Query("SELECT noteId FROM note WHERE noteIsDeleted = 1")
+    @Query("SELECT deletedNoteId FROM deletednote")
     suspend fun listDeletedIds(): List<UUID>
+
+    @Query("SELECT * FROM Note WHERE noteIsDeleted = 1")
+    suspend fun listDeletedNotes(): List<Note>
 
     @Query(
         """

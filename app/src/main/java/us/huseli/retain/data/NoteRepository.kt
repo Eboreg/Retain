@@ -13,6 +13,7 @@ import us.huseli.retain.Constants.IMAGE_SUBDIR
 import us.huseli.retain.LogInterface
 import us.huseli.retain.Logger
 import us.huseli.retain.data.entities.ChecklistItem
+import us.huseli.retain.data.entities.ChecklistItemWithNote
 import us.huseli.retain.data.entities.Image
 import us.huseli.retain.data.entities.Note
 import us.huseli.retain.data.entities.NoteCombo
@@ -47,13 +48,12 @@ class NoteRepository @Inject constructor(
                     log("_imageDirObserver.onEvent($eventType, $path): finished")
                 } catch (e: Exception) {
                     log("_imageDirObserver.onEvent($eventType, $path): could not process: $e", level = Log.ERROR)
-                    log(e.stackTraceToString(), level = Log.ERROR)
                 }
             }
         }
     }
 
-    val checklistItems: Flow<List<ChecklistItem>> = checklistItemDao.flowList()
+    val checklistItemsWithNote: Flow<List<ChecklistItemWithNote>> = checklistItemDao.flowListWithNote()
     val images: Flow<List<Image>> = imageDao.flowList().map { images ->
         images.map { it.copy(imageBitmap = getImageBitmap(it.filename)) }
     }

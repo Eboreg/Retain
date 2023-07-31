@@ -11,7 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -19,16 +18,13 @@ import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
-import kotlinx.coroutines.launch
 import us.huseli.retain.R
 import us.huseli.retain.viewmodels.NoteViewModel
-import us.huseli.retain.viewmodels.SettingsViewModel
 
 @Composable
 fun RetainScaffold(
     modifier: Modifier = Modifier,
     viewModel: NoteViewModel = hiltViewModel(),
-    settingsViewModel: SettingsViewModel = hiltViewModel(),
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     statusBarColor: Color = MaterialTheme.colorScheme.surface,
     navigationBarColor: Color = MaterialTheme.colorScheme.background,
@@ -36,9 +32,7 @@ fun RetainScaffold(
     content: @Composable (PaddingValues) -> Unit
 ) {
     val context = LocalContext.current
-    val syncBackendNeedsTesting by settingsViewModel.syncBackendNeedsTesting.collectAsStateWithLifecycle()
     val snackbarMessage by viewModel.logger.snackbarMessage.collectAsStateWithLifecycle(null)
-    val scope = rememberCoroutineScope()
     val trashedNoteCount by viewModel.trashedNoteCount.collectAsStateWithLifecycle(0)
     val systemUiController = rememberSystemUiController()
 
@@ -76,12 +70,6 @@ fun RetainScaffold(
                 SnackbarResult.ActionPerformed -> viewModel.undoTrashNotes()
                 SnackbarResult.Dismissed -> viewModel.reallyTrashNotes()
             }
-        }
-    }
-
-    LaunchedEffect(syncBackendNeedsTesting) {
-        if (syncBackendNeedsTesting) settingsViewModel.testSyncBackend { result ->
-            if (!result.success) scope.launch { snackbarHostState.showSnackbar(result.getErrorMessage(context)) }
         }
     }
 

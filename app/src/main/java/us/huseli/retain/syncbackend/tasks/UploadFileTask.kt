@@ -10,7 +10,7 @@ open class UploadFileTask<ET : Engine>(
     private val localFile: File,
     private val mimeType: String? = null,
 ) : OperationTask<ET, OperationTaskResult>(engine) {
-    override val successMessageString = "Successfully saved $localFile to $remotePath on Nextcloud"
+    override val successMessageString = "Successfully saved $localFile to $remotePath"
 
     override fun start(onResult: (OperationTaskResult) -> Unit) {
         if (!localFile.isFile)

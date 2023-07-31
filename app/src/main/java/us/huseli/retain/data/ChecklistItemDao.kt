@@ -7,6 +7,7 @@ import androidx.room.Query
 import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 import us.huseli.retain.data.entities.ChecklistItem
+import us.huseli.retain.data.entities.ChecklistItemWithNote
 import java.util.UUID
 
 @Dao
@@ -17,8 +18,8 @@ interface ChecklistItemDao {
     @Query("DELETE FROM checklistitem WHERE checklistItemNoteId=:noteId AND checklistItemId NOT IN (:except)")
     suspend fun deleteByNoteId(noteId: UUID, except: Collection<UUID> = emptyList())
 
-    @Query("SELECT * FROM checklistitem ORDER BY checklistItemNoteId, checklistItemChecked, checklistItemPosition")
-    fun flowList(): Flow<List<ChecklistItem>>
+    @Query("SELECT * FROM checklistitem INNER JOIN note ON checklistItemNoteId = noteId ORDER BY checklistItemNoteId, checklistItemChecked, checklistItemPosition")
+    fun flowListWithNote(): Flow<List<ChecklistItemWithNote>>
 
     @Query("SELECT * FROM checklistitem WHERE checklistItemNoteId = :noteId ORDER BY checklistItemPosition")
     suspend fun listByNoteId(noteId: UUID): List<ChecklistItem>

@@ -32,7 +32,7 @@ data class LogMessage(
     fun levelToString() = logLevelToString(level)
     override fun toString() = "$timestamp ${levelToString()} $tag [$thread] $message"
     override fun equals(other: Any?) = other is LogMessage && other.timestamp == timestamp
-    override fun hashCode() = timestamp.hashCode()
+    override fun hashCode(): Int = 31 * timestamp.hashCode() + message.hashCode()
 }
 
 @Singleton
@@ -73,19 +73,17 @@ class Logger {
 interface LogInterface {
     val logger: Logger
 
-    fun log(message: String, level: Int = Log.INFO, showInSnackbar: Boolean = false) {
-        log(createLogMessage(message, level), showInSnackbar)
+    fun log(message: String, level: Int = Log.INFO, showInSnackbar: Boolean = false) =
+        logger.log(createLogMessage(message, level), showInSnackbar)
+
+    fun showError(message: String) = log(message, Log.ERROR, true)
+
+    fun showError(prefix: String, exception: Exception?) {
+        if (exception != null) showError("$prefix: $exception")
+        else showError(prefix)
     }
 
-    fun log(logMessage: LogMessage, showInSnackbar: Boolean = false) = logger.log(logMessage, showInSnackbar)
-
-    fun logError(prefix: String, logMessage: LogMessage? = null) {
-        var message = prefix
-        if (logMessage != null) message += ": ${logMessage.message}"
-        log(message, Log.ERROR, true)
-    }
-
-    fun createLogMessage(message: String, level: Int = Log.INFO): LogMessage {
+    private fun createLogMessage(message: String, level: Int = Log.INFO): LogMessage {
         return LogMessage(
             level = level,
             tag = "${javaClass.simpleName}<${System.identityHashCode(this)}>",

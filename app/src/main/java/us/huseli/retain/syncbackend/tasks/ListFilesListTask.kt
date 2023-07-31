@@ -6,7 +6,7 @@ import us.huseli.retain.syncbackend.Engine.Companion.STATUS_OK
 abstract class ListFilesListTask<ET : Engine, CRT : OperationTaskResult, CT : Task<ET, CRT>>(
     engine: ET,
     remoteDir: String,
-    filter: (RemoteFile) -> Boolean
+    filter: (RemoteFile) -> Boolean,
 ) : ListFilesTask<ET>(engine, remoteDir, filter) {
     private var onEachCallback: ((RemoteFile, CRT) -> Unit)? = null
     protected val successfulRemoteFiles = mutableListOf<RemoteFile>()

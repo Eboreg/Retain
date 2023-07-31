@@ -18,7 +18,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import us.huseli.retain.Constants.NEXTCLOUD_BASE_DIR
+import kotlinx.coroutines.launch
+import us.huseli.retain.Constants.DEFAULT_NEXTCLOUD_BASE_DIR
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_BASE_DIR
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_PASSWORD
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_URI
@@ -69,7 +70,7 @@ class NextCloudEngine @Inject constructor(
             }
         }
 
-    private var baseDir = NEXTCLOUD_BASE_DIR
+    private var baseDir = DEFAULT_NEXTCLOUD_BASE_DIR
         set(value) {
             if (field != value.trimEnd('/')) field = value.trimEnd('/')
         }
@@ -87,15 +88,24 @@ class NextCloudEngine @Inject constructor(
         uri = Uri.parse(preferences.getString(PREF_NEXTCLOUD_URI, "") ?: "")
         username = preferences.getString(PREF_NEXTCLOUD_USERNAME, "") ?: ""
         password = preferences.getString(PREF_NEXTCLOUD_PASSWORD, "") ?: ""
-        baseDir = preferences.getString(PREF_NEXTCLOUD_BASE_DIR, NEXTCLOUD_BASE_DIR) ?: NEXTCLOUD_BASE_DIR
+        baseDir =
+            preferences.getString(PREF_NEXTCLOUD_BASE_DIR, DEFAULT_NEXTCLOUD_BASE_DIR) ?: DEFAULT_NEXTCLOUD_BASE_DIR
         status =
             if (preferences.getString(PREF_SYNC_BACKEND, null) == SyncBackend.NEXTCLOUD.name) STATUS_READY
             else STATUS_DISABLED
         preferences.registerOnSharedPreferenceChangeListener(this)
+
+        ioScope.launch {
+            syncBackend.collect {
+                if (it != backend) status = STATUS_DISABLED
+                else if (status == STATUS_DISABLED) status = STATUS_READY
+            }
+        }
     }
 
     private fun resultToStatus(result: RemoteOperationResult<*>): TaskResult.Status =
         if (result.isSuccess) TaskResult.Status.OK
+        else if (result.code == RemoteOperationResult.ResultCode.FILE_NOT_FOUND) TaskResult.Status.PATH_NOT_FOUND
         else if (
             result.code == RemoteOperationResult.ResultCode.UNAUTHORIZED ||
             result.code == RemoteOperationResult.ResultCode.FORBIDDEN
@@ -133,7 +143,7 @@ class NextCloudEngine @Inject constructor(
         isEnabled: Boolean? = null
     ) {
         log(
-            "updateClient: uri=$uri, username=$username, password=$password, isEnabled=$isEnabled",
+            message = "updateClient: uri=$uri, username=$username, password=$password, isEnabled=$isEnabled",
             level = Log.DEBUG
         )
         if (uri != null) client.baseUri = uri
@@ -153,7 +163,7 @@ class NextCloudEngine @Inject constructor(
         username: String,
         password: String,
         baseDir: String,
-        onResult: ((TestTaskResult) -> Unit)? = null
+        onResult: (TestTaskResult) -> Unit
     ) {
         this.uri = uri
         this.username = username
@@ -163,7 +173,7 @@ class NextCloudEngine @Inject constructor(
             _isTesting.value = true
             test { result ->
                 _isTesting.value = false
-                onResult?.invoke(result)
+                onResult(result)
             }
         }
     }
@@ -176,12 +186,16 @@ class NextCloudEngine @Inject constructor(
             onResult(castResult(result, status = status, objects = listOf(remoteDir)))
         }
 
-    override fun downloadFile(remotePath: String, onResult: (OperationTaskResult) -> Unit) =
+    override fun downloadFile(remotePath: String, localFile: File, onResult: (OperationTaskResult) -> Unit) =
         executeRemoteOperation(DownloadFileRemoteOperation(remotePath, tempDirDown.absolutePath + '/')) { result ->
+            val tmpFile = File(tempDirDown, remotePath)
+            if (result.isSuccess && tmpFile.absolutePath != localFile.absolutePath) {
+                File(tempDirDown, remotePath).renameTo(localFile)
+            }
             onResult(
                 castResult(
                     result,
-                    localFiles = listOf(File(tempDirDown, remotePath)),
+                    localFiles = listOf(localFile),
                     objects = listOf(remotePath)
                 )
             )
@@ -193,7 +207,7 @@ class NextCloudEngine @Inject constructor(
     @Suppress("DEPRECATION")
     override fun listFiles(
         remoteDir: String,
-        filter: ((RemoteFile) -> Boolean)?,
+        filter: (RemoteFile) -> Boolean,
         onResult: (OperationTaskResult) -> Unit
     ) {
         executeRemoteOperation(ReadFolderRemoteOperation(remoteDir)) { result ->
@@ -203,7 +217,7 @@ class NextCloudEngine @Inject constructor(
                     remoteFiles = result.data
                         .filterIsInstance<com.owncloud.android.lib.resources.files.model.RemoteFile>()
                         .map { RemoteFile(it.remotePath, it.length, it.mimeType == "DIR") }
-                        .filter(filter ?: { true })
+                        .filter(filter)
                 )
             )
         }
@@ -233,12 +247,9 @@ class NextCloudEngine @Inject constructor(
             PREF_NEXTCLOUD_URI -> uri = Uri.parse(preferences.getString(key, "") ?: "")
             PREF_NEXTCLOUD_USERNAME -> username = preferences.getString(key, "") ?: ""
             PREF_NEXTCLOUD_PASSWORD -> password = preferences.getString(key, "") ?: ""
-            PREF_NEXTCLOUD_BASE_DIR -> baseDir = preferences.getString(key, NEXTCLOUD_BASE_DIR) ?: NEXTCLOUD_BASE_DIR
-            PREF_SYNC_BACKEND -> {
-                if (preferences.getString(key, null) == SyncBackend.NEXTCLOUD.name) {
-                    if (status == STATUS_DISABLED) status = STATUS_READY
-                } else status = STATUS_DISABLED
-            }
+            PREF_NEXTCLOUD_BASE_DIR -> baseDir =
+                preferences.getString(key, DEFAULT_NEXTCLOUD_BASE_DIR) ?: DEFAULT_NEXTCLOUD_BASE_DIR
+            PREF_SYNC_BACKEND -> updateSyncBackend()
         }
     }
 }

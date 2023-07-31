@@ -1,6 +1,6 @@
 package us.huseli.retain.syncbackend.tasks
 
-import us.huseli.retain.Constants
+import us.huseli.retain.Constants.SYNCBACKEND_IMAGE_SUBDIR
 import us.huseli.retain.data.entities.Image
 import us.huseli.retain.syncbackend.Engine
 
@@ -17,6 +17,6 @@ class RemoveImagesTask<ET : Engine>(engine: ET, images: Collection<Image>) :
 
     override fun getChildTask(obj: Image) = RemoveFileTask(
         engine = engine,
-        remotePath = engine.getAbsolutePath(Constants.SYNCBACKEND_IMAGE_SUBDIR, obj.filename),
+        remotePath = engine.getAbsolutePath(SYNCBACKEND_IMAGE_SUBDIR, obj.filename),
     )
 }

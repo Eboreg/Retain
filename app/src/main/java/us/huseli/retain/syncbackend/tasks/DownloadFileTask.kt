@@ -4,21 +4,21 @@ import us.huseli.retain.syncbackend.Engine
 import java.io.File
 
 /** Down: 1 arbitrary file */
-abstract class DownloadFileTask<ET : Engine, RT : OperationTaskResult>(
+open class DownloadFileTask<ET : Engine, RT : OperationTaskResult>(
     engine: ET,
     protected val remotePath: String,
+    protected val localFile: File,
 ) : OperationTask<ET, RT>(engine) {
     override val successMessageString = "Successfully downloaded $remotePath"
 
     override fun start(onResult: (RT) -> Unit) {
-        engine.downloadFile(remotePath) { result ->
-            val localFile = result.localFiles.getOrNull(0)
-
-            @Suppress("UNCHECKED_CAST")
-            if (localFile != null) handleDownloadedFile(localFile, result, onResult)
-            else onResult(result as RT)
+        engine.downloadFile(remotePath, localFile) { result ->
+            handleDownloadedFile(localFile, result, onResult)
         }
     }
 
-    abstract fun handleDownloadedFile(file: File, result: OperationTaskResult, onResult: (RT) -> Unit)
+    open fun handleDownloadedFile(file: File, result: OperationTaskResult, onResult: (RT) -> Unit) {
+        @Suppress("UNCHECKED_CAST")
+        onResult(result as RT)
+    }
 }

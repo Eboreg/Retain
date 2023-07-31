@@ -1,6 +1,5 @@
 package us.huseli.retain.compose.settings
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.sharp.Check
 import androidx.compose.material.icons.sharp.Visibility
 import androidx.compose.material.icons.sharp.VisibilityOff
 import androidx.compose.material3.AlertDialog
@@ -33,6 +31,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import us.huseli.retain.Constants.PREF_SFTP_BASE_DIR
 import us.huseli.retain.Constants.PREF_SFTP_HOSTNAME
@@ -42,9 +41,7 @@ import us.huseli.retain.Constants.PREF_SFTP_USERNAME
 import us.huseli.retain.R
 import us.huseli.retain.compose.SweepLoadingOverlay
 import us.huseli.retain.syncbackend.tasks.TestTaskResult
-import us.huseli.retain.ui.theme.RetainColorDark
-import us.huseli.retain.ui.theme.RetainColorLight
-import us.huseli.retain.viewmodels.SettingsViewModel
+import us.huseli.retain.viewmodels.SFTPViewModel
 
 @Composable
 fun PromptYesNoDialog(
@@ -73,33 +70,25 @@ fun PromptYesNoDialog(
 }
 
 @Composable
-fun SFTPSection(modifier: Modifier = Modifier, viewModel: SettingsViewModel) {
-    val baseDir by viewModel.sftpBaseDir.collectAsStateWithLifecycle()
-    val hostname by viewModel.sftpHostname.collectAsStateWithLifecycle()
-    val port by viewModel.sftpPort.collectAsStateWithLifecycle()
-    val username by viewModel.sftpUsername.collectAsStateWithLifecycle()
-    val password by viewModel.sftpPassword.collectAsStateWithLifecycle()
-    val promptYesNo by viewModel.sftpPromptYesNo.collectAsStateWithLifecycle()
-    val isTesting by viewModel.isSFTPTesting.collectAsStateWithLifecycle()
-    val isWorking by viewModel.isSFTPWorking.collectAsStateWithLifecycle()
+fun SFTPSection(modifier: Modifier = Modifier, viewModel: SFTPViewModel = hiltViewModel()) {
+    val baseDir by viewModel.baseDir.collectAsStateWithLifecycle()
+    val hostname by viewModel.hostname.collectAsStateWithLifecycle()
+    val port by viewModel.port.collectAsStateWithLifecycle()
+    val username by viewModel.username.collectAsStateWithLifecycle()
+    val password by viewModel.password.collectAsStateWithLifecycle()
+    val promptYesNo by viewModel.promptYesNo.collectAsStateWithLifecycle()
+    val isTesting by viewModel.isTesting.collectAsStateWithLifecycle()
+    val isWorking by viewModel.isWorking.collectAsStateWithLifecycle()
     var isPasswordShown by rememberSaveable { mutableStateOf(false) }
     var testResult by remember { mutableStateOf<TestTaskResult?>(null) }
-    val colors = if (isSystemInDarkTheme()) RetainColorDark else RetainColorLight
     var isPasswordFieldFocused by rememberSaveable { mutableStateOf(false) }
-    val workingIcon = @Composable {
-        Icon(
-            imageVector = Icons.Sharp.Check,
-            contentDescription = null,
-            tint = colors.Green,
-        )
-    }
 
     promptYesNo?.let {
         PromptYesNoDialog(
             title = "SFTP",
             message = it,
-            onYes = { viewModel.approveSFTPKey() },
-            onNo = { viewModel.denySFTPKey() },
+            onYes = { viewModel.approveKey() },
+            onNo = { viewModel.denyKey() },
         )
     }
 
@@ -118,7 +107,7 @@ fun SFTPSection(modifier: Modifier = Modifier, viewModel: SettingsViewModel) {
                     ),
                     enabled = !isTesting,
                     trailingIcon = {
-                        if (isWorking == true) workingIcon()
+                        if (isWorking == true) SuccessIcon()
                     },
                 )
                 OutlinedTextField(
@@ -132,7 +121,7 @@ fun SFTPSection(modifier: Modifier = Modifier, viewModel: SettingsViewModel) {
                     ),
                     enabled = !isTesting,
                     trailingIcon = {
-                        if (isWorking == true) workingIcon()
+                        if (isWorking == true) SuccessIcon()
                     },
                 )
             }
@@ -146,7 +135,7 @@ fun SFTPSection(modifier: Modifier = Modifier, viewModel: SettingsViewModel) {
                     keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
                     enabled = !isTesting,
                     trailingIcon = {
-                        if (isWorking == true) workingIcon()
+                        if (isWorking == true) SuccessIcon()
                     },
                 )
             }
@@ -175,7 +164,7 @@ fun SFTPSection(modifier: Modifier = Modifier, viewModel: SettingsViewModel) {
                                     else stringResource(R.string.show_password),
                                 )
                             }
-                        else if (isWorking == true) workingIcon()
+                        else if (isWorking == true) SuccessIcon()
                     },
                     enabled = !isTesting,
                 )
@@ -191,7 +180,7 @@ fun SFTPSection(modifier: Modifier = Modifier, viewModel: SettingsViewModel) {
                     supportingText = { Text(stringResource(R.string.relative_to_users_home_directory)) },
                     enabled = !isTesting,
                     trailingIcon = {
-                        if (isWorking == true) workingIcon()
+                        if (isWorking == true) SuccessIcon()
                     },
                 )
             }
@@ -200,7 +189,7 @@ fun SFTPSection(modifier: Modifier = Modifier, viewModel: SettingsViewModel) {
     }
     Row {
         OutlinedButton(
-            onClick = { viewModel.testSFTP { result -> testResult = result } },
+            onClick = { viewModel.test { result -> testResult = result } },
             shape = ShapeDefaults.ExtraSmall,
             enabled = !isTesting && hostname.isNotEmpty() && username.isNotEmpty() && password.isNotEmpty(),
         ) {

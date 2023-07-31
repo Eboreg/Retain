@@ -18,10 +18,12 @@ class DownloadListJSONTaskResult<T : Any>(
 
 abstract class DownloadListJSONTask<ET : Engine, LT : Any>(
     engine: ET,
-    remotePath: String
+    remotePath: String,
+    localFile: File
 ) : DownloadFileTask<ET, DownloadListJSONTaskResult<LT>>(
     engine = engine,
     remotePath = remotePath,
+    localFile = localFile,
 ) {
     private var _finished = false
 

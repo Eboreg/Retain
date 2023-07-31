@@ -13,7 +13,7 @@ open class TaskResult(
     open val message: String? = null,
     open val exception: Exception? = null,
 ) {
-    enum class Status { OK, UNKNOWN_HOST, CONNECT_ERROR, AUTH_ERROR, OTHER_ERROR }
+    enum class Status { OK, UNKNOWN_HOST, CONNECT_ERROR, AUTH_ERROR, PATH_NOT_FOUND, OTHER_ERROR }
 
     val success
         get() = status == Status.OK
@@ -27,7 +27,8 @@ open class TaskResult(
 abstract class Task<ET : Engine, RT : TaskResult>(protected val engine: ET) : LogInterface {
     override val logger: Logger = engine.logger
 
-    private var _status = MutableStateFlow(STATUS_WAITING)
+    private val _status = MutableStateFlow(STATUS_WAITING)
+    private val isCancelled = MutableStateFlow(false)
     private val onFinishedListeners = mutableListOf<(RT) -> Unit>()
 
     protected var triggerStatus: Int = STATUS_OK
@@ -42,24 +43,32 @@ abstract class Task<ET : Engine, RT : TaskResult>(protected val engine: ET) : Lo
 
     fun addOnFinishedListener(listener: (RT) -> Unit) = onFinishedListeners.add(listener)
 
+    fun cancel() {
+        isCancelled.value = true
+    }
+
     open fun run(triggerStatus: Int = STATUS_OK, onFinishedListener: ((RT) -> Unit)? = null) {
         this.triggerStatus = triggerStatus
         if (onFinishedListener != null) onFinishedListeners.add(onFinishedListener)
 
         engine.registerTask(this, triggerStatus) {
-            _status.value = STATUS_RUNNING
-            log("${javaClass.simpleName}: START", level = Log.DEBUG)
-            startMessageString?.let { log(it) }
-            start { result ->
-                _status.value = STATUS_FINISHED
-                if (result.success) {
-                    successMessageString?.let { log(it) }
-                    log("${javaClass.simpleName}: FINISH SUCCESSFULLY", level = Log.DEBUG)
-                } else {
-                    result.message?.let { log(it) }
-                    log("${javaClass.simpleName}: FINISH FAILINGLY", level = Log.ERROR)
+            if (isCancelled.value) {
+                _status.value = STATUS_CANCELLED
+            } else {
+                _status.value = STATUS_RUNNING
+                log("${javaClass.simpleName}: START", level = Log.DEBUG)
+                startMessageString?.let { log(it) }
+                start { result ->
+                    _status.value = STATUS_FINISHED
+                    if (result.success) {
+                        successMessageString?.let { log(it) }
+                        log("${javaClass.simpleName}: FINISH SUCCESSFULLY", level = Log.DEBUG)
+                    } else {
+                        result.message?.let { log(it) }
+                        log("${javaClass.simpleName}: FINISH FAILINGLY", level = Log.ERROR)
+                    }
+                    onFinishedListeners.forEach { it.invoke(result) }
                 }
-                onFinishedListeners.forEach { it.invoke(result) }
             }
         }
     }
@@ -67,6 +76,7 @@ abstract class Task<ET : Engine, RT : TaskResult>(protected val engine: ET) : Lo
     companion object {
         const val STATUS_WAITING = 0
         const val STATUS_RUNNING = 1
-        const val STATUS_FINISHED = 2
+        const val STATUS_CANCELLED = 2
+        const val STATUS_FINISHED = 3
     }
 }

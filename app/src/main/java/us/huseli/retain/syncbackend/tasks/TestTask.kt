@@ -21,12 +21,17 @@ class TestTaskResult(
     override fun hashCode() = timestamp.hashCode()
 
     fun getErrorMessage(context: Context): String {
-        return when (status) {
+        var message = when (status) {
             Status.UNKNOWN_HOST -> context.getString(R.string.unknown_host)
             Status.AUTH_ERROR -> context.getString(R.string.server_reported_authorization_error)
             Status.CONNECT_ERROR -> context.getString(R.string.connect_error)
-            else -> context.getString(R.string.unkown_error)
+            else -> context.getString(R.string.an_error_occurred)
         }
+        if (this.message != null || exception != null) {
+            message += "\n\n" + context.getString(R.string.the_error_was) + ' '
+            message += this.message ?: exception.toString()
+        }
+        return message
     }
 
     companion object {

@@ -8,5 +8,6 @@ object Enums {
         NONE("None"),
         NEXTCLOUD("Nextcloud"),
         SFTP("SFTP"),
+        DROPBOX("Dropbox"),
     }
 }

@@ -97,6 +97,7 @@ class EditChecklistNoteViewModel @Inject constructor(
                 item = previousItem,
                 text = previousItem.textFieldValue.value.text + stripNullChar(item.textFieldValue.value.text),
                 selection = TextRange(previousItem.textFieldValue.value.text.length),
+                composition = previousItem.textFieldValue.value.composition,
             )
         }
         _focusedItemId.value = previousItem.id
@@ -113,9 +114,15 @@ class EditChecklistNoteViewModel @Inject constructor(
         val head = textFieldValue.text.substring(0, textFieldValue.selection.start)
         val tail = textFieldValue.text.substring(textFieldValue.selection.start)
 
-        log("onNextItem: item=$item, head=$head, tail=$tail")
+        log("onNextItem: item=$item, head=$head, tail=$tail, index=$index")
+        if (tail.isNotEmpty()) updateItemTextFieldValue(
+            item = item,
+            text = head,
+            selection = item.textFieldValue.value.selection,
+            composition = null,
+            // composition = item.textFieldValue.value.composition,
+        )
         insertItem(tail, item.checked.value, index + 1)
-        if (tail.isNotEmpty()) updateItemTextFieldValue(item = item, text = head)
     }
 
     fun onTextFieldValueChange(item: ChecklistItemFlow, textFieldValue: TextFieldValue) {
@@ -126,19 +133,23 @@ class EditChecklistNoteViewModel @Inject constructor(
          * one above. If this is the first row: just re-insert the null
          * character and move the selection start to after it.
          */
-        val index = _checklistItems.value.indexOfFirst { it.id == item.id }
-
-        if (index > -1) {
-            if (textFieldValue.text.isEmpty() || textFieldValue.text[0] != INVISIBLE_CHAR) {
+        if (item.id == _focusedItemId.value && textFieldValue != item.textFieldValue.value) {
+            log("onTextFieldValueChange: textFieldValue=$textFieldValue, item.textFieldValue.value=${item.textFieldValue.value}")
+            if (
+                textFieldValue.text.getOrNull(0) != INVISIBLE_CHAR &&
+                addNullChar(textFieldValue.text) == item.textFieldValue.value.text
+            ) {
+                val index = _checklistItems.value
+                    .filter { it.checked.value == item.checked.value }
+                    .indexOfFirst { it.id == item.id }
                 if (index > 0) mergeItemWithPrevious(item)
-                else if (textFieldValue.text.isEmpty()) deleteItem(item, true)
-            } else {
-                updateItemTextFieldValue(
-                    item = item,
-                    text = textFieldValue.text,
-                    selection = textFieldValue.selection,
-                )
-            }
+                else if (index == 0 && textFieldValue.text.isEmpty()) deleteItem(item, true)
+            } else updateItemTextFieldValue(
+                item = item,
+                text = textFieldValue.text,
+                selection = textFieldValue.selection,
+                composition = textFieldValue.composition,
+            )
         }
     }
 
@@ -195,13 +206,17 @@ class EditChecklistNoteViewModel @Inject constructor(
 
     private fun updateItemTextFieldValue(
         item: ChecklistItemFlow,
-        text: String? = null,
-        selection: TextRange? = null,
+        text: String,
+        selection: TextRange,
+        composition: TextRange?,
     ) {
+        log("updateItemTextFieldValue before: ${item.textFieldValue.value}, text = $text, selection = $selection, composition=$composition")
         item.textFieldValue.value = item.textFieldValue.value.copy(
-            text = text?.let { addNullChar(it) } ?: item.textFieldValue.value.text,
-            selection = selection?.let { adjustSelection(it) } ?: item.textFieldValue.value.selection,
+            text = addNullChar(text),
+            selection = adjustSelection(selection),
+            composition = composition,
         )
+        log("updateItemTextFieldValue after: ${item.textFieldValue.value}, text = $text, selection = $selection, composition=$composition")
         _dirtyChecklistItems.removeIf { it.id == item.id }
         if (_originalChecklistItems.none { it.id == item.id && it.text == stripNullChar(item.textFieldValue.value.text) })
             _dirtyChecklistItems.add(item)

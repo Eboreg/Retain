@@ -1,12 +1,12 @@
 package us.huseli.retain.syncbackend.tasks
 
-import us.huseli.retain.Constants
+import us.huseli.retain.Constants.SYNCBACKEND_IMAGE_SUBDIR
 import us.huseli.retain.syncbackend.Engine
 
 class RemoveOrphanImagesTask<ET : Engine>(engine: ET, private val keep: List<String>) :
     ListFilesListTask<ET, OperationTaskResult, RemoveFileTask<ET>>(
         engine = engine,
-        remoteDir = engine.getAbsolutePath(Constants.SYNCBACKEND_IMAGE_SUBDIR),
+        remoteDir = engine.getAbsolutePath(SYNCBACKEND_IMAGE_SUBDIR),
         filter = { (name, _, isDirectory) -> !isDirectory && !keep.contains(name.split("/").last()) },
     ) {
     override val failOnUnsuccessfulChildTask = false

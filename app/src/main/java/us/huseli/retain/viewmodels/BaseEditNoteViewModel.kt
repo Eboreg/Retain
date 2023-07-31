@@ -29,10 +29,7 @@ data class ChecklistItemFlow(
     val checked: MutableStateFlow<Boolean> = MutableStateFlow(item.checked),
     val position: MutableStateFlow<Int> = MutableStateFlow(item.position),
     val textFieldValue: MutableStateFlow<TextFieldValue> = MutableStateFlow(
-        TextFieldValue(
-            addNullChar(item.text),
-            TextRange(1)
-        )
+        TextFieldValue(addNullChar(item.text), TextRange(1))
     )
 ) {
     override fun equals(other: Any?): Boolean {

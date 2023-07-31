@@ -5,9 +5,11 @@ import android.content.SharedPreferences
 import androidx.preference.PreferenceManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import us.huseli.retain.Constants
@@ -16,9 +18,11 @@ import us.huseli.retain.Enums.SyncBackend
 import us.huseli.retain.LogInterface
 import us.huseli.retain.Logger
 import us.huseli.retain.data.entities.Image
+import us.huseli.retain.syncbackend.DropboxEngine
 import us.huseli.retain.syncbackend.Engine
 import us.huseli.retain.syncbackend.NextCloudEngine
 import us.huseli.retain.syncbackend.SFTPEngine
+import us.huseli.retain.syncbackend.tasks.OperationTaskResult
 import us.huseli.retain.syncbackend.tasks.RemoveImagesTask
 import us.huseli.retain.syncbackend.tasks.SyncTask
 import us.huseli.retain.syncbackend.tasks.UploadNoteCombosTask
@@ -27,10 +31,12 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
+@OptIn(ExperimentalCoroutinesApi::class)
 class SyncBackendRepository @Inject constructor(
     @ApplicationContext context: Context,
     private val nextCloudEngine: NextCloudEngine,
     private val sftpEngine: SFTPEngine,
+    private val dropboxEngine: DropboxEngine,
     override val logger: Logger,
     private val noteDao: NoteDao,
     private val database: Database,
@@ -40,30 +46,44 @@ class SyncBackendRepository @Inject constructor(
 ) : SharedPreferences.OnSharedPreferenceChangeListener, LogInterface {
     private val imageDir = File(context.filesDir, Constants.IMAGE_SUBDIR).apply { mkdirs() }
     private val preferences = PreferenceManager.getDefaultSharedPreferences(context)
-    private val _syncBackend: MutableStateFlow<SyncBackend?> = MutableStateFlow(
-        preferences.getString(PREF_SYNC_BACKEND, null)?.let { SyncBackend.valueOf(it) }
+    private val _syncBackend: MutableStateFlow<SyncBackend> = MutableStateFlow(
+        preferences.getString(PREF_SYNC_BACKEND, null)?.let { SyncBackend.valueOf(it) } ?: SyncBackend.NONE
     )
-    private val engine: Engine?
-        get() = when (_syncBackend.value) {
-            SyncBackend.NEXTCLOUD -> nextCloudEngine
-            SyncBackend.SFTP -> sftpEngine
-            else -> null
+    private val engine = MutableStateFlow<Engine?>(null).apply {
+        ioScope.launch {
+            _syncBackend.collect {
+                value = syncBackendToEngine(it)
+            }
         }
+    }
+    private val onSaveListeners = mutableListOf<() -> Unit>()
 
-    val hasActiveTasks: Flow<Boolean> = engine?.hasActiveTasks ?: flowOf(false)
+    val isSyncing: Flow<Boolean> = engine.flatMapLatest { it?.isSyncing ?: flowOf(false) }
     val needsTesting = MutableStateFlow(true)
     val syncBackend = _syncBackend.asStateFlow()
 
     init {
         preferences.registerOnSharedPreferenceChangeListener(this)
+        engine.value = syncBackendToEngine(_syncBackend.value)
         ioScope.launch { sync() }
     }
 
-    fun removeImages(images: Collection<Image>) = engine?.let { RemoveImagesTask(it, images).run() }
+    private fun syncBackendToEngine(syncBackend: SyncBackend): Engine? = when (syncBackend) {
+        SyncBackend.NEXTCLOUD -> nextCloudEngine
+        SyncBackend.SFTP -> sftpEngine
+        SyncBackend.DROPBOX -> dropboxEngine
+        else -> null
+    }
 
-    suspend fun sync() {
+    fun addOnSaveListener(listener: () -> Unit) = onSaveListeners.add(listener)
+
+    fun removeImages(images: Collection<Image>) = engine.value?.let { RemoveImagesTask(it, images).run() }
+
+    fun save() = onSaveListeners.forEach { it.invoke() }
+
+    private suspend fun _sync() {
         @Suppress("Destructure")
-        engine?.let {
+        engine.value?.let {
             SyncTask(
                 engine = it,
                 localCombos = noteDao.listAllCombos().map { combo ->
@@ -78,26 +98,43 @@ class SyncBackendRepository @Inject constructor(
                 },
                 localImageDir = imageDir,
                 deletedNoteIds = noteDao.listDeletedIds(),
-            ).run()
+            ).run { result ->
+                if (!result.success) showError("Sync with ${it.backend.displayName} failed", result.exception)
+            }
         }
     }
 
-    suspend fun uploadNotes() {
-        engine?.let {
+    suspend fun sync() {
+        if (needsTesting.value) {
+            needsTesting.value = false
+            engine.value?.test { result ->
+                if (result.success) ioScope.launch { _sync() }
+            }
+        } else _sync()
+    }
+
+    suspend fun uploadNotes(onResult: ((OperationTaskResult) -> Unit)? = null) {
+        engine.value?.let {
             val combos = noteDao.listAllCombos()
             UploadNoteCombosTask(
                 engine = it,
                 combos = combos.map { combo ->
                     combo.copy(databaseVersion = database.openHelper.readableDatabase.version)
                 },
-            ).run { result ->
-                if (!result.success) logError("Failed to upload note(s) to Nextcloud: ${result.message}")
-            }
+            ).run { result -> onResult?.invoke(result) }
         }
     }
 
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
-        if (key == PREF_SYNC_BACKEND)
-            _syncBackend.value = preferences.getString(key, null)?.let { SyncBackend.valueOf(it) }
+        when (key) {
+            PREF_SYNC_BACKEND -> {
+                val value = preferences.getString(key, null)?.let { SyncBackend.valueOf(it) } ?: SyncBackend.NONE
+                if (value != _syncBackend.value) {
+                    engine.value?.cancelTasks()
+                    _syncBackend.value = value
+                    needsTesting.value = true
+                }
+            }
+        }
     }
 }

@@ -8,6 +8,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import us.huseli.retaintheme.ui.theme.RetainTheme
 import us.huseli.retain.ChecklistNoteDestination
 import us.huseli.retain.DebugDestination
 import us.huseli.retain.Enums.NoteType
@@ -19,7 +20,6 @@ import us.huseli.retain.TextNoteDestination
 import us.huseli.retain.compose.notescreen.ChecklistNoteScreen
 import us.huseli.retain.compose.notescreen.TextNoteScreen
 import us.huseli.retain.compose.settings.SettingsScreen
-import us.huseli.retain.ui.theme.RetainTheme
 import us.huseli.retain.viewmodels.NoteViewModel
 import us.huseli.retain.viewmodels.SettingsViewModel
 import java.util.UUID

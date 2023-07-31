@@ -41,25 +41,29 @@ class NoteViewModel @Inject constructor(
     private val _showArchive = MutableStateFlow(false)
 
     val syncBackend = syncBackendRepository.syncBackend
-    val isSyncBackendRefreshing = syncBackendRepository.hasActiveTasks
+    val isSyncBackendSyncing = syncBackendRepository.isSyncing
     val showArchive = _showArchive.asStateFlow()
     val trashedNoteCount = _trashedNotes.map { it.size }
     val isSelectEnabled = _selectedNoteIds.map { it.isNotEmpty() }
     val selectedNoteIds = _selectedNoteIds.asStateFlow()
     val notes = _notes.asStateFlow()
     val images: Flow<List<Image>> = repository.images
-    val checklistData = repository.checklistItems.map { items ->
-        items.groupBy { it.noteId }.map { (noteId, noteItems) ->
-            val shownItems = noteItems.subList(0, min(noteItems.size, 5))
-            val hiddenItems = noteItems.minus(shownItems.toSet())
+    val checklistData = repository.checklistItemsWithNote.map { items ->
+        items
+            .groupBy { it.note }
+            .map { (note, itemsWithNote) -> note to itemsWithNote.map { it.checklistItem } }
+            .map { (note, items) ->
+                val filteredItems = if (note.showChecked) items else items.filter { !it.checked }
+                val shownItems = filteredItems.subList(0, min(filteredItems.size, 5))
+                val hiddenItems = items.minus(shownItems.toSet())
 
-            NoteCardChecklistData(
-                noteId = noteId,
-                shownChecklistItems = shownItems,
-                hiddenChecklistItemCount = hiddenItems.size,
-                hiddenChecklistItemAllChecked = hiddenItems.all { it.checked },
-            )
-        }
+                NoteCardChecklistData(
+                    noteId = note.id,
+                    shownChecklistItems = shownItems,
+                    hiddenChecklistItemCount = hiddenItems.size,
+                    hiddenChecklistItemAllChecked = hiddenItems.all { it.checked },
+                )
+            }
     }
 
     init {
@@ -183,6 +187,9 @@ class NoteViewModel @Inject constructor(
     }
 
     fun uploadNotes() = viewModelScope.launch {
-        syncBackendRepository.uploadNotes()
+        syncBackendRepository.uploadNotes { result ->
+            if (!result.success)
+                showError("Failed to upload note(s) to ${syncBackend.value.displayName}: ${result.message}")
+        }
     }
 }

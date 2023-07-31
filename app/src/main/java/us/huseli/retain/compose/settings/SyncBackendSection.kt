@@ -69,12 +69,15 @@ fun SyncBackendSection(
             selected = syncBackend == SyncBackend.SFTP,
             onClick = { viewModel.updateField(PREF_SYNC_BACKEND, SyncBackend.SFTP) },
         )
+        SyncBackendRadioButton(
+            text = stringResource(R.string.sync_with_dropbox),
+            selected = syncBackend == SyncBackend.DROPBOX,
+            onClick = { viewModel.updateField(PREF_SYNC_BACKEND, SyncBackend.DROPBOX) },
+        )
 
-        if (syncBackend == SyncBackend.NEXTCLOUD) {
-            NextCloudSection(viewModel = viewModel, snackbarHostState = snackbarHostState)
-        }
-        if (syncBackend == SyncBackend.SFTP) {
-            SFTPSection(viewModel = viewModel)
-        }
+        if (syncBackend == SyncBackend.NEXTCLOUD)
+            NextCloudSection(snackbarHostState = snackbarHostState)
+        if (syncBackend == SyncBackend.SFTP) SFTPSection()
+        if (syncBackend == SyncBackend.DROPBOX) DropboxSection()
     }
 }

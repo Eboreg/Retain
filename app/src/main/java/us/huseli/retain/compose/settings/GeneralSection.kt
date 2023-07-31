@@ -1,5 +1,6 @@
 package us.huseli.retain.compose.settings
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
@@ -44,16 +45,19 @@ fun GeneralSection(
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
             Slider(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.weight(0.9f),
                 value = minColumnWidthSliderPos.toFloat(),
                 steps = columnWidthSteps,
                 onValueChange = { minColumnWidthSliderPos = it.roundToInt() },
                 onValueChangeFinished = { viewModel.updateField(PREF_MIN_COLUMN_WIDTH, minColumnWidthSliderPos) },
                 valueRange = 50f..maxColumnWidth.toFloat(),
             )
-            Text(
-                text = minColumnWidthSliderPos.toString(),
-            )
+            Column(modifier = Modifier.fillMaxWidth(0.1f)) {
+                Text(
+                    text = minColumnWidthSliderPos.toString(),
+                    modifier = Modifier.align(Alignment.End),
+                )
+            }
         }
     }
 }

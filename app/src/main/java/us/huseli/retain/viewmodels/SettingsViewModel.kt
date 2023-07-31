@@ -13,7 +13,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.preference.PreferenceManager
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
-import com.jcraft.jsch.JSch
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -26,19 +25,8 @@ import kotlinx.coroutines.withContext
 import okhttp3.internal.toImmutableList
 import org.jsoup.Jsoup
 import us.huseli.retain.Constants.DEFAULT_MIN_COLUMN_WIDTH
-import us.huseli.retain.Constants.NEXTCLOUD_BASE_DIR
 import us.huseli.retain.Constants.PREF_MIN_COLUMN_WIDTH
-import us.huseli.retain.Constants.PREF_NEXTCLOUD_BASE_DIR
-import us.huseli.retain.Constants.PREF_NEXTCLOUD_PASSWORD
-import us.huseli.retain.Constants.PREF_NEXTCLOUD_URI
-import us.huseli.retain.Constants.PREF_NEXTCLOUD_USERNAME
-import us.huseli.retain.Constants.PREF_SFTP_BASE_DIR
-import us.huseli.retain.Constants.PREF_SFTP_HOSTNAME
-import us.huseli.retain.Constants.PREF_SFTP_PASSWORD
-import us.huseli.retain.Constants.PREF_SFTP_PORT
-import us.huseli.retain.Constants.PREF_SFTP_USERNAME
 import us.huseli.retain.Constants.PREF_SYNC_BACKEND
-import us.huseli.retain.Constants.SFTP_BASE_DIR
 import us.huseli.retain.Enums.NoteType
 import us.huseli.retain.Enums.SyncBackend
 import us.huseli.retain.LogInterface
@@ -53,10 +41,6 @@ import us.huseli.retain.data.entities.NoteCombo
 import us.huseli.retain.extractFileFromZip
 import us.huseli.retain.isImageFile
 import us.huseli.retain.readTextFileFromZip
-import us.huseli.retain.syncbackend.NextCloudEngine
-import us.huseli.retain.syncbackend.SFTPEngine
-import us.huseli.retain.syncbackend.tasks.TaskResult
-import us.huseli.retain.syncbackend.tasks.TestTaskResult
 import us.huseli.retain.uriToImage
 import java.io.File
 import java.time.Instant
@@ -103,63 +87,38 @@ class SettingsViewModel @Inject constructor(
     @ApplicationContext context: Context,
     private val repository: NoteRepository,
     private val syncBackendRepository: SyncBackendRepository,
-    private val sftpEngine: SFTPEngine,
-    private val nextCloudEngine: NextCloudEngine,
     override val logger: Logger,
 ) : ViewModel(), SharedPreferences.OnSharedPreferenceChangeListener, LogInterface {
     private val preferences = PreferenceManager.getDefaultSharedPreferences(context)
     private var importJob: Job? = null
     private val sectionsShown = mutableMapOf<String, MutableState<Boolean>>()
-    private var syncBackendDataChanged = false
-    private val jsch = JSch()
-    private val knownHostsFile = File(context.filesDir, "known_hosts")
     private var originalSyncBackend = preferences.getString(PREF_SYNC_BACKEND, null)?.let { SyncBackend.valueOf(it) }
+    private val _importActionCount = MutableStateFlow<Int?>(null)
+    private val _importCurrentAction = MutableStateFlow("")
+    private val _importCurrentActionIndex = MutableStateFlow(0)
+    private val _keepImportIsActive = MutableStateFlow(false)
+    private val _minColumnWidth = MutableStateFlow(preferences.getInt(PREF_MIN_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH))
+    private val _quickNoteImportIsActive = MutableStateFlow(false)
+    private val _syncBackend = MutableStateFlow(originalSyncBackend)
 
-    val minColumnWidth = MutableStateFlow(preferences.getInt(PREF_MIN_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH))
-    val syncBackend = MutableStateFlow(originalSyncBackend)
-
-    val importActionCount = MutableStateFlow<Int?>(null)
-    val importCurrentAction = MutableStateFlow("")
-    val importCurrentActionIndex = MutableStateFlow(0)
-    val keepImportIsActive = MutableStateFlow(false)
-    val quickNoteImportIsActive = MutableStateFlow(false)
-    val syncBackendNeedsTesting = syncBackendRepository.needsTesting.asStateFlow()
-    val isSyncBackendEnabled = syncBackend.map { it != null && it != SyncBackend.NONE }
-
-    val isNextCloudAuthError = MutableStateFlow(false)
-    val isNextCloudTesting = nextCloudEngine.isTesting
-    val isNextCloudUrlError = MutableStateFlow(false)
-    val isNextCloudWorking = MutableStateFlow<Boolean?>(null)
-    val nextCloudBaseDir = MutableStateFlow(
-        preferences.getString(PREF_NEXTCLOUD_BASE_DIR, NEXTCLOUD_BASE_DIR) ?: NEXTCLOUD_BASE_DIR
-    )
-    val nextCloudPassword = MutableStateFlow(preferences.getString(PREF_NEXTCLOUD_PASSWORD, "") ?: "")
-    val nextCloudUri = MutableStateFlow(preferences.getString(PREF_NEXTCLOUD_URI, "") ?: "")
-    val nextCloudUsername = MutableStateFlow(preferences.getString(PREF_NEXTCLOUD_USERNAME, "") ?: "")
-
-    val isSFTPTesting = sftpEngine.isTesting
-    val isSFTPWorking = MutableStateFlow<Boolean?>(null)
-    val sftpHostname = MutableStateFlow(preferences.getString(PREF_SFTP_HOSTNAME, "") ?: "")
-    val sftpPassword = MutableStateFlow(preferences.getString(PREF_SFTP_PASSWORD, "") ?: "")
-    val sftpPort = MutableStateFlow(preferences.getInt(PREF_SFTP_PORT, 22))
-    val sftpUsername = MutableStateFlow(preferences.getString(PREF_SFTP_USERNAME, "") ?: "")
-    val sftpBaseDir = MutableStateFlow(preferences.getString(PREF_SFTP_BASE_DIR, SFTP_BASE_DIR) ?: SFTP_BASE_DIR)
-    val sftpPromptYesNo = sftpEngine.promptYesNo
+    val importActionCount = _importActionCount.asStateFlow()
+    val importCurrentAction = _importCurrentAction.asStateFlow()
+    val importCurrentActionIndex = _importCurrentActionIndex.asStateFlow()
+    val isSyncBackendEnabled = _syncBackend.map { it != null && it != SyncBackend.NONE }
+    val keepImportIsActive = _keepImportIsActive.asStateFlow()
+    val minColumnWidth = _minColumnWidth.asStateFlow()
+    val quickNoteImportIsActive = _quickNoteImportIsActive.asStateFlow()
+    val syncBackend = _syncBackend.asStateFlow()
 
     init {
         preferences.registerOnSharedPreferenceChangeListener(this)
-        jsch.setKnownHosts(knownHostsFile.absolutePath)
     }
-
-    fun approveSFTPKey() = sftpEngine.approveKey()
 
     fun cancelImport() {
         importJob?.cancel()
-        quickNoteImportIsActive.value = false
-        keepImportIsActive.value = false
+        _quickNoteImportIsActive.value = false
+        _keepImportIsActive.value = false
     }
-
-    fun denySFTPKey() = sftpEngine.denyKey()
 
     fun getSectionShown(key: String, default: Boolean): State<Boolean> {
         return sectionsShown[key] ?: mutableStateOf(default).also { sectionsShown[key] = it }
@@ -167,9 +126,9 @@ class SettingsViewModel @Inject constructor(
 
     @Suppress("destructure")
     fun keepImport(zipUri: Uri, context: Context) {
-        keepImportIsActive.value = true
-        importCurrentActionIndex.value = 0
-        importCurrentAction.value = ""
+        _keepImportIsActive.value = true
+        _importCurrentActionIndex.value = 0
+        _importCurrentAction.value = ""
 
         importJob = viewModelScope.launch {
             try {
@@ -198,7 +157,7 @@ class SettingsViewModel @Inject constructor(
                     }
                 }
 
-                importActionCount.value = ((noteCount + imageCount) * 2) + if (noteCount > 0) 1 else 0
+                _importActionCount.value = ((noteCount + imageCount) * 2) + if (noteCount > 0) 1 else 0
 
                 zipFile.entries().iterator().forEach { zipEntry ->
                     zipEntry?.let {
@@ -270,15 +229,15 @@ class SettingsViewModel @Inject constructor(
             } catch (e: Exception) {
                 log("Error: $e", level = Log.ERROR, showInSnackbar = true)
             } finally {
-                keepImportIsActive.value = false
+                _keepImportIsActive.value = false
             }
         }
     }
 
     fun quickNoteImport(zipUri: Uri, context: Context) {
-        quickNoteImportIsActive.value = true
-        importCurrentActionIndex.value = 0
-        importCurrentAction.value = ""
+        _quickNoteImportIsActive.value = true
+        _importCurrentActionIndex.value = 0
+        _importCurrentAction.value = ""
 
         viewModelScope.launch {
             try {
@@ -328,75 +287,21 @@ class SettingsViewModel @Inject constructor(
             } catch (e: Exception) {
                 log("Error: $e", level = Log.ERROR, showInSnackbar = true)
             } finally {
-                quickNoteImportIsActive.value = false
+                _quickNoteImportIsActive.value = false
             }
         }
     }
 
     fun save() {
+        syncBackendRepository.save()
         preferences.edit()
-            .putString(PREF_NEXTCLOUD_URI, nextCloudUri.value)
-            .putString(PREF_NEXTCLOUD_USERNAME, nextCloudUsername.value)
-            .putString(PREF_NEXTCLOUD_PASSWORD, nextCloudPassword.value)
-            .putString(PREF_NEXTCLOUD_BASE_DIR, nextCloudBaseDir.value)
-            .putInt(PREF_MIN_COLUMN_WIDTH, minColumnWidth.value)
-            .putString(PREF_SYNC_BACKEND, syncBackend.value?.name)
-            .putString(PREF_SFTP_HOSTNAME, sftpHostname.value)
-            .putInt(PREF_SFTP_PORT, sftpPort.value)
-            .putString(PREF_SFTP_USERNAME, sftpUsername.value)
-            .putString(PREF_SFTP_PASSWORD, sftpPassword.value)
-            .putString(PREF_SFTP_BASE_DIR, sftpBaseDir.value)
+            .putInt(PREF_MIN_COLUMN_WIDTH, _minColumnWidth.value)
+            .putString(PREF_SYNC_BACKEND, _syncBackend.value?.name)
             .apply()
-        if (syncBackendDataChanged) {
-            syncBackendRepository.needsTesting.value = true
-            syncBackendDataChanged = false
-        }
-        if (!listOf(SyncBackend.NONE, originalSyncBackend, null).contains(syncBackend.value)) {
-            syncBackendRepository.needsTesting.value = true
-            originalSyncBackend = syncBackend.value
+        if (!listOf(SyncBackend.NONE, originalSyncBackend, null).contains(_syncBackend.value)) {
+            originalSyncBackend = _syncBackend.value
             viewModelScope.launch {
                 syncBackendRepository.sync()
-            }
-        }
-    }
-
-    fun testSyncBackend(onResult: (TestTaskResult) -> Unit) {
-        when (syncBackend.value) {
-            SyncBackend.NEXTCLOUD -> testNextCloud(onResult)
-            SyncBackend.SFTP -> testSFTP(onResult)
-            else -> {}
-        }
-    }
-
-    fun testNextCloud(onResult: (TestTaskResult) -> Unit) = viewModelScope.launch {
-        if (syncBackend.value == SyncBackend.NEXTCLOUD) {
-            syncBackendRepository.needsTesting.value = false
-            nextCloudEngine.test(
-                Uri.parse(nextCloudUri.value),
-                nextCloudUsername.value,
-                nextCloudPassword.value,
-                nextCloudBaseDir.value,
-            ) { result ->
-                isNextCloudWorking.value = result.success
-                isNextCloudUrlError.value =
-                    result.status == TaskResult.Status.UNKNOWN_HOST || result.status == TaskResult.Status.CONNECT_ERROR
-                isNextCloudAuthError.value = result.status == TaskResult.Status.AUTH_ERROR
-                onResult(result)
-            }
-        }
-    }
-
-    fun testSFTP(onResult: (TestTaskResult) -> Unit) = viewModelScope.launch(Dispatchers.IO) {
-        if (syncBackend.value == SyncBackend.SFTP) {
-            syncBackendRepository.needsTesting.value = false
-            sftpEngine.test(
-                sftpHostname.value,
-                sftpUsername.value,
-                sftpPassword.value,
-                sftpBaseDir.value,
-            ) { result ->
-                isSFTPWorking.value = result.success
-                onResult(result)
             }
         }
     }
@@ -407,68 +312,11 @@ class SettingsViewModel @Inject constructor(
 
     fun updateField(field: String, value: Any) {
         when (field) {
-            PREF_NEXTCLOUD_URI -> {
-                if (value != nextCloudUri.value) {
-                    nextCloudUri.value = value as String
-                    syncBackendDataChanged = true
-                    resetNextCloudStatus()
-                }
-            }
-            PREF_NEXTCLOUD_USERNAME -> {
-                if (value != nextCloudUsername.value) {
-                    nextCloudUsername.value = value as String
-                    syncBackendDataChanged = true
-                    resetNextCloudStatus()
-                }
-            }
-            PREF_NEXTCLOUD_PASSWORD -> {
-                if (value != nextCloudPassword.value) {
-                    nextCloudPassword.value = value as String
-                    syncBackendDataChanged = true
-                    resetNextCloudStatus()
-                }
-            }
-            PREF_MIN_COLUMN_WIDTH -> minColumnWidth.value = value as Int
-            PREF_NEXTCLOUD_BASE_DIR -> nextCloudBaseDir.value = value as String
-            PREF_SFTP_BASE_DIR -> {
-                if (value != sftpBaseDir.value) {
-                    sftpBaseDir.value = value as String
-                    syncBackendDataChanged = true
-                    resetSFTPStatus()
-                }
-            }
-            PREF_SFTP_HOSTNAME -> {
-                if (value != sftpHostname.value) {
-                    sftpHostname.value = value as String
-                    syncBackendDataChanged = true
-                    resetSFTPStatus()
-                }
-            }
-            PREF_SFTP_PASSWORD -> {
-                if (value != sftpPassword.value) {
-                    sftpPassword.value = value as String
-                    syncBackendDataChanged = true
-                    resetSFTPStatus()
-                }
-            }
-            PREF_SFTP_PORT -> {
-                if (value != sftpPort.value) {
-                    sftpPort.value = value as Int
-                    syncBackendDataChanged = true
-                    resetSFTPStatus()
-                }
-            }
-            PREF_SFTP_USERNAME -> {
-                if (value != sftpUsername.value) {
-                    sftpUsername.value = value as String
-                    syncBackendDataChanged = true
-                    resetSFTPStatus()
-                }
-            }
+            PREF_MIN_COLUMN_WIDTH -> _minColumnWidth.value = value as Int
             PREF_SYNC_BACKEND -> {
-                if (value != syncBackend.value) {
-                    syncBackend.value = value as SyncBackend
-                    preferences.edit().putString(PREF_SYNC_BACKEND, syncBackend.value?.name).apply()
+                if (value != _syncBackend.value) {
+                    _syncBackend.value = value as SyncBackend
+                    preferences.edit().putString(PREF_SYNC_BACKEND, _syncBackend.value?.name).apply()
                 }
             }
         }
@@ -578,35 +426,15 @@ class SettingsViewModel @Inject constructor(
         return null
     }
 
-    private fun resetNextCloudStatus() {
-        isNextCloudWorking.value = null
-        isNextCloudUrlError.value = false
-        isNextCloudAuthError.value = false
-    }
-
-    private fun resetSFTPStatus() {
-        isSFTPWorking.value = null
-    }
-
     private fun updateCurrentAction(action: String) {
-        importCurrentActionIndex.value++
-        importCurrentAction.value = action
+        _importCurrentActionIndex.value++
+        _importCurrentAction.value = action
     }
 
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
         when (key) {
-            PREF_MIN_COLUMN_WIDTH -> minColumnWidth.value = preferences.getInt(key, DEFAULT_MIN_COLUMN_WIDTH)
-            PREF_NEXTCLOUD_BASE_DIR -> nextCloudBaseDir.value =
-                preferences.getString(key, NEXTCLOUD_BASE_DIR) ?: NEXTCLOUD_BASE_DIR
-            PREF_NEXTCLOUD_PASSWORD -> nextCloudPassword.value = preferences.getString(key, "") ?: ""
-            PREF_NEXTCLOUD_URI -> nextCloudUri.value = preferences.getString(key, "") ?: ""
-            PREF_NEXTCLOUD_USERNAME -> nextCloudUsername.value = preferences.getString(key, "") ?: ""
-            PREF_SFTP_BASE_DIR -> sftpBaseDir.value = preferences.getString(key, SFTP_BASE_DIR) ?: SFTP_BASE_DIR
-            PREF_SFTP_HOSTNAME -> sftpHostname.value = preferences.getString(key, "") ?: ""
-            PREF_SFTP_PASSWORD -> sftpPassword.value = preferences.getString(key, "") ?: ""
-            PREF_SFTP_PORT -> sftpPort.value = preferences.getInt(key, 22)
-            PREF_SFTP_USERNAME -> sftpUsername.value = preferences.getString(key, "") ?: ""
-            PREF_SYNC_BACKEND -> syncBackend.value =
+            PREF_MIN_COLUMN_WIDTH -> _minColumnWidth.value = preferences.getInt(key, DEFAULT_MIN_COLUMN_WIDTH)
+            PREF_SYNC_BACKEND -> _syncBackend.value =
                 preferences.getString(key, null)?.let { SyncBackend.valueOf(it) }
         }
     }

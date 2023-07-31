@@ -3,7 +3,7 @@ package us.huseli.retain.syncbackend.tasks
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import us.huseli.retain.Constants
+import us.huseli.retain.Constants.SYNCBACKEND_JSON_SUBDIR
 import us.huseli.retain.data.entities.NoteCombo
 import us.huseli.retain.syncbackend.Engine
 import java.io.File
@@ -14,7 +14,7 @@ class UploadNoteCombosTask<ET : Engine>(
     private val combos: Collection<NoteCombo>
 ) : OperationTask<ET, OperationTaskResult>(engine) {
     private val filename = "noteCombos.json"
-    private val remotePath = engine.getAbsolutePath(Constants.SYNCBACKEND_JSON_SUBDIR, filename)
+    private val remotePath = engine.getAbsolutePath(SYNCBACKEND_JSON_SUBDIR, filename)
     private val localFile = File(engine.tempDirUp, filename).apply { deleteOnExit() }
 
     override fun start(onResult: (OperationTaskResult) -> Unit) {

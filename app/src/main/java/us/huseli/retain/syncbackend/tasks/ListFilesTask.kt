@@ -6,7 +6,7 @@ import us.huseli.retain.syncbackend.Engine
 abstract class ListFilesTask<ET : Engine>(
     engine: ET,
     private val remoteDir: String,
-    protected val filter: ((RemoteFile) -> Boolean)? = null,
+    protected val filter: (RemoteFile) -> Boolean,
 ) : OperationTask<ET, OperationTaskResult>(engine) {
     protected val remoteFiles = mutableListOf<String>()
 

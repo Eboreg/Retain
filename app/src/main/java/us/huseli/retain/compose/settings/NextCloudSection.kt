@@ -1,14 +1,11 @@
 package us.huseli.retain.compose.settings
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.sharp.Check
-import androidx.compose.material.icons.sharp.Error
 import androidx.compose.material.icons.sharp.Visibility
 import androidx.compose.material.icons.sharp.VisibilityOff
 import androidx.compose.material3.Icon
@@ -33,6 +30,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_BASE_DIR
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_PASSWORD
@@ -42,25 +40,23 @@ import us.huseli.retain.R
 import us.huseli.retain.cleanUri
 import us.huseli.retain.compose.SweepLoadingOverlay
 import us.huseli.retain.syncbackend.tasks.TestTaskResult
-import us.huseli.retain.ui.theme.RetainColorDark
-import us.huseli.retain.ui.theme.RetainColorLight
-import us.huseli.retain.viewmodels.SettingsViewModel
+import us.huseli.retain.viewmodels.NextCloudViewModel
 
 @Composable
 fun NextCloudSection(
     modifier: Modifier = Modifier,
-    viewModel: SettingsViewModel,
+    viewModel: NextCloudViewModel = hiltViewModel(),
     snackbarHostState: SnackbarHostState,
 ) {
     val context = LocalContext.current
-    val uri by viewModel.nextCloudUri.collectAsStateWithLifecycle("")
-    val username by viewModel.nextCloudUsername.collectAsStateWithLifecycle("")
-    val password by viewModel.nextCloudPassword.collectAsStateWithLifecycle("")
-    val baseDir by viewModel.nextCloudBaseDir.collectAsStateWithLifecycle("")
-    val isTesting by viewModel.isNextCloudTesting.collectAsStateWithLifecycle()
-    val isWorking by viewModel.isNextCloudWorking.collectAsStateWithLifecycle()
-    val isUrlError by viewModel.isNextCloudUrlError.collectAsStateWithLifecycle()
-    val isAuthError by viewModel.isNextCloudAuthError.collectAsStateWithLifecycle()
+    val uri by viewModel.uri.collectAsStateWithLifecycle("")
+    val username by viewModel.username.collectAsStateWithLifecycle("")
+    val password by viewModel.password.collectAsStateWithLifecycle("")
+    val baseDir by viewModel.baseDir.collectAsStateWithLifecycle("")
+    val isTesting by viewModel.isTesting.collectAsStateWithLifecycle()
+    val isWorking by viewModel.isWorking.collectAsStateWithLifecycle()
+    val isUrlError by viewModel.isUrlError.collectAsStateWithLifecycle()
+    val isAuthError by viewModel.isAuthError.collectAsStateWithLifecycle()
     val successMessage = stringResource(R.string.successfully_connected_to_nextcloud)
 
     var testResult by remember { mutableStateOf<TestTaskResult?>(null) }
@@ -80,22 +76,6 @@ fun NextCloudSection(
                 onClose = { testResult = null }
             )
         }
-    }
-
-    val colors = if (isSystemInDarkTheme()) RetainColorDark else RetainColorLight
-    val workingIcon = @Composable {
-        Icon(
-            imageVector = Icons.Sharp.Check,
-            contentDescription = null,
-            tint = colors.Green,
-        )
-    }
-    val failIcon = @Composable {
-        Icon(
-            imageVector = Icons.Sharp.Error,
-            contentDescription = null,
-            tint = colors.Red,
-        )
     }
 
     BoxWithConstraints(modifier = modifier) {
@@ -125,8 +105,8 @@ fun NextCloudSection(
                     ),
                     enabled = !isTesting,
                     trailingIcon = {
-                        if (isWorking == true) workingIcon()
-                        else if (isUrlError) failIcon()
+                        if (isWorking == true) SuccessIcon()
+                        else if (isUrlError) FailIcon()
                     },
                 )
             }
@@ -140,8 +120,8 @@ fun NextCloudSection(
                     onValueChange = { viewModel.updateField(PREF_NEXTCLOUD_USERNAME, it) },
                     keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
                     trailingIcon = {
-                        if (isWorking == true) workingIcon()
-                        else if (isAuthError) failIcon()
+                        if (isWorking == true) SuccessIcon()
+                        else if (isAuthError) FailIcon()
                     },
                 )
             }
@@ -167,8 +147,8 @@ fun NextCloudSection(
                                     else stringResource(R.string.show_password),
                                 )
                             }
-                        else if (isWorking == true) workingIcon()
-                        else if (isAuthError) failIcon()
+                        else if (isWorking == true) SuccessIcon()
+                        else if (isAuthError) FailIcon()
                     }
                 )
             }
@@ -181,7 +161,7 @@ fun NextCloudSection(
                     onValueChange = { viewModel.updateField(PREF_NEXTCLOUD_BASE_DIR, it) },
                     enabled = !isTesting,
                     keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
-                    trailingIcon = { if (isWorking == true) workingIcon() },
+                    trailingIcon = { if (isWorking == true) SuccessIcon() },
                 )
             }
         }
@@ -189,7 +169,7 @@ fun NextCloudSection(
     }
     Row {
         OutlinedButton(
-            onClick = { viewModel.testNextCloud { result -> testResult = result } },
+            onClick = { viewModel.test { result -> testResult = result } },
             shape = ShapeDefaults.ExtraSmall,
             enabled = !isTesting && uriState.isNotEmpty() && username.isNotEmpty() && password.isNotEmpty(),
         ) {

@@ -24,7 +24,8 @@
     <string name="test_connection">Test connection</string>
     <string name="testing">Testing …</string>
     <string name="nextcloud_error">Nextcloud error</string>
-    <string name="unkown_error">Unknown error</string>
+    <string name="an_error_occurred">An error occurred.</string>
+    <string name="the_error_was">The error was:</string>
     <string name="successfully_connected_to_nextcloud">Successfully connected to Nextcloud.</string>
     <string name="server_reported_authorization_error">The server reported an authorization error. Username and/or password is probably incorrect.</string>
     <string name="unknown_host">No host with this name was found.</string>
@@ -65,7 +66,14 @@
     <string name="do_not_sync">Do not sync</string>
     <string name="sftp_base_directory">SFTP base directory</string>
     <string name="relative_to_users_home_directory">Relative to the user\'s home directory.</string>
-    <string name="backend">backend</string>
+    <string name="sync_with_dropbox">Sync with Dropbox</string>
+    <string name="not_connected_to_dropbox">Not connected to Dropbox.</string>
+    <string name="connected_to_dropbox_account">Connected to Dropbox account: %1$s.</string>
+    <string name="connect">Connect</string>
+    <string name="revoke">Revoke</string>
+    <string name="the_dropbox_connection_is_working">The Dropbox connection is working.</string>
+    <string name="the_dropbox_connection_is_not_working_somehow">The Dropbox connection is not working somehow.</string>
+    <string name="dropbox_error">Dropbox error</string>
     <plurals name="plus_x_items">
         <item quantity="one">+ 1 item</item>
         <item quantity="other">+ %1$d items</item>

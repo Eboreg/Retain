@@ -6,7 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -58,7 +57,7 @@ fun HomeScreen(
     onDebugClick: () -> Unit,
 ) {
     val syncBackend by viewModel.syncBackend.collectAsStateWithLifecycle()
-    val isSyncBackendRefreshing by viewModel.isSyncBackendRefreshing.collectAsStateWithLifecycle(false)
+    val isSyncBackendSyncing by viewModel.isSyncBackendSyncing.collectAsStateWithLifecycle(false)
     val isSyncBackendEnabled by settingsViewModel.isSyncBackendEnabled.collectAsStateWithLifecycle(false)
     val notes by viewModel.notes.collectAsStateWithLifecycle(emptyList())
     val images by viewModel.images.collectAsStateWithLifecycle(emptyList())
@@ -81,7 +80,7 @@ fun HomeScreen(
 
     if (isSyncBackendEnabled) {
         val refreshState = rememberPullRefreshState(
-            refreshing = isSyncBackendRefreshing,
+            refreshing = isSyncBackendSyncing,
             onRefresh = { viewModel.syncBackend() },
         )
         lazyModifier = lazyModifier.pullRefresh(state = refreshState)
@@ -115,7 +114,6 @@ fun HomeScreen(
 
     RetainScaffold(
         viewModel = viewModel,
-        settingsViewModel = settingsViewModel,
         topBar = {
             if (isSelectEnabled) SelectionTopAppBar(
                 selectedCount = selectedNoteIds.size,
@@ -156,17 +154,14 @@ fun HomeScreen(
         }
 
         Column(modifier = lazyModifier.padding(innerPadding).fillMaxWidth()) {
-            if (isSyncBackendRefreshing) {
+            if (isSyncBackendSyncing) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = stringResource(
-                            R.string.syncing_with,
-                            syncBackend?.displayName ?: stringResource(R.string.backend)
-                        ),
+                        text = stringResource(R.string.syncing_with, syncBackend.displayName),
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(end = 4.dp),
                     )
@@ -177,7 +172,6 @@ fun HomeScreen(
             if (viewType == HomeScreenViewType.GRID) {
                 LazyVerticalStaggeredGrid(
                     columns = StaggeredGridCells.Adaptive(minSize = minColumnWidth.dp),
-                    contentPadding = PaddingValues(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalItemSpacing = 8.dp,
                 ) {
@@ -187,7 +181,6 @@ fun HomeScreen(
                 LazyColumn(
                     modifier = Modifier.reorderable(reorderableState).detectReorder(reorderableState),
                     state = reorderableState.listState,
-                    contentPadding = PaddingValues(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(notes, key = { it.id }) { note ->

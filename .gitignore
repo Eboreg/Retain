@@ -1,15 +1,15 @@
 *.iml
-.gradle
-/local.properties
-/.idea
 .DS_Store
+.cxx
+.externalNativeBuild
+.gradle
+/.idea
 /build
 /captures
-.externalNativeBuild
-.cxx
+keystore.properties
 local.properties
-/keystore.properties
 /notes.txt
+secrets.properties
 
 # Built application files
 *.apk

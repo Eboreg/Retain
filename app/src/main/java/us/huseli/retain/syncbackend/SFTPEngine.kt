@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import com.jcraft.jsch.ChannelSftp
+import com.jcraft.jsch.ChannelSftp.SSH_FX_NO_SUCH_FILE
 import com.jcraft.jsch.JSch
 import com.jcraft.jsch.JSchException
 import com.jcraft.jsch.SftpException
@@ -13,13 +14,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import us.huseli.retain.Constants.DEFAULT_SFTP_BASE_DIR
 import us.huseli.retain.Constants.PREF_SFTP_BASE_DIR
 import us.huseli.retain.Constants.PREF_SFTP_HOSTNAME
 import us.huseli.retain.Constants.PREF_SFTP_PASSWORD
 import us.huseli.retain.Constants.PREF_SFTP_PORT
 import us.huseli.retain.Constants.PREF_SFTP_USERNAME
 import us.huseli.retain.Constants.PREF_SYNC_BACKEND
-import us.huseli.retain.Constants.SFTP_BASE_DIR
 import us.huseli.retain.Enums
 import us.huseli.retain.Logger
 import us.huseli.retain.syncbackend.tasks.OperationTaskResult
@@ -43,7 +44,8 @@ class SFTPEngine @Inject constructor(
     private val knownHostsFile = File(context.filesDir, "known_hosts")
     private val _isTesting = MutableStateFlow(false)
 
-    private val baseDir = MutableStateFlow(preferences.getString(PREF_SFTP_BASE_DIR, SFTP_BASE_DIR) ?: SFTP_BASE_DIR)
+    private val baseDir =
+        MutableStateFlow(preferences.getString(PREF_SFTP_BASE_DIR, DEFAULT_SFTP_BASE_DIR) ?: DEFAULT_SFTP_BASE_DIR)
     private val hostname = MutableStateFlow(preferences.getString(PREF_SFTP_HOSTNAME, "") ?: "")
     private val password = MutableStateFlow(preferences.getString(PREF_SFTP_PASSWORD, "") ?: "")
     private val port = MutableStateFlow(preferences.getInt(PREF_SFTP_PORT, 22))
@@ -73,6 +75,12 @@ class SFTPEngine @Inject constructor(
             else STATUS_DISABLED
         preferences.registerOnSharedPreferenceChangeListener(this)
         jsch.setKnownHosts(knownHostsFile.absolutePath)
+        ioScope.launch {
+            syncBackend.collect {
+                if (it != backend) status = STATUS_DISABLED
+                else if (status == STATUS_DISABLED) status = STATUS_READY
+            }
+        }
     }
 
     fun approveKey() {
@@ -93,7 +101,9 @@ class SFTPEngine @Inject constructor(
                     is ConnectException -> TaskResult.Status.CONNECT_ERROR
                     else -> TaskResult.Status.AUTH_ERROR
                 }
-            } else TaskResult.Status.OTHER_ERROR
+            } else if (exception is SftpException && exception.id == SSH_FX_NO_SUCH_FILE)
+                TaskResult.Status.PATH_NOT_FOUND
+            else TaskResult.Status.OTHER_ERROR
         return OperationTaskResult(status = status, exception = exception, objects = objects)
     }
 
@@ -155,16 +165,19 @@ class SFTPEngine @Inject constructor(
         )
     }
 
-    override fun downloadFile(remotePath: String, onResult: (OperationTaskResult) -> Unit) = ioScope.launch {
+    override fun downloadFile(
+        remotePath: String,
+        localFile: File,
+        onResult: (OperationTaskResult) -> Unit
+    ) = ioScope.launch {
         runCommand(
             command = { get(remotePath, tempDirDown.absolutePath) },
             onResult = { result ->
-                onResult(
-                    result.copy(
-                        localFiles = listOf(File(tempDirDown, remotePath.split('/').last())),
-                        objects = listOf(remotePath)
-                    )
-                )
+                val tmpFile = File(tempDirDown, remotePath.split('/').last())
+                if (result.success && tmpFile.absolutePath != localFile.absolutePath) {
+                    tmpFile.renameTo(localFile)
+                }
+                onResult(result.copy(localFiles = listOf(localFile), objects = listOf(remotePath)))
             },
         )
     }
@@ -174,7 +187,7 @@ class SFTPEngine @Inject constructor(
 
     override fun listFiles(
         remoteDir: String,
-        filter: ((RemoteFile) -> Boolean)?,
+        filter: (RemoteFile) -> Boolean,
         onResult: (OperationTaskResult) -> Unit
     ) = ioScope.launch {
         try {
@@ -185,7 +198,7 @@ class SFTPEngine @Inject constructor(
                         status = TaskResult.Status.OK,
                         remoteFiles = lsResult
                             .map { entry -> RemoteFile(entry.filename, entry.attrs.size, entry.attrs.isDir) }
-                            .filter(filter ?: { true }),
+                            .filter(filter),
                         objects = lsResult,
                     )
                 )
@@ -218,16 +231,13 @@ class SFTPEngine @Inject constructor(
 
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
         when (key) {
-            PREF_SFTP_BASE_DIR -> baseDir.value = preferences.getString(key, SFTP_BASE_DIR) ?: SFTP_BASE_DIR
+            PREF_SFTP_BASE_DIR -> baseDir.value =
+                preferences.getString(key, DEFAULT_SFTP_BASE_DIR) ?: DEFAULT_SFTP_BASE_DIR
             PREF_SFTP_HOSTNAME -> hostname.value = preferences.getString(key, "") ?: ""
             PREF_SFTP_PASSWORD -> password.value = preferences.getString(key, "") ?: ""
             PREF_SFTP_PORT -> port.value = preferences.getInt(key, 22)
             PREF_SFTP_USERNAME -> username.value = preferences.getString(key, "") ?: ""
-            PREF_SYNC_BACKEND -> {
-                if (preferences.getString(key, null) == Enums.SyncBackend.SFTP.name) {
-                    if (status == STATUS_DISABLED) status = STATUS_READY
-                } else status = STATUS_DISABLED
-            }
+            PREF_SYNC_BACKEND -> updateSyncBackend()
         }
     }
 }
