@@ -12,7 +12,6 @@ local.properties
 secrets.properties
 
 # Built application files
-*.apk
 *.aar
 *.ap_
 *.aab
