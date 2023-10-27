@@ -1,3 +1,5 @@
+@file:Suppress("AnimateAsStateLabel")
+
 package us.huseli.retain.compose.notescreen
 
 import androidx.compose.animation.core.animateFloatAsState

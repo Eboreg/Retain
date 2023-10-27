@@ -34,19 +34,6 @@ import androidx.compose.ui.unit.sp
 import org.burnoutcrew.reorderable.ReorderableLazyListState
 import org.burnoutcrew.reorderable.detectReorder
 
-/**
- * A row with a checkbox and a textfield. Multiple rows of these emulate
- * multiline text editing behaviour, in that pressing enter in the middle of
- * a row will bring the characters after the cursor down to a new row, and
- * pressing backspace at the beginning of a row will paste the entire row
- * contents to the end of the previous row.
- *
- * This is done via a hack where the textfield internally has an invisible
- * null character at the beginning. Normally, there is no way for us to know
- * that the user has pressed backspace when there are no characters before the
- * cursor, but in this way, there actually are, even though it looks like the
- * cursor is at the beginning of the row.
- */
 @Composable
 fun ChecklistNoteChecklistRow(
     modifier: Modifier = Modifier,
@@ -104,23 +91,17 @@ fun ChecklistNoteChecklistRow(
             onValueChange = onTextFieldValueChange,
             keyboardOptions = KeyboardOptions.Default.copy(
                 imeAction = ImeAction.Next,
-                capitalization =
-                if (textFieldValue.selection.start == 1) KeyboardCapitalization.Characters
-                else KeyboardCapitalization.Sentences,
+                capitalization = KeyboardCapitalization.Sentences,
             ),
             keyboardActions = KeyboardActions(
                 onNext = { onNext() }
             ),
             modifier = Modifier
-                .onFocusChanged {
-                    if (it.isFocused) onFocus()
-                }
+                .onFocusChanged { if (it.isFocused) onFocus() }
                 .weight(1f)
                 .fillMaxWidth()
                 .focusRequester(focusRequester)
-                .onGloballyPositioned {
-                    if (isFocused) focusRequester.requestFocus()
-                },
+                .onGloballyPositioned { if (isFocused) focusRequester.requestFocus() },
         )
         IconButton(onClick = onDeleteClick) {
             Icon(

@@ -10,9 +10,9 @@ import us.huseli.retaintheme.ui.theme.RetainBasicColorsDark
 import us.huseli.retaintheme.ui.theme.RetainBasicColorsLight
 import kotlin.math.max
 
-val noteColors: (RetainBasicColors) -> Map<String, Color> = { colorScheme ->
+val noteColors: (RetainBasicColors, Color) -> Map<String, Color> = { colorScheme, default ->
     mapOf(
-        "DEFAULT" to Color.Transparent,
+        "DEFAULT" to default,
         "RED" to colorScheme.Red,
         "ORANGE" to colorScheme.Orange,
         "YELLOW" to colorScheme.Yellow,
@@ -28,25 +28,26 @@ val noteColors: (RetainBasicColors) -> Map<String, Color> = { colorScheme ->
 }
 
 @Composable
-fun getNoteColors(): Map<String, Color> =
-    noteColors(if (isSystemInDarkTheme()) RetainBasicColorsDark else RetainBasicColorsLight)
+fun getNoteColors(default: Color): Map<String, Color> =
+    noteColors(if (isSystemInDarkTheme()) RetainBasicColorsDark else RetainBasicColorsLight, default)
 
-fun getNoteColor(key: String, dark: Boolean): Color {
+fun getNoteColor(key: String, dark: Boolean, default: Color): Color {
     val colorScheme = if (dark) RetainBasicColorsDark else RetainBasicColorsLight
-    return noteColors(colorScheme).getOrDefault(key, Color.Transparent)
+    return noteColors(colorScheme, default).getOrDefault(key, default)
 }
 
-fun getNoteColor(context: Context, key: String) = getNoteColor(
+fun getNoteColor(context: Context, key: String, default: Color) = getNoteColor(
     key = key,
-    dark = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+    dark = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES,
+    default = default,
 )
 
 @Composable
-fun getNoteColor(key: String): Color = getNoteColor(key, isSystemInDarkTheme())
+fun getNoteColor(key: String, default: Color): Color = getNoteColor(key, isSystemInDarkTheme(), default)
 
-fun getAppBarColor(key: String, dark: Boolean): Color {
-    return if (key == "DEFAULT") Color.Transparent
-    else getNoteColor(key, dark).let {
+fun getAppBarColor(key: String, dark: Boolean, default: Color): Color {
+    return if (key == "DEFAULT") default
+    else getNoteColor(key, dark, default).let {
         it.copy(
             red = max(it.red - 0.05f, 0f),
             green = max(it.green - 0.05f, 0f),
@@ -55,7 +56,8 @@ fun getAppBarColor(key: String, dark: Boolean): Color {
     }
 }
 
-fun getAppBarColor(context: Context, key: String) = getAppBarColor(
+fun getAppBarColor(context: Context, key: String, default: Color) = getAppBarColor(
     key = key,
-    dark = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+    dark = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES,
+    default = default,
 )

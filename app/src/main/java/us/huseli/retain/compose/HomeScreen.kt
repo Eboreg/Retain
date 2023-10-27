@@ -1,7 +1,6 @@
 package us.huseli.retain.compose
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -44,7 +43,7 @@ import us.huseli.retain.data.entities.Note
 import us.huseli.retain.viewmodels.NoteViewModel
 import us.huseli.retain.viewmodels.SettingsViewModel
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterialApi::class)
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
@@ -179,7 +178,10 @@ fun HomeScreen(
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier.reorderable(reorderableState).detectReorder(reorderableState),
+                    modifier = Modifier
+                        .reorderable(reorderableState)
+                        .detectReorder(reorderableState)
+                        .fillMaxHeight(),
                     state = reorderableState.listState,
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {

@@ -59,7 +59,8 @@ fun NoteCard(
     isDragging: Boolean,
 ) {
     val elevation by animateDpAsState(if (isDragging) 16.dp else 0.dp)
-    val noteColor = getNoteColor(note.color)
+    val defaultColor = MaterialTheme.colorScheme.background
+    val noteColor = getNoteColor(note.color, defaultColor)
     val border =
         if (isSelected) BorderStroke(3.dp, MaterialTheme.colorScheme.primary)
         else BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f))

@@ -51,7 +51,8 @@ fun ChecklistNoteScreen(
     val reorderableState = rememberReorderableLazyListState(
         onMove = { from, to -> viewModel.switchItemPositions(from, to) },
     )
-    val noteColor by remember(note.color) { mutableStateOf(getNoteColor(context, note.color)) }
+    val defaultColor = MaterialTheme.colorScheme.background
+    val noteColor by remember(note.color) { mutableStateOf(getNoteColor(context, note.color, defaultColor)) }
 
     LaunchedEffect(trashedChecklistItems) {
         if (trashedChecklistItems.isNotEmpty()) {
@@ -119,10 +120,7 @@ fun ChecklistNoteScreen(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .clickable {
-                        val index = uncheckedItems.size
-                        viewModel.insertItem(text = "", checked = false, index = index)
-                    }
+                    .clickable { viewModel.insertItem(text = "", checked = false, index = uncheckedItems.size) }
                     .padding(vertical = 8.dp)
                     .fillMaxWidth()
             ) {

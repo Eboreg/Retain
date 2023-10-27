@@ -72,8 +72,10 @@ fun BaseNoteScreen(
     val context = LocalContext.current
     val images by viewModel.images.collectAsStateWithLifecycle()
     val trashedImageCount by viewModel.trashedImageCount.collectAsStateWithLifecycle(0)
-    val noteColor by remember(color) { mutableStateOf(getNoteColor(context, color)) }
-    val appBarColor by remember(color) { mutableStateOf(getAppBarColor(context, color)) }
+    val background = MaterialTheme.colorScheme.background
+    val surface = MaterialTheme.colorScheme.surface
+    val noteColor by remember(color) { mutableStateOf(getNoteColor(context, color, background)) }
+    val appBarColor by remember(color) { mutableStateOf(getAppBarColor(context, color, surface)) }
     val selectedImages by viewModel.selectedImages.collectAsStateWithLifecycle()
     val imageAdded by viewModel.imageAdded.collectAsStateWithLifecycle(null)
     val isImageSelectEnabled = selectedImages.isNotEmpty()
