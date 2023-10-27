@@ -28,6 +28,7 @@ abstract class Database : RoomDatabase() {
     abstract fun noteDao(): NoteDao
     abstract fun checklistItemDao(): ChecklistItemDao
     abstract fun imageDao(): ImageDao
+
     @EntryPoint
     @InstallIn(SingletonComponent::class)
     interface DatabaseEntryPoint {

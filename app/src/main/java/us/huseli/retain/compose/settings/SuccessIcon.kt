@@ -7,12 +7,12 @@ import androidx.compose.material.icons.sharp.CheckCircle
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import us.huseli.retaintheme.ui.theme.RetainColorDark
-import us.huseli.retaintheme.ui.theme.RetainColorLight
+import us.huseli.retaintheme.ui.theme.RetainBasicColorsDark
+import us.huseli.retaintheme.ui.theme.RetainBasicColorsLight
 
 @Composable
 fun SuccessIcon(modifier: Modifier = Modifier, circled: Boolean = false) {
-    val colors = if (isSystemInDarkTheme()) RetainColorDark else RetainColorLight
+    val colors = if (isSystemInDarkTheme()) RetainBasicColorsDark else RetainBasicColorsLight
 
     Icon(
         modifier = modifier,

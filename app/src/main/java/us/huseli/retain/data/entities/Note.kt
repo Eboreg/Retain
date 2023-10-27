@@ -27,8 +27,7 @@ data class Note(
 
     override fun compareTo(other: Note) = (updated.epochSecond - other.updated.epochSecond).toInt()
 
-    override fun equals(other: Any?) =
-        other is Note &&
+    override fun equals(other: Any?) = other is Note &&
         other.id == id &&
         other.title == title &&
         other.text == text &&

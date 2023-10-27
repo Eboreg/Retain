@@ -13,6 +13,7 @@ import javax.inject.Inject
 class RetainActivity : ComponentActivity() {
     @Inject
     lateinit var logger: Logger
+
     @Inject
     lateinit var dropboxEngine: DropboxEngine
 

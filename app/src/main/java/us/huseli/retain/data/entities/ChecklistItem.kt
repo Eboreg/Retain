@@ -27,8 +27,7 @@ open class ChecklistItem(
     override fun toString() =
         "<ChecklistItem: id=$id, text=$text, position=$position, noteId=$noteId>"
 
-    override fun equals(other: Any?) =
-        other is ChecklistItem &&
+    override fun equals(other: Any?) = other is ChecklistItem &&
         other.id == id &&
         other.text == text &&
         other.noteId == noteId &&

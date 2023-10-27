@@ -43,21 +43,19 @@ data class Image(
         added: Instant,
         size: Int,
         position: Int
-    ) :
-        this(
-            filename = filename,
-            mimeType = mimeType,
-            width = width,
-            height = height,
-            noteId = noteId,
-            added = added,
-            size = size,
-            position = position,
-            imageBitmap = MutableStateFlow<ImageBitmap?>(null)
-        )
+    ) : this(
+        filename = filename,
+        mimeType = mimeType,
+        width = width,
+        height = height,
+        noteId = noteId,
+        added = added,
+        size = size,
+        position = position,
+        imageBitmap = MutableStateFlow<ImageBitmap?>(null)
+    )
 
-    override fun equals(other: Any?) =
-        other is Image &&
+    override fun equals(other: Any?) = other is Image &&
         other.filename == filename &&
         other.mimeType == mimeType &&
         other.width == width &&

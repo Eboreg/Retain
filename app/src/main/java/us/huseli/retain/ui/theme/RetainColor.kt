@@ -5,14 +5,14 @@ import android.content.res.Configuration
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import us.huseli.retaintheme.ui.theme.RetainColorDark
-import us.huseli.retaintheme.ui.theme.RetainColorLight
-import us.huseli.retaintheme.ui.theme.RetainColorScheme
+import us.huseli.retaintheme.ui.theme.RetainBasicColors
+import us.huseli.retaintheme.ui.theme.RetainBasicColorsDark
+import us.huseli.retaintheme.ui.theme.RetainBasicColorsLight
 import kotlin.math.max
 
-val noteColors: (RetainColorScheme) -> Map<String, Color> = { colorScheme ->
+val noteColors: (RetainBasicColors) -> Map<String, Color> = { colorScheme ->
     mapOf(
-        "DEFAULT" to colorScheme.Background,
+        "DEFAULT" to Color.Transparent,
         "RED" to colorScheme.Red,
         "ORANGE" to colorScheme.Orange,
         "YELLOW" to colorScheme.Yellow,
@@ -28,11 +28,12 @@ val noteColors: (RetainColorScheme) -> Map<String, Color> = { colorScheme ->
 }
 
 @Composable
-fun getNoteColors(): Map<String, Color> = noteColors(if (isSystemInDarkTheme()) RetainColorDark else RetainColorLight)
+fun getNoteColors(): Map<String, Color> =
+    noteColors(if (isSystemInDarkTheme()) RetainBasicColorsDark else RetainBasicColorsLight)
 
 fun getNoteColor(key: String, dark: Boolean): Color {
-    val colorScheme = if (dark) RetainColorDark else RetainColorLight
-    return noteColors(colorScheme).getOrDefault(key, colorScheme.Background)
+    val colorScheme = if (dark) RetainBasicColorsDark else RetainBasicColorsLight
+    return noteColors(colorScheme).getOrDefault(key, Color.Transparent)
 }
 
 fun getNoteColor(context: Context, key: String) = getNoteColor(
@@ -44,9 +45,7 @@ fun getNoteColor(context: Context, key: String) = getNoteColor(
 fun getNoteColor(key: String): Color = getNoteColor(key, isSystemInDarkTheme())
 
 fun getAppBarColor(key: String, dark: Boolean): Color {
-    val colorScheme = if (dark) RetainColorDark else RetainColorLight
-
-    return if (key == "DEFAULT") colorScheme.Surface
+    return if (key == "DEFAULT") Color.Transparent
     else getNoteColor(key, dark).let {
         it.copy(
             red = max(it.red - 0.05f, 0f),
