@@ -36,6 +36,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.delay
 import org.burnoutcrew.reorderable.ReorderableLazyListState
 import org.burnoutcrew.reorderable.reorderable
 import us.huseli.retain.R
@@ -117,6 +118,19 @@ fun BaseNoteScreen(
                 viewModel.deletedChecklistItemIds,
                 viewModel.deletedImageIds
             )
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            onSave(
+                viewModel.dirtyNote,
+                viewModel.dirtyChecklistItems,
+                viewModel.dirtyImages,
+                viewModel.deletedChecklistItemIds,
+                viewModel.deletedImageIds,
+            )
+            delay(5000L)
         }
     }
 
