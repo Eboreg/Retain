@@ -41,7 +41,7 @@ class NoteViewModel @Inject constructor(
     private val _checklistItems = MutableStateFlow<List<ChecklistItem>>(emptyList())
     private val _selectedImages = MutableStateFlow<Set<String>>(emptySet())
     private val _focusedChecklistItemId = MutableStateFlow<UUID?>(null)
-    private val _isUnsaved = MutableStateFlow(true)
+    private val _isUnsaved = MutableStateFlow(false)
     private val _checklistItemUndoState = MutableStateFlow<List<ChecklistItem>?>(null)
     private val _imageUndoState = MutableStateFlow<List<Image>?>(null)
 

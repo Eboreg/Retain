@@ -113,27 +113,28 @@ fun LazyListScope.ChecklistNoteChecklist(
             }
         } else item { Spacer(Modifier.height(4.dp)) }
 
-        item {
-            // "Add item" link:
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .clickable(onClick = onAddItemClick)
-                    .padding(vertical = 8.dp)
-                    .fillMaxWidth()
-            ) {
-                Icon(
-                    imageVector = Icons.Sharp.Add,
-                    contentDescription = null,
-                    modifier = Modifier.padding(horizontal = 12.dp),
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                )
-                Text(
-                    text = stringResource(R.string.add_item),
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                    modifier = Modifier.padding(horizontal = 6.dp)
-                )
-            }
+    }
+
+    item {
+        // "Add item" link:
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .clickable(onClick = onAddItemClick)
+                .padding(vertical = 8.dp)
+                .fillMaxWidth()
+        ) {
+            Icon(
+                imageVector = Icons.Sharp.Add,
+                contentDescription = null,
+                modifier = Modifier.padding(horizontal = 12.dp),
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+            )
+            Text(
+                text = stringResource(R.string.add_item),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                modifier = Modifier.padding(horizontal = 6.dp)
+            )
         }
     }
 }

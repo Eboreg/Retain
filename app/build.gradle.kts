@@ -39,8 +39,8 @@ android {
         applicationId = "us.huseli.retain"
         minSdk = 26
         targetSdk = targetSdk
-        versionCode = 5
-        versionName = "1.0.0-beta.5"
+        versionCode = 6
+        versionName = "1.0.0-beta.6"
         vectorDrawables.useSupportLibrary = true
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // buildConfigField("String", "dropboxAppKey", "\"${dropboxAppKey}\"")

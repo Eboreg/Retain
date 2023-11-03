@@ -138,7 +138,7 @@ fun NoteScreen(
                 NoteScreenTopAppBar(
                     backgroundColor = appBarColor,
                     onBackClick = {
-                        viewModel.save()
+                        if (isUnsaved) viewModel.save()
                         onBackClick()
                     },
                     onImagePick = { uri -> viewModel.insertImage(uri) },
