@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.sharp.Add
 import androidx.compose.material.icons.sharp.ExpandMore
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -23,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import org.burnoutcrew.reorderable.ReorderableItem
@@ -45,6 +47,7 @@ fun LazyListScope.ChecklistNoteChecklist(
     onItemFocus: (ChecklistItem) -> Unit,
     onShowCheckedClick: () -> Unit,
     backgroundColor: Color,
+    onAddItemClick: () -> Unit,
 ) {
     items(uncheckedItems, key = { it.id }) { item ->
         ReorderableItem(state, key = item.id) { isDragging ->
@@ -72,9 +75,9 @@ fun LazyListScope.ChecklistNoteChecklist(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .padding(vertical = 8.dp)
                     .fillMaxWidth()
-                    .clickable { onShowCheckedClick() },
+                    .clickable { onShowCheckedClick() }
+                    .padding(vertical = 8.dp),
             ) {
                 Icon(
                     imageVector = Icons.Sharp.ExpandMore,
@@ -108,9 +111,28 @@ fun LazyListScope.ChecklistNoteChecklist(
                     )
                 }
             }
-        } else {
-            item {
-                Spacer(Modifier.height(4.dp))
+        } else item { Spacer(Modifier.height(4.dp)) }
+
+        item {
+            // "Add item" link:
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clickable(onClick = onAddItemClick)
+                    .padding(vertical = 8.dp)
+                    .fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Sharp.Add,
+                    contentDescription = null,
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                )
+                Text(
+                    text = stringResource(R.string.add_item),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                    modifier = Modifier.padding(horizontal = 6.dp)
+                )
             }
         }
     }

@@ -13,9 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.sharp.Add
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -30,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
@@ -188,7 +186,9 @@ fun NoteScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     OutlinedTextField(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .onFocusChanged { if (it.isFocused) viewModel.setChecklistItemFocus(null) },
                         value = note?.title ?: "",
                         onValueChange = { viewModel.setTitle(it) },
                         textStyle = MaterialTheme.typography.headlineSmall,
@@ -199,7 +199,7 @@ fun NoteScreen(
                         keyboardActions = KeyboardActions(
                             onNext = {
                                 if (note?.type == NoteType.CHECKLIST && checkedItems.isEmpty() && uncheckedItems.isEmpty()) {
-                                    viewModel.insertChecklistItem(text = "", checked = false, index = 0)
+                                    viewModel.insertChecklistItem(text = "", checked = false, position = 0)
                                 }
                             }
                         ),
@@ -258,36 +258,14 @@ fun NoteScreen(
                             backgroundColor = noteColor,
                             focusedItemId = focusedChecklistItemId,
                             onItemFocus = { viewModel.setChecklistItemFocus(it) },
+                            onAddItemClick = {
+                                viewModel.insertChecklistItem(
+                                    text = "",
+                                    checked = false,
+                                    position = uncheckedItems.size,
+                                )
+                            },
                         )
-
-                        item {
-                            // "Add item" link:
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .clickable {
-                                        viewModel.insertChecklistItem(
-                                            text = "",
-                                            checked = false,
-                                            index = uncheckedItems.size,
-                                        )
-                                    }
-                                    .padding(vertical = 8.dp)
-                                    .fillMaxWidth()
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Sharp.Add,
-                                    contentDescription = null,
-                                    modifier = Modifier.padding(horizontal = 12.dp),
-                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                                )
-                                Text(
-                                    text = stringResource(R.string.add_item),
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                                    modifier = Modifier.padding(horizontal = 6.dp)
-                                )
-                            }
-                        }
                     }
                 }
             }

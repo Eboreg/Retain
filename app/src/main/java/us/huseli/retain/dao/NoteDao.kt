@@ -18,6 +18,9 @@ interface NoteDao {
     @Delete
     suspend fun _delete(notes: Collection<Note>)
 
+    @Query("SELECT EXISTS(SELECT * FROM note WHERE noteId = :noteId)")
+    suspend fun _exists(noteId: UUID): Boolean
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun _insert(note: Note)
 
@@ -77,6 +80,7 @@ interface NoteDao {
     @Transaction
     suspend fun upsert(note: Note) {
         _makePlaceFor(note.id, note.position)
-        _insert(note)
+        if (_exists(note.id)) update(listOf(note))
+        else _insert(note)
     }
 }

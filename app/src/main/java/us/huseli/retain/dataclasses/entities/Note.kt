@@ -22,9 +22,6 @@ data class Note(
     @ColumnInfo(name = "noteIsDeleted", defaultValue = "0") val isDeleted: Boolean = false,
     @ColumnInfo(name = "noteIsArchived", defaultValue = "0") val isArchived: Boolean = false,
 ) : Comparable<Note> {
-    override fun toString() =
-        "<Note: id=$id, title=$title, created=$created, updated=$updated, isDeleted=$isDeleted, isArchived=$isArchived]>"
-
     override fun compareTo(other: Note) = (updated.epochSecond - other.updated.epochSecond).toInt()
 
     override fun equals(other: Any?) = other is Note &&

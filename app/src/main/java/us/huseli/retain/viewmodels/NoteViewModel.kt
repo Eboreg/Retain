@@ -90,13 +90,20 @@ class NoteViewModel @Inject constructor(
         _selectedImages.value = emptySet()
     }
 
-    fun insertChecklistItem(text: String, checked: Boolean, index: Int): ChecklistItem =
-        ChecklistItem(text = text, checked = checked, position = index, noteId = _noteId).also { item ->
-            _checklistItems.value = _checklistItems.value.toMutableList().apply { add(item.position, item) }
-            setChecklistItemFocus(item)
-            updateChecklistItemPositions()
-            save(NotePojo.Component.CHECKLIST_ITEMS)
-        }
+    fun insertChecklistItem(text: String, checked: Boolean, position: Int): ChecklistItem {
+        val item = ChecklistItem(text = text, checked = checked, position = position, noteId = _noteId)
+
+        _checklistItems.value = _checklistItems.value
+            .map {
+                if (it.position >= position && it.checked == checked) it.copy(position = it.position + 1)
+                else it
+            }.plus(item).sorted()
+
+        setChecklistItemFocus(item)
+        save(NotePojo.Component.CHECKLIST_ITEMS)
+
+        return item
+    }
 
     fun insertImage(uri: Uri) = viewModelScope.launch {
         repository.uriToImage(uri, _noteId)?.let { image ->
@@ -112,8 +119,8 @@ class NoteViewModel @Inject constructor(
         _selectedImages.value = _images.value.map { it.filename }.toSet()
     }
 
-    fun setChecklistItemFocus(item: ChecklistItem) {
-        _focusedChecklistItemId.value = item.id
+    fun setChecklistItemFocus(item: ChecklistItem?) {
+        _focusedChecklistItemId.value = item?.id
     }
 
     fun setChecklistItemText(item: ChecklistItem, value: String) {
@@ -145,13 +152,11 @@ class NoteViewModel @Inject constructor(
          * Splits item's text at cursor position, moves the last part to a new
          * item, moves focus to this item.
          */
-        val index = _checklistItems.value.indexOfFirst { it.id == item.id }
         val head = textFieldValue.text.substring(0, textFieldValue.selection.start)
         val tail = textFieldValue.text.substring(textFieldValue.selection.start)
 
-        log("onNextItem: item=$item, head=$head, tail=$tail, index=$index")
         setChecklistItemText(item, head)
-        insertChecklistItem(text = tail, checked = item.checked, index = index + 1)
+        insertChecklistItem(text = tail, checked = item.checked, position = item.position + 1)
     }
 
     fun switchItemPositions(from: ItemPosition, to: ItemPosition) {
@@ -159,14 +164,17 @@ class NoteViewModel @Inject constructor(
          * We cannot use ItemPosition.index because the lazy column contains
          * a whole bunch of other junk than checklist items.
          */
-        val fromIdx = _checklistItems.value.indexOfFirst { it.id == from.key }
-        val toIdx = _checklistItems.value.indexOfFirst { it.id == to.key }
+        val fromItem = _checklistItems.value.firstOrNull { it.id == from.key }
+        val toItem = _checklistItems.value.firstOrNull { it.id == to.key }
 
-        if (fromIdx > -1 && toIdx > -1) {
-            log("switchItemPositions($from, $to) before: ${_checklistItems.value}")
-            _checklistItems.value = _checklistItems.value.toMutableList().apply { add(toIdx, removeAt(fromIdx)) }
-            log("switchItemPositions($from, $to) after: ${_checklistItems.value}")
-            updateChecklistItemPositions()
+        if (fromItem != null && toItem != null) {
+            _checklistItems.value = _checklistItems.value.map { item ->
+                when (item.id) {
+                    fromItem.id -> item.copy(position = toItem.position)
+                    toItem.id -> item.copy(position = fromItem.position)
+                    else -> item
+                }
+            }.sorted()
             _isUnsaved.value = true
         }
     }
@@ -184,8 +192,12 @@ class NoteViewModel @Inject constructor(
     }
 
     fun uncheckAllItems() {
-        _checklistItems.value = _checklistItems.value.map { it.copy(checked = false) }
-        updateChecklistItemPositions()
+        var position = _checklistItems.value.filter { !it.checked }.maxOfOrNull { it.position } ?: -1
+
+        _checklistItems.value = _checklistItems.value.map { item ->
+            if (item.checked) item.copy(checked = false, position = ++position)
+            else item
+        }.sorted()
         save(NotePojo.Component.CHECKLIST_ITEMS)
     }
 
@@ -206,13 +218,12 @@ class NoteViewModel @Inject constructor(
     }
 
     fun updateChecklistItemChecked(item: ChecklistItem, checked: Boolean) {
-        _checklistItems.value = _checklistItems.value.toMutableList().apply {
-            val position = filter { it.checked == checked }.takeIf { it.isNotEmpty() }?.maxOf { it.position } ?: -1
+        val position = _checklistItems.value.filter { it.checked == checked }.maxOfOrNull { it.position } ?: -1
 
-            removeIf { it.id == item.id }
-            add(item.copy(checked = checked, position = position + 1))
-        }
-        updateChecklistItemPositions()
+        _checklistItems.value = _checklistItems.value.map {
+            if (it.id == item.id) it.copy(checked = checked, position = position + 1)
+            else it
+        }.sorted()
         save(NotePojo.Component.CHECKLIST_ITEMS)
     }
 
@@ -235,13 +246,6 @@ class NoteViewModel @Inject constructor(
             components,
         )
         _isUnsaved.value = false
-    }
-
-    private fun updateChecklistItemPositions() {
-        _checklistItems.value = _checklistItems.value.mapIndexed { index, item ->
-            if (item.position != index) item.copy(position = index) else item
-        }
-        _isUnsaved.value = true
     }
 
     private fun updateImagePositions() {

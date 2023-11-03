@@ -39,8 +39,8 @@ android {
         applicationId = "us.huseli.retain"
         minSdk = 26
         targetSdk = targetSdk
-        versionCode = 4
-        versionName = "1.0.0-beta.4"
+        versionCode = 5
+        versionName = "1.0.0-beta.5"
         vectorDrawables.useSupportLibrary = true
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // buildConfigField("String", "dropboxAppKey", "\"${dropboxAppKey}\"")
@@ -157,13 +157,13 @@ dependencies {
     implementation("com.google.accompanist:accompanist-systemuicontroller:0.27.0")
 
     // HTML parsing:
-    implementation("org.jsoup:jsoup:1.16.1")
+    implementation("org.jsoup:jsoup:1.16.2")
 
     // SFTP:
-    implementation(group = "com.github.mwiede", name = "jsch", version = "0.2.9")
+    implementation(group = "com.github.mwiede", name = "jsch", version = "0.2.12")
 
     // Dropbox:
-    implementation("com.dropbox.core:dropbox-core-sdk:5.4.5")
+    implementation("com.dropbox.core:dropbox-core-sdk:5.4.6")
 
     // Theme:
     implementation("com.github.Eboreg:RetainTheme:2.2.1")
