@@ -1,6 +1,6 @@
 package us.huseli.retain.syncbackend.tasks
 
-import us.huseli.retain.data.entities.NoteCombo
+import us.huseli.retain.dataclasses.NotePojo
 import us.huseli.retain.syncbackend.Engine
 import java.io.File
 import java.util.UUID
@@ -12,13 +12,13 @@ data class TaskLog(val simpleName: String, val totalCount: Int = 1, var finished
 
 class SyncTask<ET : Engine>(
     engine: ET,
-    private val localCombos: Collection<NoteCombo>,
+    private val localPojos: Collection<NotePojo>,
     private val deletedNoteIds: Collection<UUID>,
-    private val onRemoteComboUpdated: (NoteCombo) -> Unit,
+    private val onRemotePojoUpdated: (NotePojo) -> Unit,
     private val localImageDir: File,
 ) : Task<ET, TaskResult>(engine = engine) {
     private var isCancelled = false
-    private var remoteUpdatedCombos: List<NoteCombo> = emptyList()
+    private var remoteUpdatedPojos: List<NotePojo> = emptyList()
     private val finishedTasks = listOf(
         TaskLog(DownloadImagesTask::class.java.simpleName, 2),
         TaskLog(DownloadNoteCombosJSONTask::class.java.simpleName),
@@ -53,7 +53,7 @@ class SyncTask<ET : Engine>(
     override fun start(onResult: (TaskResult) -> Unit) {
         this.onResult = onResult
         engine.isSyncing.value = true
-        val images = localCombos.flatMap { it.images }.toMutableList()
+        val images = localPojos.flatMap { it.images }.toMutableList()
 
         runChildTask(DownloadImagesTask(engine, images.filter { !File(localImageDir, it.filename).exists() }))
 
@@ -61,28 +61,28 @@ class SyncTask<ET : Engine>(
             // All notes on remote that either don't exist locally, or
             // have a newer timestamp than their local counterparts:
             @Suppress("destructure")
-            remoteUpdatedCombos = downTaskResult.objects.filter { remote ->
-                localCombos
+            remoteUpdatedPojos = downTaskResult.objects.filter { remote ->
+                localPojos
                     .find { it.note.id == remote.note.id }
                     ?.let { local -> local.note < remote.note }
-                ?: true
+                    ?: true
             }
-            remoteUpdatedCombos.forEach { combo ->
-                images.addAll(combo.images)
-                // This will save combo to DB:
-                onRemoteComboUpdated(combo)
+            remoteUpdatedPojos.forEach { pojo ->
+                images.addAll(pojo.images)
+                // This will save pojo to DB:
+                onRemotePojoUpdated(pojo)
             }
-            if (remoteUpdatedCombos.isNotEmpty()) {
+            if (remoteUpdatedPojos.isNotEmpty()) {
                 log(
-                    message = "${remoteUpdatedCombos.size} new or updated notes synced from ${engine.backend.displayName}.",
+                    message = "${remoteUpdatedPojos.size} new or updated notes synced from ${engine.backend.displayName}.",
                     showInSnackbar = true,
                 )
             }
-            runChildTask(DownloadImagesTask(engine, remoteUpdatedCombos.flatMap { it.images }))
+            runChildTask(DownloadImagesTask(engine, remoteUpdatedPojos.flatMap { it.images }))
 
             // Now upload all notes (i.e. the pre-existing local notes joined with the updated remote ones):
-            val combos = localCombos.toSet().union(remoteUpdatedCombos.toSet())
-            runChildTask(UploadNoteCombosTask(engine, combos))
+            val pojos = localPojos.toSet().union(remoteUpdatedPojos.toSet())
+            runChildTask(UploadNoteCombosTask(engine, pojos))
 
             // Upload any images that are missing/wrong on remote:
             val imageFilenames = images.map { it.filename }

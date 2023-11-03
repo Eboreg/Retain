@@ -21,6 +21,7 @@ import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,6 +29,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -39,15 +41,17 @@ import org.burnoutcrew.reorderable.rememberReorderableLazyListState
 import org.burnoutcrew.reorderable.reorderable
 import us.huseli.retain.Enums.HomeScreenViewType
 import us.huseli.retain.R
-import us.huseli.retain.data.entities.Note
-import us.huseli.retain.viewmodels.NoteViewModel
+import us.huseli.retain.dataclasses.NotePojo
+import us.huseli.retain.dataclasses.entities.Note
+import us.huseli.retain.viewmodels.NoteListViewModel
 import us.huseli.retain.viewmodels.SettingsViewModel
+import us.huseli.retaintheme.snackbar.SnackbarEngine
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
-    viewModel: NoteViewModel = hiltViewModel(),
+    viewModel: NoteListViewModel = hiltViewModel(),
     settingsViewModel: SettingsViewModel = hiltViewModel(),
     onAddTextNoteClick: () -> Unit,
     onAddChecklistClick: () -> Unit,
@@ -55,16 +59,17 @@ fun HomeScreen(
     onSettingsClick: () -> Unit,
     onDebugClick: () -> Unit,
 ) {
+    val context = LocalContext.current
     val syncBackend by viewModel.syncBackend.collectAsStateWithLifecycle()
     val isSyncBackendSyncing by viewModel.isSyncBackendSyncing.collectAsStateWithLifecycle(false)
     val isSyncBackendEnabled by settingsViewModel.isSyncBackendEnabled.collectAsStateWithLifecycle(false)
-    val notes by viewModel.notes.collectAsStateWithLifecycle(emptyList())
-    val images by viewModel.images.collectAsStateWithLifecycle(emptyList())
-    val checklistData by viewModel.checklistData.collectAsStateWithLifecycle(emptyList())
+    val pojos by viewModel.pojos.collectAsStateWithLifecycle()
     val isSelectEnabled by viewModel.isSelectEnabled.collectAsStateWithLifecycle(false)
     val selectedNoteIds by viewModel.selectedNoteIds.collectAsStateWithLifecycle()
     val minColumnWidth by settingsViewModel.minColumnWidth.collectAsStateWithLifecycle()
     val showArchive by viewModel.showArchive.collectAsStateWithLifecycle()
+    val trashedPojos by viewModel.trashedPojos.collectAsStateWithLifecycle()
+
     val reorderableState = rememberReorderableLazyListState(
         onMove = { from, to -> viewModel.switchNotePositions(from, to) },
         onDragEnd = { _, _ -> viewModel.saveNotePositions() }
@@ -89,30 +94,51 @@ fun HomeScreen(
         viewModel.deselectAllNotes()
     }
 
-    val lazyContent: @Composable (Note, Boolean) -> Unit = { note, isDragging ->
+    LaunchedEffect(Unit) {
+        viewModel.uploadNotes { result ->
+            if (!result.success) SnackbarEngine.addError(
+                context.getString(R.string.failed_to_upload_notes_to, syncBackend.displayName, result.message)
+            )
+        }
+    }
+
+    LaunchedEffect(trashedPojos) {
+        if (trashedPojos.isNotEmpty()) {
+            SnackbarEngine.addInfo(
+                message = context.resources.getQuantityString(
+                    R.plurals.x_notes_trashed,
+                    trashedPojos.size,
+                    trashedPojos.size,
+                ),
+                actionLabel = context.resources.getString(R.string.undo).uppercase(),
+                onActionPerformed = { viewModel.undoTrashNotes() },
+                onDismissed = { viewModel.reallyTrashNotes() },
+            )
+        }
+    }
+
+    val lazyContent: @Composable (NotePojo, Boolean) -> Unit = { pojo, isDragging ->
         NoteCard(
             modifier = Modifier.fillMaxWidth(),
-            note = note,
-            checklistData = checklistData.find { it.noteId == note.id },
-            images = images.filter { it.noteId == note.id },
+            pojo = pojo,
             isDragging = isDragging,
             onClick = {
-                if (isSelectEnabled) viewModel.toggleNoteSelected(note.id)
-                else onCardClick(note)
+                if (isSelectEnabled) viewModel.toggleNoteSelected(pojo.note.id)
+                else onCardClick(pojo.note)
                 isFABExpanded = false
             },
             onLongClick = {
-                viewModel.toggleNoteSelected(note.id)
+                viewModel.toggleNoteSelected(pojo.note.id)
                 isFABExpanded = false
             },
-            isSelected = selectedNoteIds.contains(note.id),
+            isSelected = selectedNoteIds.contains(pojo.note.id),
             showDragHandle = viewType == HomeScreenViewType.LIST,
             reorderableState = reorderableState,
+            secondaryImageGridRowHeight = if (viewType == HomeScreenViewType.LIST) 200.dp else 100.dp,
         )
     }
 
     RetainScaffold(
-        viewModel = viewModel,
         topBar = {
             if (isSelectEnabled) SelectionTopAppBar(
                 selectedCount = selectedNoteIds.size,
@@ -152,7 +178,7 @@ fun HomeScreen(
             )
         }
 
-        Column(modifier = lazyModifier.padding(innerPadding).fillMaxWidth()) {
+        Column(modifier = lazyModifier.padding(innerPadding).padding(horizontal = 8.dp).fillMaxWidth()) {
             if (isSyncBackendSyncing) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -174,7 +200,7 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalItemSpacing = 8.dp,
                 ) {
-                    items(notes, key = { it.id }) { note -> lazyContent(note, false) }
+                    items(pojos, key = { it.note.id }) { pojo -> lazyContent(pojo, false) }
                 }
             } else {
                 LazyColumn(
@@ -185,9 +211,9 @@ fun HomeScreen(
                     state = reorderableState.listState,
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    items(notes, key = { it.id }) { note ->
-                        ReorderableItem(reorderableState, key = note.id) { isDragging ->
-                            lazyContent(note, isDragging)
+                    items(pojos, key = { it.note.id }) { pojo ->
+                        ReorderableItem(reorderableState, key = pojo.note.id) { isDragging ->
+                            lazyContent(pojo, isDragging)
                         }
                     }
                 }

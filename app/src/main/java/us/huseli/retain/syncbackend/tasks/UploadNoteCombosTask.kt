@@ -4,14 +4,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import us.huseli.retain.Constants.SYNCBACKEND_JSON_SUBDIR
-import us.huseli.retain.data.entities.NoteCombo
+import us.huseli.retain.dataclasses.NotePojo
 import us.huseli.retain.syncbackend.Engine
 import java.io.File
 import java.io.FileWriter
 
 class UploadNoteCombosTask<ET : Engine>(
     engine: ET,
-    private val combos: Collection<NoteCombo>
+    private val combos: Collection<NotePojo>
 ) : OperationTask<ET, OperationTaskResult>(engine) {
     private val filename = "noteCombos.json"
     private val remotePath = engine.getAbsolutePath(SYNCBACKEND_JSON_SUBDIR, filename)

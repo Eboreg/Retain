@@ -1,4 +1,4 @@
-package us.huseli.retain.data
+package us.huseli.retain
 
 import android.content.Context
 import android.util.Log
@@ -9,13 +9,13 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
-import us.huseli.retain.BuildConfig
-import us.huseli.retain.LogMessage
-import us.huseli.retain.Logger
-import us.huseli.retain.data.entities.ChecklistItem
-import us.huseli.retain.data.entities.DeletedNote
-import us.huseli.retain.data.entities.Image
-import us.huseli.retain.data.entities.Note
+import us.huseli.retain.dao.ChecklistItemDao
+import us.huseli.retain.dao.ImageDao
+import us.huseli.retain.dao.NoteDao
+import us.huseli.retain.dataclasses.entities.ChecklistItem
+import us.huseli.retain.dataclasses.entities.DeletedNote
+import us.huseli.retain.dataclasses.entities.Image
+import us.huseli.retain.dataclasses.entities.Note
 import java.util.concurrent.Executors
 
 @androidx.room.Database(

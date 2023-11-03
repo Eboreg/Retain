@@ -7,6 +7,7 @@ object Constants {
     const val DEFAULT_SFTP_BASE_DIR = ".retain"
     const val IMAGE_SUBDIR = "images"
     const val NAV_ARG_IMAGE_CAROUSEL_CURRENT_ID = "imageCarouselCurrentId"
+    const val NAV_ARG_NEW_NOTE_TYPE = "noteType"
     const val NAV_ARG_NOTE_ID = "noteId"
     const val PREF_DROPBOX_CREDENTIAL = "dropboxCredential"
     const val PREF_MIN_COLUMN_WIDTH = "minColumnWidth"

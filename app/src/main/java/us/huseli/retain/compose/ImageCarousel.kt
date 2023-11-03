@@ -25,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -42,7 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import us.huseli.retain.Enums.Side
 import us.huseli.retain.R
-import us.huseli.retain.data.entities.Image
+import us.huseli.retain.dataclasses.entities.Image
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -59,10 +60,10 @@ fun ImageCarousel(
 ) {
     var isTransformable by remember(image) { mutableStateOf(false) }
     var maxHeightDp by remember { mutableStateOf(0.dp) }
-    var overScroll by remember(image) { mutableStateOf(0f) }
-    var panX by remember(image) { mutableStateOf(0f) }
-    var panY by remember(image) { mutableStateOf(0f) }
-    var scale by remember(image) { mutableStateOf(1f) }
+    var overScroll by remember(image) { mutableFloatStateOf(0f) }
+    var panX by remember(image) { mutableFloatStateOf(0f) }
+    var panY by remember(image) { mutableFloatStateOf(0f) }
+    var scale by remember(image) { mutableFloatStateOf(1f) }
     var slideFrom by remember { mutableStateOf<Side?>(null) }
     var slideTo by remember(image) { mutableStateOf<Side?>(null) }
 

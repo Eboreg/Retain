@@ -1,4 +1,4 @@
-package us.huseli.retain.data.entities
+package us.huseli.retain.dataclasses.entities
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity

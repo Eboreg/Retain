@@ -2,7 +2,7 @@ package us.huseli.retain.syncbackend.tasks
 
 import us.huseli.retain.Constants
 import us.huseli.retain.Constants.SYNCBACKEND_IMAGE_SUBDIR
-import us.huseli.retain.data.entities.Image
+import us.huseli.retain.dataclasses.entities.Image
 import us.huseli.retain.syncbackend.Engine
 import java.io.File
 

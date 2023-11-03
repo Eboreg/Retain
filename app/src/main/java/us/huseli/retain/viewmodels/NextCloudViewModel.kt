@@ -16,7 +16,7 @@ import us.huseli.retain.Constants.PREF_NEXTCLOUD_BASE_DIR
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_PASSWORD
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_URI
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_USERNAME
-import us.huseli.retain.data.SyncBackendRepository
+import us.huseli.retain.repositories.SyncBackendRepository
 import us.huseli.retain.syncbackend.NextCloudEngine
 import us.huseli.retain.syncbackend.tasks.TaskResult
 import us.huseli.retain.syncbackend.tasks.TestTaskResult

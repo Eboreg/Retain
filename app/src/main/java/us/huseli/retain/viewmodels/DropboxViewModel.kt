@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import us.huseli.retain.data.SyncBackendRepository
+import us.huseli.retain.repositories.SyncBackendRepository
 import us.huseli.retain.syncbackend.DropboxEngine
 import us.huseli.retain.syncbackend.tasks.TestTaskResult
 import javax.inject.Inject

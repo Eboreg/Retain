@@ -6,10 +6,10 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import us.huseli.retain.data.ChecklistItemDao
-import us.huseli.retain.data.Database
-import us.huseli.retain.data.ImageDao
-import us.huseli.retain.data.NoteDao
+import us.huseli.retain.dao.ChecklistItemDao
+import us.huseli.retain.Database
+import us.huseli.retain.dao.ImageDao
+import us.huseli.retain.dao.NoteDao
 import javax.inject.Singleton
 
 @InstallIn(SingletonComponent::class)

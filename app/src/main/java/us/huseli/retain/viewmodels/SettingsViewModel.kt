@@ -3,7 +3,6 @@ package us.huseli.retain.viewmodels
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
-import android.util.Log
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
@@ -32,55 +31,22 @@ import us.huseli.retain.Enums.SyncBackend
 import us.huseli.retain.LogInterface
 import us.huseli.retain.Logger
 import us.huseli.retain.copyFileToLocal
-import us.huseli.retain.data.NoteRepository
-import us.huseli.retain.data.SyncBackendRepository
-import us.huseli.retain.data.entities.ChecklistItem
-import us.huseli.retain.data.entities.Image
-import us.huseli.retain.data.entities.Note
-import us.huseli.retain.data.entities.NoteCombo
-import us.huseli.retain.extractFileFromZip
+import us.huseli.retain.dataclasses.GoogleNoteEntry
+import us.huseli.retain.dataclasses.NotePojo
+import us.huseli.retain.dataclasses.QuickNoteEntry
+import us.huseli.retain.dataclasses.entities.ChecklistItem
+import us.huseli.retain.dataclasses.entities.Image
+import us.huseli.retain.dataclasses.entities.Note
+import us.huseli.retain.extractFile
 import us.huseli.retain.isImageFile
-import us.huseli.retain.readTextFileFromZip
+import us.huseli.retain.readTextFile
+import us.huseli.retain.repositories.NoteRepository
+import us.huseli.retain.repositories.SyncBackendRepository
 import us.huseli.retain.uriToImage
 import java.io.File
 import java.time.Instant
 import java.util.zip.ZipFile
 import javax.inject.Inject
-
-data class QuickNoteTodoList(
-    val todo: Collection<String>? = null,
-    val done: Collection<String>? = null,
-)
-
-data class QuickNoteEntry(
-    val creation_date: Long? = null,
-    val title: String? = null,
-    val last_modification_date: Long? = null,
-    val color: String? = null,
-    val todolists: Collection<QuickNoteTodoList>? = null,
-)
-
-data class GoogleNoteListContent(
-    val text: String,
-    val isChecked: Boolean,
-)
-
-data class GoogleNoteAttachment(
-    val filePath: String,
-    val mimetype: String,
-)
-
-data class GoogleNoteEntry(
-    val attachments: List<GoogleNoteAttachment>? = null,
-    val color: String? = null,
-    val isTrashed: Boolean = false,
-    val isArchived: Boolean = false,
-    val listContent: List<GoogleNoteListContent>? = null,
-    val title: String? = null,
-    val userEditedTimestampUsec: Long? = null,
-    val createdTimestampUsec: Long? = null,
-    val textContent: String? = null,
-)
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
@@ -143,7 +109,7 @@ class SettingsViewModel @Inject constructor(
                 val gson: Gson = GsonBuilder().create()
                 val zipFile = withContext(Dispatchers.IO) { ZipFile(keepFile) }
                 val entries = mutableListOf<GoogleNoteEntry>()
-                val combos = mutableListOf<NoteCombo>()
+                val pojos = mutableListOf<NotePojo>()
                 val startPosition = repository.getMaxNotePosition() + 1
                 var noteCount = 0
                 var imageCount = 0
@@ -164,7 +130,7 @@ class SettingsViewModel @Inject constructor(
                         if (zipEntry.name.startsWith("Takeout/Keep/")) {
                             if (zipEntry.name.endsWith(".json")) {
                                 updateCurrentAction("Extracting ${zipEntry.name}")
-                                val json = readTextFileFromZip(zipFile, zipEntry)
+                                val json = zipFile.readTextFile(zipEntry)
                                 gson.fromJson(json, GoogleNoteEntry::class.java)?.let {
                                     if (!it.isTrashed) entries.add(it)
                                 }
@@ -172,7 +138,7 @@ class SettingsViewModel @Inject constructor(
                                 updateCurrentAction("Extracting ${zipEntry.name}")
                                 val imageFile =
                                     File(tempDir, zipEntry.name.substringAfterLast('/')).apply { deleteOnExit() }
-                                extractFileFromZip(zipFile, zipEntry, imageFile)
+                                zipFile.extractFile(zipEntry, imageFile)
                             }
                         }
                     }
@@ -189,10 +155,12 @@ class SettingsViewModel @Inject constructor(
                         text = noteEntry.textContent ?: "",
                         type = if (noteEntry.listContent != null) NoteType.CHECKLIST else NoteType.TEXT,
                         isArchived = noteEntry.isArchived,
-                        created = noteEntry.createdTimestampUsec?.let { Instant.ofEpochMilli(it / 1000) }
-                                  ?: Instant.now(),
-                        updated = noteEntry.userEditedTimestampUsec?.let { Instant.ofEpochMilli(it / 1000) }
-                                  ?: Instant.now(),
+                        created = noteEntry.createdTimestampUsec
+                            ?.let { Instant.ofEpochMilli(it / 1000) }
+                            ?: Instant.now(),
+                        updated = noteEntry.userEditedTimestampUsec
+                            ?.let { Instant.ofEpochMilli(it / 1000) }
+                            ?: Instant.now(),
                         position = startPosition + noteIndex,
                     )
                     val checklistItems = noteEntry.listContent?.mapIndexed { checklistItemIndex, checklistItemEntry ->
@@ -212,8 +180,8 @@ class SettingsViewModel @Inject constructor(
                         } else null
                     }
 
-                    combos.add(
-                        NoteCombo(
+                    pojos.add(
+                        NotePojo(
                             note = note,
                             checklistItems = checklistItems ?: emptyList(),
                             images = images ?: emptyList()
@@ -221,13 +189,13 @@ class SettingsViewModel @Inject constructor(
                     )
                 }
 
-                if (combos.isNotEmpty()) {
+                if (pojos.isNotEmpty()) {
                     updateCurrentAction("Saving to database")
-                    repository.insertCombos(combos)
+                    repository.insertNotePojos(pojos)
                 }
-                log("Imported ${combos.size} notes.", showInSnackbar = true)
+                log("Imported ${pojos.size} notes.", showInSnackbar = true)
             } catch (e: Exception) {
-                log("Error: $e", level = Log.ERROR, showInSnackbar = true)
+                showError("Error: $e", e)
             } finally {
                 _keepImportIsActive.value = false
             }
@@ -251,7 +219,7 @@ class SettingsViewModel @Inject constructor(
                 copyFileToLocal(context, zipUri, quickNoteFile)
 
                 val zipFile = withContext(Dispatchers.IO) { ZipFile(quickNoteFile) }
-                val combos = mutableListOf<NoteCombo>()
+                val pojos = mutableListOf<NotePojo>()
                 val sqdDirs = mutableListOf<String>()
                 val sqdDirRegex = Regex("^.*\\.sqd/$")
                 var notePosition = repository.getMaxNotePosition() + 1
@@ -261,9 +229,9 @@ class SettingsViewModel @Inject constructor(
                         if (zipEntry.name.endsWith(".sqd") && !zipEntry.isDirectory) {
                             val sqdFile = File(tempDir, zipEntry.name.substringAfterLast('/'))
                             updateCurrentAction("Extracting ${sqdFile.name}")
-                            extractFileFromZip(zipFile, zipEntry, sqdFile)
+                            zipFile.extractFile(zipEntry, sqdFile)
                             extractQuickNoteSqd(sqdFile, context, notePosition)?.let {
-                                combos.add(it)
+                                pojos.add(it)
                                 notePosition++
                             }
                         } else sqdDirRegex.find(zipEntry.name)?.let { result ->
@@ -274,18 +242,18 @@ class SettingsViewModel @Inject constructor(
 
                 sqdDirs.forEach { dirname ->
                     extractQuickNoteSqd(quickNoteFile, context, notePosition, dirname)?.let {
-                        combos.add(it)
+                        pojos.add(it)
                         notePosition++
                     }
                 }
 
-                if (combos.isNotEmpty()) {
+                if (pojos.isNotEmpty()) {
                     updateCurrentAction("Saving to database")
-                    repository.insertCombos(combos)
+                    repository.insertNotePojos(pojos)
                 }
-                log("Imported ${combos.size} notes.", showInSnackbar = true)
+                log("Imported ${pojos.size} notes.", showInSnackbar = true)
             } catch (e: Exception) {
-                log("Error: $e", level = Log.ERROR, showInSnackbar = true)
+                showError("Error: $e", e)
             } finally {
                 _quickNoteImportIsActive.value = false
             }
@@ -327,8 +295,8 @@ class SettingsViewModel @Inject constructor(
         file: File,
         context: Context,
         notePosition: Int,
-        baseDir: String = ""
-    ): NoteCombo? {
+        baseDir: String = "",
+    ): NotePojo? {
         val zipFile = withContext(Dispatchers.IO) { ZipFile(file) }
         var quickNoteEntry: QuickNoteEntry? = null
         var text = ""
@@ -336,7 +304,7 @@ class SettingsViewModel @Inject constructor(
 
         zipFile.getEntry("${baseDir}metadata.json")?.let { zipEntry ->
             updateCurrentAction("Parsing ${zipEntry.name}")
-            val json = readTextFileFromZip(zipFile, zipEntry)
+            val json = zipFile.readTextFile(zipEntry)
             gson.fromJson(json, QuickNoteEntry::class.java)?.let {
                 quickNoteEntry = it
                 log(quickNoteEntry.toString())
@@ -348,7 +316,7 @@ class SettingsViewModel @Inject constructor(
         quickNoteEntry?.let { entry ->
             zipFile.getEntry("${baseDir}index.html")?.let { zipEntry ->
                 updateCurrentAction("Parsing ${zipEntry.name}")
-                val html = readTextFileFromZip(zipFile, zipEntry)
+                val html = zipFile.readTextFile(zipEntry)
                 val doc = Jsoup.parseBodyFragment(html)
                 text = doc.body().wholeText().trim().replace("\n\n", "\n")
             }
@@ -357,8 +325,7 @@ class SettingsViewModel @Inject constructor(
             val images = mutableListOf<Image>()
             var imagePosition = 0
             var checklistItemPosition = 0
-            val title =
-                entry.title
+            val title = entry.title
                 ?: (if (baseDir.isNotBlank()) Regex("(?:.*/)?([^/.]+?)(?:\\.sqd)?/?$").find(baseDir)?.groupValues?.last() else null)
                 ?: file.nameWithoutExtension
 
@@ -405,7 +372,7 @@ class SettingsViewModel @Inject constructor(
                         ).apply { mkdirs() }
                         val imageFile = File(tempDir, basename).apply { deleteOnExit() }
                         updateCurrentAction("Extracting ${zipEntry.name}")
-                        extractFileFromZip(zipFile, zipEntry, imageFile)
+                        zipFile.extractFile(zipEntry, imageFile)
                         if (imageFile.exists()) {
                             updateCurrentAction("Copying ${imageFile.name}")
                             uriToImage(context, imageFile.toUri(), note.id)?.let { image ->
@@ -416,7 +383,7 @@ class SettingsViewModel @Inject constructor(
                 }
             }
 
-            return NoteCombo(
+            return NotePojo(
                 note = note,
                 checklistItems = checklistItems.toImmutableList(),
                 images = images.toImmutableList()

@@ -3,19 +3,10 @@ package us.huseli.retain
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import us.huseli.retain.Constants.NAV_ARG_IMAGE_CAROUSEL_CURRENT_ID
+import us.huseli.retain.Constants.NAV_ARG_NEW_NOTE_TYPE
 import us.huseli.retain.Constants.NAV_ARG_NOTE_ID
+import us.huseli.retain.Enums.NoteType
 import java.util.UUID
-
-abstract class NoteDestination {
-    abstract val baseRoute: String
-    val arguments = listOf(
-        navArgument(NAV_ARG_NOTE_ID) { type = NavType.StringType },
-    )
-    val routeTemplate: String
-        get() = "$baseRoute/{$NAV_ARG_NOTE_ID}"
-
-    fun route(noteId: UUID) = "$baseRoute/$noteId"
-}
 
 object HomeDestination {
     const val route = "home"
@@ -29,12 +20,22 @@ object DebugDestination {
     const val route = "debug"
 }
 
-object TextNoteDestination : NoteDestination() {
-    override val baseRoute = "textNote"
-}
+object NoteDestination {
+    const val routeTemplate = "note?id={$NAV_ARG_NOTE_ID}&type={$NAV_ARG_NEW_NOTE_TYPE}"
+    val arguments = listOf(
+        navArgument(NAV_ARG_NOTE_ID) {
+            type = NavType.StringType
+            nullable = true
+        },
+        navArgument(NAV_ARG_NEW_NOTE_TYPE) {
+            type = NavType.StringType
+            nullable = true
+        },
+    )
 
-object ChecklistNoteDestination : NoteDestination() {
-    override val baseRoute = "checklistNote"
+    fun route(noteId: UUID) = "note?id=$noteId"
+
+    fun route(newNoteType: NoteType) = "note?type=$newNoteType"
 }
 
 object ImageCarouselDestination {

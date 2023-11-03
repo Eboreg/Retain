@@ -1,4 +1,4 @@
-package us.huseli.retain.data
+package us.huseli.retain
 
 import androidx.room.TypeConverter
 import java.time.Instant

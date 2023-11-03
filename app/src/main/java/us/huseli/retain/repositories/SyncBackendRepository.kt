@@ -1,4 +1,4 @@
-package us.huseli.retain.data
+package us.huseli.retain.repositories
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -14,10 +14,14 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import us.huseli.retain.Constants
 import us.huseli.retain.Constants.PREF_SYNC_BACKEND
+import us.huseli.retain.Database
 import us.huseli.retain.Enums.SyncBackend
 import us.huseli.retain.LogInterface
 import us.huseli.retain.Logger
-import us.huseli.retain.data.entities.Image
+import us.huseli.retain.dao.ChecklistItemDao
+import us.huseli.retain.dao.ImageDao
+import us.huseli.retain.dao.NoteDao
+import us.huseli.retain.dataclasses.entities.Image
 import us.huseli.retain.syncbackend.DropboxEngine
 import us.huseli.retain.syncbackend.Engine
 import us.huseli.retain.syncbackend.NextCloudEngine
@@ -86,10 +90,10 @@ class SyncBackendRepository @Inject constructor(
         engine.value?.let {
             SyncTask(
                 engine = it,
-                localCombos = noteDao.listAllCombos().map { combo ->
+                localPojos = noteDao.listNotePojos().map { combo ->
                     combo.copy(databaseVersion = database.openHelper.readableDatabase.version)
                 },
-                onRemoteComboUpdated = { combo ->
+                onRemotePojoUpdated = { combo ->
                     ioScope.launch {
                         noteDao.upsert(combo.note)
                         checklistItemDao.replace(combo.note.id, combo.checklistItems)
@@ -115,10 +119,10 @@ class SyncBackendRepository @Inject constructor(
 
     suspend fun uploadNotes(onResult: ((OperationTaskResult) -> Unit)? = null) {
         engine.value?.let {
-            val combos = noteDao.listAllCombos()
+            val pojos = noteDao.listNotePojos()
             UploadNoteCombosTask(
                 engine = it,
-                combos = combos.map { combo ->
+                combos = pojos.map { combo ->
                     combo.copy(databaseVersion = database.openHelper.readableDatabase.version)
                 },
             ).run { result -> onResult?.invoke(result) }

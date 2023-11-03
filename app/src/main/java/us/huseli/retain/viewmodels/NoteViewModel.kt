@@ -1,195 +1,253 @@
 package us.huseli.retain.viewmodels
 
+import android.net.Uri
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.launch
 import org.burnoutcrew.reorderable.ItemPosition
+import us.huseli.retain.Constants.NAV_ARG_NEW_NOTE_TYPE
+import us.huseli.retain.Constants.NAV_ARG_NOTE_ID
+import us.huseli.retain.Enums.NoteType
 import us.huseli.retain.LogInterface
 import us.huseli.retain.Logger
-import us.huseli.retain.data.NoteRepository
-import us.huseli.retain.data.SyncBackendRepository
-import us.huseli.retain.data.entities.ChecklistItem
-import us.huseli.retain.data.entities.Image
-import us.huseli.retain.data.entities.Note
+import us.huseli.retain.dataclasses.NotePojo
+import us.huseli.retain.dataclasses.entities.ChecklistItem
+import us.huseli.retain.dataclasses.entities.Image
+import us.huseli.retain.dataclasses.entities.Note
+import us.huseli.retain.repositories.NoteRepository
 import java.util.UUID
 import javax.inject.Inject
-import kotlin.math.min
-
-data class NoteCardChecklistData(
-    val noteId: UUID,
-    val shownChecklistItems: List<ChecklistItem>,
-    val hiddenChecklistItemCount: Int,
-    val hiddenChecklistItemAllChecked: Boolean,
-)
 
 @HiltViewModel
 class NoteViewModel @Inject constructor(
     private val repository: NoteRepository,
-    private val syncBackendRepository: SyncBackendRepository,
-    override val logger: Logger
+    savedStateHandle: SavedStateHandle,
+    override val logger: Logger,
 ) : ViewModel(), LogInterface {
-    private val _selectedNoteIds = MutableStateFlow<Set<UUID>>(emptySet())
-    private val _trashedNotes = MutableStateFlow<Set<Note>>(emptySet())
-    private val _notes = MutableStateFlow<List<Note>>(emptyList())
-    private val _showArchive = MutableStateFlow(false)
+    private val _noteId: UUID =
+        savedStateHandle.get<String>(NAV_ARG_NOTE_ID)?.let { UUID.fromString(it) } ?: UUID.randomUUID()
+    private val _newNoteType: NoteType? =
+        savedStateHandle.get<String>(NAV_ARG_NEW_NOTE_TYPE)?.let { NoteType.valueOf(it) }
+    private val _note = MutableStateFlow<Note?>(null)
+    private val _images = MutableStateFlow<List<Image>>(emptyList())
+    private val _checklistItems = MutableStateFlow<List<ChecklistItem>>(emptyList())
+    private val _selectedImages = MutableStateFlow<Set<String>>(emptySet())
+    private val _focusedChecklistItemId = MutableStateFlow<UUID?>(null)
+    private val _isUnsaved = MutableStateFlow(true)
+    private val _checklistItemUndoState = MutableStateFlow<List<ChecklistItem>?>(null)
+    private val _imageUndoState = MutableStateFlow<List<Image>?>(null)
 
-    val syncBackend = syncBackendRepository.syncBackend
-    val isSyncBackendSyncing = syncBackendRepository.isSyncing
-    val showArchive = _showArchive.asStateFlow()
-    val trashedNoteCount = _trashedNotes.map { it.size }
-    val isSelectEnabled = _selectedNoteIds.map { it.isNotEmpty() }
-    val selectedNoteIds = _selectedNoteIds.asStateFlow()
-    val notes = _notes.asStateFlow()
-    val images: Flow<List<Image>> = repository.images
-    val checklistData = repository.checklistItemsWithNote.map { items ->
-        items
-            .groupBy { it.note }
-            .map { (note, itemsWithNote) -> note to itemsWithNote.map { it.checklistItem } }
-            .map { (note, items) ->
-                val filteredItems = if (note.showChecked) items else items.filter { !it.checked }
-                val shownItems = filteredItems.subList(0, min(filteredItems.size, 5))
-                val hiddenItems = items.minus(shownItems.toSet())
-
-                NoteCardChecklistData(
-                    noteId = note.id,
-                    shownChecklistItems = shownItems,
-                    hiddenChecklistItemCount = hiddenItems.size,
-                    hiddenChecklistItemAllChecked = hiddenItems.all { it.checked },
-                )
-            }
-    }
+    val images = _images.asStateFlow()
+    val note = _note.asStateFlow()
+    val checkedItems = _checklistItems.map { items -> items.filter { it.checked } }
+    val uncheckedItems = _checklistItems.map { items -> items.filter { !it.checked } }
+    val selectedImages = _selectedImages.asStateFlow()
+    val focusedChecklistItemId = _focusedChecklistItemId.asStateFlow()
+    val isUnsaved = _isUnsaved.asStateFlow()
 
     init {
-        // Just make sure note positions are set:
         viewModelScope.launch {
-            var fetchCount = 0
-
-            repository.notes.takeWhile { fetchCount++ == 0 }.collect { notes ->
-                notes.toMutableList().mapIndexedNotNull { index, note ->
-                    if (note.position != index) note.copy(position = index) else null
-                }.also { repository.updateNotes(it) }
+            repository.flowNotePojo(_noteId).filterNotNull().distinctUntilChanged().collect { pojo ->
+                _note.value = pojo.note
+                _images.value = pojo.images
+                _checklistItems.value = pojo.checklistItems
+                _isUnsaved.value = false
             }
         }
 
-        viewModelScope.launch {
-            repository.deleteTrashedNotes()
-        }
-
-        viewModelScope.launch {
-            combine(repository.notes, _showArchive) { notes, showArchive ->
-                notes.filter { it.isArchived == showArchive }
-            }.collect { notes ->
-                _notes.value = notes
-            }
+        _newNoteType?.also { noteType ->
+            _note.value = Note(id = _noteId, type = noteType)
         }
     }
 
-    fun archiveSelectedNotes() {
-        val selectedNotes = _notes.value.filter { _selectedNoteIds.value.contains(it.id) }
+    fun deleteCheckedItems(onFinish: (Int) -> Unit) =
+        deleteChecklistItems(_checklistItems.value.filter { it.checked }.map { it.id }, onFinish)
 
-        deselectAllNotes()
-        if (selectedNotes.isNotEmpty()) {
-            viewModelScope.launch {
-                repository.archiveNotes(selectedNotes)
-                log("Archived ${selectedNotes.size} notes.", showInSnackbar = true)
-            }
+    fun deleteChecklistItem(item: ChecklistItem, onFinish: (Int) -> Unit) =
+        deleteChecklistItems(listOf(item.id), onFinish)
+
+    fun deleteSelectedImages(onFinish: (Int) -> Unit) {
+        val trashedImageIds = _selectedImages.value
+
+        _imageUndoState.value = _images.value
+        _images.value = _images.value.toMutableList().apply {
+            removeAll { trashedImageIds.contains(it.filename) }
+        }
+        deselectAllImages()
+        save(NotePojo.Component.IMAGES)
+        onFinish(trashedImageIds.size)
+    }
+
+    fun deselectAllImages() {
+        _selectedImages.value = emptySet()
+    }
+
+    fun insertChecklistItem(text: String, checked: Boolean, index: Int): ChecklistItem =
+        ChecklistItem(text = text, checked = checked, position = index, noteId = _noteId).also { item ->
+            _checklistItems.value = _checklistItems.value.toMutableList().apply { add(item.position, item) }
+            setChecklistItemFocus(item)
+            updateChecklistItemPositions()
+            save(NotePojo.Component.CHECKLIST_ITEMS)
+        }
+
+    fun insertImage(uri: Uri) = viewModelScope.launch {
+        repository.uriToImage(uri, _noteId)?.let { image ->
+            _images.value = _images.value.toMutableList().apply { add(image) }
+            updateImagePositions()
+            save(NotePojo.Component.IMAGES)
         }
     }
 
-    fun deselectAllNotes() {
-        _selectedNoteIds.value = emptySet()
+    fun save() = save(listOf(NotePojo.Component.CHECKLIST_ITEMS, NotePojo.Component.NOTE, NotePojo.Component.IMAGES))
+
+    fun selectAllImages() {
+        _selectedImages.value = _images.value.map { it.filename }.toSet()
     }
 
-    fun reallyTrashNotes() {
-        _trashedNotes.value = emptySet()
-        viewModelScope.launch {
-            repository.deleteTrashedNotes()
-            syncBackendRepository.uploadNotes()
+    fun setChecklistItemFocus(item: ChecklistItem) {
+        _focusedChecklistItemId.value = item.id
+    }
+
+    fun setChecklistItemText(item: ChecklistItem, value: String) {
+        _checklistItems.value = _checklistItems.value.map {
+            if (it.id == item.id) it.copy(text = value) else it
+        }
+        _isUnsaved.value = true
+    }
+
+    fun setColor(value: String) {
+        if (value != _note.value?.color) {
+            _note.value = _note.value?.copy(color = value)
+            save(NotePojo.Component.NOTE)
         }
     }
 
-    fun save(
-        note: Note?,
-        checklistItems: List<ChecklistItem>,
-        images: List<Image>,
-        deletedChecklistItemIds: List<UUID>,
-        deletedImageIds: List<String>
-    ) = viewModelScope.launch {
-        log("save(): note=$note, checklistItems=$checklistItems, images=$images")
-        note?.let { repository.upsertNote(it) }
-        if (checklistItems.isNotEmpty()) repository.upsertChecklistItems(checklistItems)
-        if (images.isNotEmpty()) repository.upsertImages(images)
-        if (deletedChecklistItemIds.isNotEmpty()) repository.deleteChecklistItems(deletedChecklistItemIds)
-        if (deletedImageIds.isNotEmpty()) {
-            val deletedImages = repository.listImages(deletedImageIds)
-            syncBackendRepository.removeImages(deletedImages)
-            repository.deleteImages(deletedImages)
+    fun setText(value: String) {
+        if (value != _note.value?.text) _note.value = _note.value?.copy(text = value)
+        _isUnsaved.value = true
+    }
+
+    fun setTitle(value: String) {
+        if (value != _note.value?.title) _note.value = _note.value?.copy(title = value)
+        _isUnsaved.value = true
+    }
+
+    fun splitChecklistItem(item: ChecklistItem, textFieldValue: TextFieldValue) {
+        /**
+         * Splits item's text at cursor position, moves the last part to a new
+         * item, moves focus to this item.
+         */
+        val index = _checklistItems.value.indexOfFirst { it.id == item.id }
+        val head = textFieldValue.text.substring(0, textFieldValue.selection.start)
+        val tail = textFieldValue.text.substring(textFieldValue.selection.start)
+
+        log("onNextItem: item=$item, head=$head, tail=$tail, index=$index")
+        setChecklistItemText(item, head)
+        insertChecklistItem(text = tail, checked = item.checked, index = index + 1)
+    }
+
+    fun switchItemPositions(from: ItemPosition, to: ItemPosition) {
+        /**
+         * We cannot use ItemPosition.index because the lazy column contains
+         * a whole bunch of other junk than checklist items.
+         */
+        val fromIdx = _checklistItems.value.indexOfFirst { it.id == from.key }
+        val toIdx = _checklistItems.value.indexOfFirst { it.id == to.key }
+
+        if (fromIdx > -1 && toIdx > -1) {
+            log("switchItemPositions($from, $to) before: ${_checklistItems.value}")
+            _checklistItems.value = _checklistItems.value.toMutableList().apply { add(toIdx, removeAt(fromIdx)) }
+            log("switchItemPositions($from, $to) after: ${_checklistItems.value}")
+            updateChecklistItemPositions()
+            _isUnsaved.value = true
         }
     }
 
-    fun saveNotePositions() = viewModelScope.launch {
-        repository.updateNotePositions(
-            _notes.value.mapIndexedNotNull { index, note ->
-                if (note.position != index) note.copy(position = index) else null
-            }
+    fun toggleImageSelected(filename: String) {
+        _selectedImages.value = _selectedImages.value.toMutableSet().apply {
+            if (contains(filename)) remove(filename)
+            else add(filename)
+        }
+    }
+
+    fun toggleShowCheckedItems() {
+        _note.value = _note.value?.let { it.copy(showChecked = !it.showChecked) }
+        save(NotePojo.Component.NOTE)
+    }
+
+    fun uncheckAllItems() {
+        _checklistItems.value = _checklistItems.value.map { it.copy(checked = false) }
+        updateChecklistItemPositions()
+        save(NotePojo.Component.CHECKLIST_ITEMS)
+    }
+
+    fun undeleteChecklistItems() {
+        _checklistItemUndoState.value?.also {
+            _checklistItems.value = it
+            save(NotePojo.Component.CHECKLIST_ITEMS)
+        }
+        _checklistItemUndoState.value = null
+    }
+
+    fun undeleteImages() {
+        _imageUndoState.value?.also {
+            _images.value = it
+            save(NotePojo.Component.IMAGES)
+        }
+        _imageUndoState.value = null
+    }
+
+    fun updateChecklistItemChecked(item: ChecklistItem, checked: Boolean) {
+        _checklistItems.value = _checklistItems.value.toMutableList().apply {
+            val position = filter { it.checked == checked }.takeIf { it.isNotEmpty() }?.maxOf { it.position } ?: -1
+
+            removeIf { it.id == item.id }
+            add(item.copy(checked = checked, position = position + 1))
+        }
+        updateChecklistItemPositions()
+        save(NotePojo.Component.CHECKLIST_ITEMS)
+    }
+
+    /** PRIVATE METHODS ******************************************************/
+
+    private fun deleteChecklistItems(itemIds: List<UUID>, onFinish: (Int) -> Unit) {
+        _checklistItemUndoState.value = _checklistItems.value
+        _checklistItems.value = _checklistItems.value.toMutableList().apply {
+            removeAll { itemIds.contains(it.id) }
+        }
+        save(NotePojo.Component.CHECKLIST_ITEMS)
+        onFinish(itemIds.size)
+    }
+
+    private fun save(component: NotePojo.Component) = save(listOf(component))
+
+    private fun save(components: List<NotePojo.Component>) = _note.value?.also { note ->
+        repository.saveNotePojo(
+            NotePojo(note = note, checklistItems = _checklistItems.value, images = _images.value),
+            components,
         )
+        _isUnsaved.value = false
     }
 
-    fun selectAllNotes() {
-        _selectedNoteIds.value = _notes.value.map { it.id }.toSet()
-    }
-
-    fun switchNotePositions(from: ItemPosition, to: ItemPosition) {
-        _notes.value = _notes.value.toMutableList().apply { add(to.index, removeAt(from.index)) }
-    }
-
-    fun syncBackend() = viewModelScope.launch { syncBackendRepository.sync() }
-
-    fun toggleNoteSelected(noteId: UUID) {
-        if (_selectedNoteIds.value.contains(noteId)) _selectedNoteIds.value -= noteId
-        else _selectedNoteIds.value += noteId
-    }
-
-    fun toggleShowArchive() {
-        _showArchive.value = !_showArchive.value
-    }
-
-    fun trashSelectedNotes() {
-        _trashedNotes.value = _notes.value.filter { _selectedNoteIds.value.contains(it.id) }.toSet()
-        deselectAllNotes()
-        viewModelScope.launch {
-            repository.trashNotes(_trashedNotes.value)
+    private fun updateChecklistItemPositions() {
+        _checklistItems.value = _checklistItems.value.mapIndexed { index, item ->
+            if (item.position != index) item.copy(position = index) else item
         }
+        _isUnsaved.value = true
     }
 
-    fun unarchiveSelectedNotes() {
-        val selectedNotes = _notes.value.filter { _selectedNoteIds.value.contains(it.id) }
-
-        deselectAllNotes()
-        if (selectedNotes.isNotEmpty()) {
-            viewModelScope.launch {
-                repository.unarchiveNotes(selectedNotes)
-                log("Unarchived ${selectedNotes.size} notes.", showInSnackbar = true)
-            }
+    private fun updateImagePositions() {
+        _images.value = _images.value.mapIndexed { index, image ->
+            if (image.position != index) image.copy(position = index) else image
         }
-    }
-
-    fun undoTrashNotes() = viewModelScope.launch {
-        repository.updateNotes(_trashedNotes.value)
-        _trashedNotes.value = emptySet()
-    }
-
-    fun uploadNotes() = viewModelScope.launch {
-        syncBackendRepository.uploadNotes { result ->
-            if (!result.success)
-                showError("Failed to upload note(s) to ${syncBackend.value.displayName}: ${result.message}")
-        }
+        _isUnsaved.value = true
     }
 }

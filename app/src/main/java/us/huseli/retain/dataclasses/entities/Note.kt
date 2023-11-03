@@ -1,4 +1,4 @@
-package us.huseli.retain.data.entities
+package us.huseli.retain.dataclasses.entities
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
@@ -31,8 +31,6 @@ data class Note(
         other.id == id &&
         other.title == title &&
         other.text == text &&
-        other.created == created &&
-        other.updated == updated &&
         other.position == position &&
         other.type == type &&
         other.showChecked == showChecked &&

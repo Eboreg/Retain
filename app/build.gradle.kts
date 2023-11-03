@@ -1,5 +1,3 @@
-@file:Suppress("UnstableApiUsage")
-
 import java.io.FileInputStream
 import java.util.Properties
 
@@ -41,8 +39,8 @@ android {
         applicationId = "us.huseli.retain"
         minSdk = 26
         targetSdk = targetSdk
-        versionCode = 3
-        versionName = "1.0.0-beta.3"
+        versionCode = 4
+        versionName = "1.0.0-beta.4"
         vectorDrawables.useSupportLibrary = true
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // buildConfigField("String", "dropboxAppKey", "\"${dropboxAppKey}\"")
@@ -168,5 +166,5 @@ dependencies {
     implementation("com.dropbox.core:dropbox-core-sdk:5.4.5")
 
     // Theme:
-    implementation("com.github.Eboreg:RetainTheme:2.1.0")
+    implementation("com.github.Eboreg:RetainTheme:2.2.1")
 }

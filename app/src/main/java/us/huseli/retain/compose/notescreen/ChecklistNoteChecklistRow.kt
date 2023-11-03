@@ -17,7 +17,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ShapeDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -33,31 +37,34 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.burnoutcrew.reorderable.ReorderableLazyListState
 import org.burnoutcrew.reorderable.detectReorder
+import us.huseli.retain.dataclasses.entities.ChecklistItem
 
 @Composable
 fun ChecklistNoteChecklistRow(
     modifier: Modifier = Modifier,
+    item: ChecklistItem,
     isFocused: Boolean,
     isDragging: Boolean,
-    textFieldValue: TextFieldValue,
     checked: Boolean,
     onFocus: () -> Unit,
     onDeleteClick: () -> Unit,
     onCheckedChange: (Boolean) -> Unit,
-    onNext: () -> Unit,
+    onTextChange: (String) -> Unit,
+    onNext: (TextFieldValue) -> Unit,
     reorderableState: ReorderableLazyListState,
-    onTextFieldValueChange: (TextFieldValue) -> Unit,
 ) {
     val alpha = if (checked) 0.5f else 1f
     val focusRequester = remember { FocusRequester() }
+    var textFieldValue by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
+
+    textFieldValue = textFieldValue.copy(text = item.text)
 
     val realModifier =
-        if (isDragging) modifier
-            .border(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                shape = ShapeDefaults.ExtraSmall
-            )
+        if (isDragging) modifier.border(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+            shape = ShapeDefaults.ExtraSmall,
+        )
         else modifier
 
     Row(
@@ -88,14 +95,15 @@ fun ChecklistNoteChecklistRow(
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
                 fontSize = 16.sp,
             ),
-            onValueChange = onTextFieldValueChange,
+            onValueChange = {
+                textFieldValue = it
+                onTextChange(it.text)
+            },
             keyboardOptions = KeyboardOptions.Default.copy(
                 imeAction = ImeAction.Next,
                 capitalization = KeyboardCapitalization.Sentences,
             ),
-            keyboardActions = KeyboardActions(
-                onNext = { onNext() }
-            ),
+            keyboardActions = KeyboardActions(onNext = { onNext(textFieldValue) }),
             modifier = Modifier
                 .onFocusChanged { if (it.isFocused) onFocus() }
                 .weight(1f)
@@ -103,11 +111,9 @@ fun ChecklistNoteChecklistRow(
                 .focusRequester(focusRequester)
                 .onGloballyPositioned { if (isFocused) focusRequester.requestFocus() },
         )
-        IconButton(onClick = onDeleteClick) {
-            Icon(
-                imageVector = Icons.Sharp.Close,
-                contentDescription = null
-            )
-        }
+        IconButton(
+            onClick = onDeleteClick,
+            content = { Icon(Icons.Sharp.Close, null) },
+        )
     }
 }

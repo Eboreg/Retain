@@ -8,6 +8,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -28,7 +29,7 @@ fun GeneralSection(
     viewModel: SettingsViewModel,
 ) {
     val minColumnWidth by viewModel.minColumnWidth.collectAsStateWithLifecycle()
-    var minColumnWidthSliderPos by remember { mutableStateOf(minColumnWidth) }
+    var minColumnWidthSliderPos by remember { mutableIntStateOf(minColumnWidth) }
     val maxScreenWidth = max(LocalConfiguration.current.screenHeightDp, LocalConfiguration.current.screenWidthDp)
     val maxColumnWidth = (maxScreenWidth - 24) / 10 * 10
     val columnWidthSteps = (maxColumnWidth - 51) / 10

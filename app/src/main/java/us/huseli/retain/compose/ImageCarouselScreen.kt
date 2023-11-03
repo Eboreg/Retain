@@ -16,11 +16,11 @@ fun ImageCarouselScreen(
 ) {
     val images by viewModel.images.collectAsStateWithLifecycle(emptyList())
     val currentImage by viewModel.currentImage.collectAsStateWithLifecycle(null)
-    val currentImageBitmap = currentImage?.imageBitmap?.collectAsStateWithLifecycle(null)
+    val currentImageBitmap by viewModel.currentImageBitmap.collectAsStateWithLifecycle(null)
 
     RetainScaffold { innerPadding ->
         currentImage?.let { image ->
-            currentImageBitmap?.value?.let { imageBitmap ->
+            currentImageBitmap?.let { imageBitmap ->
                 ImageCarousel(
                     modifier = modifier.padding(innerPadding),
                     image = image,

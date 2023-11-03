@@ -3,6 +3,7 @@ package us.huseli.retain
 import android.content.ContentResolver
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
@@ -11,13 +12,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.scale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import us.huseli.retain.Constants.ZIP_BUFFER_SIZE
-import us.huseli.retain.data.entities.Image
+import us.huseli.retain.dataclasses.entities.Image
 import java.io.File
 import java.io.FileOutputStream
 import java.io.StringWriter
@@ -56,51 +55,36 @@ fun outlinedTextFieldColors() = OutlinedTextFieldDefaults.colors(
 )
 
 
-fun cleanUri(value: String): String {
-    val regex = Regex("^https?://.+")
-    if (value.isBlank()) return ""
-    if (!regex.matches(value)) return "https://$value".trimEnd('/')
-    return value.trimEnd('/')
+fun String.cleanUri(): String {
+    if (isBlank()) return ""
+    if (!Regex("^https?://.+").matches(this)) return "https://$this".trimEnd('/')
+    return trimEnd('/')
 }
 
 
-@Suppress("SameReturnValue")
-fun fileToImageBitmap(file: File, context: Context): ImageBitmap? {
-    if (file.isFile) {
-        Uri.fromFile(file)?.let { uri ->
-            val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, uri))
-            } else {
-                @Suppress("DEPRECATION")
-                MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
-            }
-            return bitmap?.asImageBitmap()
-        }
-    }
-    return null
-}
-
-
-fun readTextFileFromZip(zipFile: ZipFile, zipEntry: ZipEntry): String {
-    val inputStream = zipFile.getInputStream(zipEntry)
-    val buffer = ByteArray(ZIP_BUFFER_SIZE)
-    val writer = StringWriter()
-    var length: Int
-    while (inputStream.read(buffer).also { length = it } > 0) {
-        writer.write(buffer.decodeToString(0, length))
-    }
-    return writer.toString()
-}
-
-
-fun extractFileFromZip(zipFile: ZipFile, zipEntry: ZipEntry, outfile: File) {
-    val buffer = ByteArray(ZIP_BUFFER_SIZE)
-
-    FileOutputStream(outfile).use { outputStream ->
-        val inputStream = zipFile.getInputStream(zipEntry)
+fun ZipFile.readTextFile(zipEntry: ZipEntry): String {
+    return getInputStream(zipEntry).use { inputStream ->
+        val buffer = ByteArray(ZIP_BUFFER_SIZE)
+        val writer = StringWriter()
         var length: Int
+
         while (inputStream.read(buffer).also { length = it } > 0) {
-            outputStream.write(buffer, 0, length)
+            writer.write(buffer.decodeToString(0, length))
+        }
+        writer.toString()
+    }
+}
+
+
+fun ZipFile.extractFile(zipEntry: ZipEntry, outfile: File) {
+    val buffer = ByteArray(ZIP_BUFFER_SIZE)
+
+    outfile.outputStream().use { outputStream ->
+        getInputStream(zipEntry).use { inputStream ->
+            var length: Int
+            while (inputStream.read(buffer).also { length = it } > 0) {
+                outputStream.write(buffer, 0, length)
+            }
         }
     }
 }
@@ -127,13 +111,14 @@ suspend fun uriToImage(context: Context, uri: Uri, noteId: UUID): Image? {
         val factor = Constants.DEFAULT_MAX_IMAGE_DIMEN.toFloat() / max(bitmap.width, bitmap.height)
         val width = (bitmap.width * factor).roundToInt()
         val height = (bitmap.height * factor).roundToInt()
+
         basename = "${UUID.randomUUID()}.png"
         mimeType = "image/png"
         finalBitmap = bitmap.scale(width = width, height = height)
         imageFile = File(imageDir, basename)
 
         withContext(Dispatchers.IO) {
-            FileOutputStream(imageFile).use { outputStream ->
+            imageFile.outputStream().use { outputStream ->
                 finalBitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
             }
         }
@@ -168,3 +153,6 @@ fun isImageFile(filename: String): Boolean {
 fun Uri.getMimeType(context: Context): String? =
     if (scheme == ContentResolver.SCHEME_CONTENT) context.contentResolver.getType(this)
     else Files.probeContentType(Paths.get(path))
+
+
+fun File.toBitmap(): Bitmap? = takeIf { it.isFile }?.inputStream().use { BitmapFactory.decodeStream(it) }

@@ -86,7 +86,7 @@ fun NextCloudSection(
                         .onFocusChanged {
                             if (!it.isFocused) {
                                 if (uriState.isNotEmpty()) {
-                                    uriState = cleanUri(uriState)
+                                    uriState = uriState.cleanUri()
                                     viewModel.updateField(PREF_NEXTCLOUD_URI, uriState)
                                 }
                             }

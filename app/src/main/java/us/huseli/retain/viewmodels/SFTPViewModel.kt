@@ -17,7 +17,7 @@ import us.huseli.retain.Constants.PREF_SFTP_HOSTNAME
 import us.huseli.retain.Constants.PREF_SFTP_PASSWORD
 import us.huseli.retain.Constants.PREF_SFTP_PORT
 import us.huseli.retain.Constants.PREF_SFTP_USERNAME
-import us.huseli.retain.data.SyncBackendRepository
+import us.huseli.retain.repositories.SyncBackendRepository
 import us.huseli.retain.syncbackend.SFTPEngine
 import us.huseli.retain.syncbackend.tasks.TestTaskResult
 import javax.inject.Inject

@@ -1,6 +1,5 @@
 package us.huseli.retain.compose.settings
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,7 +19,6 @@ import us.huseli.retain.compose.RetainScaffold
 import us.huseli.retain.viewmodels.SettingsViewModel
 
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
