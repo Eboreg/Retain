@@ -37,7 +37,7 @@ fun ExternalImportDialog(
                 if (actionCount != null) {
                     LinearProgressIndicator(
                         modifier = progressModifier,
-                        progress = if (actionCount > 0) (currentActionIndex.toFloat() / actionCount) else 0f
+                        progress = { if (actionCount > 0) (currentActionIndex.toFloat() / actionCount) else 0f },
                     )
                 } else {
                     LinearProgressIndicator(modifier = progressModifier)

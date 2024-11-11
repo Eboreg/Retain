@@ -1,7 +1,7 @@
 package us.huseli.retain.compose.settings
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.sharp.ArrowBack
+import androidx.compose.material.icons.automirrored.sharp.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -26,7 +26,7 @@ fun SettingsTopAppBar(
         navigationIcon = {
             IconButton(onClick = onBackClick) {
                 Icon(
-                    imageVector = Icons.Sharp.ArrowBack,
+                    imageVector = Icons.AutoMirrored.Sharp.ArrowBack,
                     contentDescription = stringResource(R.string.close)
                 )
             }

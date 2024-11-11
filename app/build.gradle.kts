@@ -3,7 +3,7 @@ import java.util.Properties
 
 val keystoreProperties = Properties()
 val secretsProperties = Properties()
-val targetSdk = 34
+val targetSdk = 35
 
 keystoreProperties.load(FileInputStream(rootProject.file("keystore.properties")))
 secretsProperties.load(FileInputStream(rootProject.file("secrets.properties")))
@@ -15,6 +15,7 @@ plugins {
     id("kotlin-parcelize")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.kapt")
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 kotlin {
@@ -53,7 +54,6 @@ android {
             val dropboxAppKey = secretsProperties["dropboxAppKeyDebug"] as String
 
             isDebuggable = true
-            isRenderscriptDebuggable = true
             applicationIdSuffix = ".debug"
             buildConfigField("String", "dropboxAppKey", "\"${dropboxAppKey}\"")
             manifestPlaceholders["dropboxAppKey"] = dropboxAppKey
@@ -82,6 +82,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     composeOptions {
@@ -96,21 +97,21 @@ android {
     }
 }
 
-val lifecycleVersion = "2.6.2"
-val composeVersion = "1.5.4"
-val daggerVersion = "2.48.1"
-val roomVersion = "2.6.0"
+val lifecycleVersion = "2.8.7"
+val composeVersion = "1.7.5"
+val daggerVersion = "2.52"
+val roomVersion = "2.6.1"
 
 dependencies {
-    implementation("com.google.devtools.ksp:symbol-processing-api:1.9.10-1.0.13")
-    implementation("androidx.core:core-ktx:1.12.0")
+    implementation("com.google.devtools.ksp:symbol-processing-api:2.0.21-1.0.25")
+    implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("androidx.preference:preference-ktx:1.2.1")
-    implementation("androidx.activity:activity-compose:1.8.0")
-    implementation("androidx.navigation:navigation-compose:2.7.4")
+    implementation("androidx.activity:activity-compose:1.9.3")
+    implementation("androidx.navigation:navigation-compose:2.8.3")
     // For PickVisualMedia contract:
-    implementation("androidx.activity:activity-ktx:1.8.0")
+    implementation("androidx.activity:activity-ktx:1.9.3")
 
     // Lifecycle:
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:$lifecycleVersion")
@@ -134,7 +135,7 @@ dependencies {
 
     // Material:
     implementation("androidx.compose.material:material:$composeVersion")
-    implementation("androidx.compose.material3:material3:1.1.2")
+    implementation("androidx.compose.material3:material3:1.3.1")
     implementation("androidx.compose.material:material-icons-extended:$composeVersion")
 
     // Room:
@@ -144,20 +145,20 @@ dependencies {
 
     // Hilt:
     implementation("com.google.dagger:hilt-android:$daggerVersion")
-    implementation("androidx.hilt:hilt-navigation-compose:1.0.0")
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
     kapt("com.google.dagger:hilt-compiler:$daggerVersion")
 
     // Gson:
-    implementation("com.google.code.gson:gson:2.10.1")
+    implementation("com.google.code.gson:gson:2.11.0")
 
     // Reorder:
     implementation("org.burnoutcrew.composereorderable:reorderable:0.9.6")
 
     // To change status bar colour etc:
-    implementation("com.google.accompanist:accompanist-systemuicontroller:0.27.0")
+    implementation("com.google.accompanist:accompanist-systemuicontroller:0.36.0")
 
     // HTML parsing:
-    implementation("org.jsoup:jsoup:1.16.2")
+    implementation("org.jsoup:jsoup:1.18.1")
 
     // SFTP:
     implementation(group = "com.github.mwiede", name = "jsch", version = "0.2.12")

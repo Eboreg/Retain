@@ -5,9 +5,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.sharp.ArrowBack
 import androidx.compose.material.icons.sharp.AddAPhoto
 import androidx.compose.material.icons.sharp.AddPhotoAlternate
-import androidx.compose.material.icons.sharp.ArrowBack
 import androidx.compose.material.icons.sharp.Palette
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -62,14 +62,17 @@ fun NoteScreenTopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(containerColor = backgroundColor),
         navigationIcon = {
             IconButton(onClick = onBackClick) {
-                Icon(imageVector = Icons.Sharp.ArrowBack, contentDescription = stringResource(R.string.go_back))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Sharp.ArrowBack,
+                    contentDescription = stringResource(R.string.go_back),
+                )
             }
         },
         actions = {
             IconButton(onClick = { isColorDropdownExpanded = true }) {
                 Icon(
                     imageVector = Icons.Sharp.Palette,
-                    contentDescription = stringResource(R.string.set_colour)
+                    contentDescription = stringResource(R.string.set_colour),
                 )
             }
             ColorDropdownMenu(
