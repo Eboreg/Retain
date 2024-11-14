@@ -1,6 +1,6 @@
 package us.huseli.retain.compose.settings
 
-import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -92,7 +92,7 @@ fun SFTPSection(modifier: Modifier = Modifier, viewModel: SFTPViewModel = hiltVi
         )
     }
 
-    BoxWithConstraints(modifier = modifier) {
+    Box(modifier = modifier) {
         Column {
             Row(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(

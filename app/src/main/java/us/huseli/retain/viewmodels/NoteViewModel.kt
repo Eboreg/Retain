@@ -41,9 +41,9 @@ class NoteViewModel @Inject constructor(
     private val _checklistItems = MutableStateFlow<List<ChecklistItem>>(emptyList())
     private val _selectedImages = MutableStateFlow<Set<String>>(emptySet())
     private val _focusedChecklistItemId = MutableStateFlow<UUID?>(null)
-    private val _isUnsaved = MutableStateFlow(false)
     private val _checklistItemUndoState = MutableStateFlow<List<ChecklistItem>?>(null)
     private val _imageUndoState = MutableStateFlow<List<Image>?>(null)
+    private val _unsavedComponents = MutableStateFlow<Set<NotePojo.Component>>(emptySet())
 
     val images = _images.asStateFlow()
     val note = _note.asStateFlow()
@@ -51,7 +51,7 @@ class NoteViewModel @Inject constructor(
     val uncheckedItems = _checklistItems.map { items -> items.filter { !it.checked } }
     val selectedImages = _selectedImages.asStateFlow()
     val focusedChecklistItemId = _focusedChecklistItemId.asStateFlow()
-    val isUnsaved = _isUnsaved.asStateFlow()
+    val isUnsaved = _unsavedComponents.map { it.isNotEmpty() }
 
     init {
         viewModelScope.launch {
@@ -59,7 +59,7 @@ class NoteViewModel @Inject constructor(
                 _note.value = pojo.note
                 _images.value = pojo.images
                 _checklistItems.value = pojo.checklistItems
-                _isUnsaved.value = false
+                _unsavedComponents.value = emptySet()
             }
         }
 
@@ -68,13 +68,17 @@ class NoteViewModel @Inject constructor(
         }
     }
 
-    fun deleteCheckedItems(onFinish: (Int) -> Unit) =
+    fun clearChecklistItemFocus() {
+        _focusedChecklistItemId.value = null
+    }
+
+    fun deleteCheckedItems(onFinish: (Int) -> Unit = {}) =
         deleteChecklistItems(_checklistItems.value.filter { it.checked }.map { it.id }, onFinish)
 
-    fun deleteChecklistItem(item: ChecklistItem, onFinish: (Int) -> Unit) =
+    fun deleteChecklistItem(item: ChecklistItem, onFinish: (Int) -> Unit = {}) =
         deleteChecklistItems(listOf(item.id), onFinish)
 
-    fun deleteSelectedImages(onFinish: (Int) -> Unit) {
+    fun deleteSelectedImages(onFinish: (Int) -> Unit = {}) {
         val trashedImageIds = _selectedImages.value
 
         _imageUndoState.value = _images.value
@@ -99,7 +103,7 @@ class NoteViewModel @Inject constructor(
                 else it
             }.plus(item).sorted()
 
-        setChecklistItemFocus(item)
+        setChecklistItemFocus(item, true)
         save(NotePojo.Component.CHECKLIST_ITEMS)
 
         return item
@@ -113,21 +117,33 @@ class NoteViewModel @Inject constructor(
         }
     }
 
-    fun save() = save(listOf(NotePojo.Component.CHECKLIST_ITEMS, NotePojo.Component.NOTE, NotePojo.Component.IMAGES))
+    fun onAutocompleteSelect(currentItem: ChecklistItem, selectedItem: ChecklistItem) {
+        setChecklistItemText(currentItem, selectedItem.text)
+        deleteChecklistItem(selectedItem)
+        save()
+    }
+
+    fun save() {
+        save(*_unsavedComponents.value.toTypedArray())
+    }
 
     fun selectAllImages() {
         _selectedImages.value = _images.value.map { it.filename }.toSet()
     }
 
-    fun setChecklistItemFocus(item: ChecklistItem?) {
-        _focusedChecklistItemId.value = item?.id
+    fun setChecklistItemFocus(item: ChecklistItem, isFocused: Boolean) {
+        if (!isFocused) {
+            if (item.id == _focusedChecklistItemId.value) clearChecklistItemFocus()
+        } else {
+            _focusedChecklistItemId.value = item.id
+        }
     }
 
     fun setChecklistItemText(item: ChecklistItem, value: String) {
         _checklistItems.value = _checklistItems.value.map {
             if (it.id == item.id) it.copy(text = value) else it
         }
-        _isUnsaved.value = true
+        _unsavedComponents.value += NotePojo.Component.CHECKLIST_ITEMS
     }
 
     fun setColor(value: String) {
@@ -139,12 +155,12 @@ class NoteViewModel @Inject constructor(
 
     fun setText(value: String) {
         if (value != _note.value?.text) _note.value = _note.value?.copy(text = value)
-        _isUnsaved.value = true
+        _unsavedComponents.value += NotePojo.Component.NOTE
     }
 
     fun setTitle(value: String) {
         if (value != _note.value?.title) _note.value = _note.value?.copy(title = value)
-        _isUnsaved.value = true
+        _unsavedComponents.value += NotePojo.Component.NOTE
     }
 
     fun splitChecklistItem(item: ChecklistItem, textFieldValue: TextFieldValue) {
@@ -175,7 +191,7 @@ class NoteViewModel @Inject constructor(
                     else -> item
                 }
             }.sorted()
-            _isUnsaved.value = true
+            _unsavedComponents.value += NotePojo.Component.CHECKLIST_ITEMS
         }
     }
 
@@ -229,7 +245,7 @@ class NoteViewModel @Inject constructor(
 
     /** PRIVATE METHODS ******************************************************/
 
-    private fun deleteChecklistItems(itemIds: List<UUID>, onFinish: (Int) -> Unit) {
+    private fun deleteChecklistItems(itemIds: List<UUID>, onFinish: (Int) -> Unit = {}) {
         _checklistItemUndoState.value = _checklistItems.value
         _checklistItems.value = _checklistItems.value.toMutableList().apply {
             removeAll { itemIds.contains(it.id) }
@@ -238,20 +254,23 @@ class NoteViewModel @Inject constructor(
         onFinish(itemIds.size)
     }
 
-    private fun save(component: NotePojo.Component) = save(listOf(component))
-
-    private fun save(components: List<NotePojo.Component>) = _note.value?.also { note ->
-        repository.saveNotePojo(
-            NotePojo(note = note, checklistItems = _checklistItems.value, images = _images.value),
-            components,
-        )
-        _isUnsaved.value = false
+    private fun save(vararg components: NotePojo.Component) {
+        if (components.isNotEmpty()) {
+            _note.value?.also { note ->
+                log("Saving ${components.map { it.name }} for $note ...")
+                repository.saveNotePojo(
+                    NotePojo(note = note, checklistItems = _checklistItems.value, images = _images.value),
+                    *components,
+                )
+                _unsavedComponents.value -= components
+            }
+        }
     }
 
     private fun updateImagePositions() {
         _images.value = _images.value.mapIndexed { index, image ->
             if (image.position != index) image.copy(position = index) else image
         }
-        _isUnsaved.value = true
+        _unsavedComponents.value += NotePojo.Component.IMAGES
     }
 }

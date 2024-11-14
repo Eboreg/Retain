@@ -1,5 +1,6 @@
 package us.huseli.retain.compose.notescreen
 
+import android.util.Log
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,6 +18,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ShapeDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -27,8 +29,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.boundsInParent
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -46,18 +54,25 @@ fun ChecklistNoteChecklistRow(
     isFocused: Boolean,
     isDragging: Boolean,
     checked: Boolean,
-    onFocus: () -> Unit,
+    onFocusChange: (Boolean) -> Unit,
     onDeleteClick: () -> Unit,
     onCheckedChange: (Boolean) -> Unit,
     onTextChange: (String) -> Unit,
     onNext: (TextFieldValue) -> Unit,
     reorderableState: ReorderableLazyListState,
+    getAutocomplete: (String) -> List<ChecklistItem>,
+    onAutocompleteSelect: (ChecklistItem) -> Unit,
 ) {
-    val alpha = if (checked) 0.5f else 1f
+    val alpha = remember(checked) { if (checked) 0.5f else 1f }
     val focusRequester = remember { FocusRequester() }
     var textFieldValue by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
+    val autocomplete = remember(textFieldValue) { getAutocomplete(textFieldValue.text) }
+    var textFieldRect by remember { mutableStateOf(Rect.Zero) }
+    val showAutocomplete = remember(isFocused, isDragging, checked) { isFocused && !isDragging && !checked }
 
-    textFieldValue = textFieldValue.copy(text = item.text)
+    LaunchedEffect(item.text) {
+        textFieldValue = textFieldValue.copy(text = item.text)
+    }
 
     val realModifier =
         if (isDragging) modifier.border(
@@ -105,15 +120,39 @@ fun ChecklistNoteChecklistRow(
             ),
             keyboardActions = KeyboardActions(onNext = { onNext(textFieldValue) }),
             modifier = Modifier
-                .onFocusChanged { if (it.isFocused) onFocus() }
+                .onFocusChanged {
+                    Log.i("ChecklistNoteChecklistRow", "onFocusChanged: ${item.text}, .isFocused=${it.isFocused}")
+                    onFocusChange(it.isFocused)
+                }
                 .weight(1f)
                 .fillMaxWidth()
                 .focusRequester(focusRequester)
+                .onPlaced { coords ->
+                    val bounds = coords.boundsInWindow()
+
+                    Log.i(
+                        "ChecklistNoteChecklistRow",
+                        "boundsInParent=${coords.boundsInParent()}, boundsInRoot=${coords.boundsInRoot()}, boundsInWindow=${coords.boundsInWindow()}, size=${coords.size}"
+                    )
+                    if (!bounds.isEmpty) textFieldRect = bounds
+                }
                 .onGloballyPositioned { if (isFocused) focusRequester.requestFocus() },
         )
         IconButton(
             onClick = onDeleteClick,
             content = { Icon(Icons.Sharp.Close, null) },
+        )
+    }
+
+    if (showAutocomplete) {
+        ChecklistAutocomplete(
+            items = autocomplete,
+            textFieldRect = { textFieldRect },
+            onItemClick = {
+                textFieldValue = TextFieldValue(text = it.text, selection = TextRange(it.text.length))
+                onAutocompleteSelect(it)
+            },
+            onDismissRequest = {},
         )
     }
 }

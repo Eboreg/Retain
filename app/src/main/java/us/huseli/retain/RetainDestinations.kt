@@ -1,3 +1,5 @@
+@file:Suppress("ConstPropertyName")
+
 package us.huseli.retain
 
 import androidx.navigation.NavType

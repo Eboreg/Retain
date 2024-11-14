@@ -68,7 +68,7 @@ class NoteRepository @Inject constructor(
 
     suspend fun listImagesByNoteId(noteId: UUID): List<Image> = imageDao.listByNoteId(noteId)
 
-    fun saveNotePojo(pojo: NotePojo, components: List<NotePojo.Component>) {
+    fun saveNotePojo(pojo: NotePojo, vararg components: NotePojo.Component) {
         /**
          * Not a suspend function, since it should not be tied to the scope of
          * any single viewmodel or composition.
@@ -77,12 +77,13 @@ class NoteRepository @Inject constructor(
          */
         ioScope.launch {
             database.withTransaction {
-                if (components.contains(NotePojo.Component.NOTE)) noteDao.upsert(pojo.note)
+                if (components.isNotEmpty()) noteDao.upsert(pojo.note)
                 if (components.contains(NotePojo.Component.CHECKLIST_ITEMS)) {
                     val checkedItems = pojo.checklistItems.filter { it.checked }
                         .mapIndexed { index, item -> item.copy(position = index) }
                     val uncheckedItems = pojo.checklistItems.filter { !it.checked }
                         .mapIndexed { index, item -> item.copy(position = index) }
+
                     checklistItemDao.replace(pojo.note.id, uncheckedItems + checkedItems)
                 }
                 if (components.contains(NotePojo.Component.IMAGES)) {

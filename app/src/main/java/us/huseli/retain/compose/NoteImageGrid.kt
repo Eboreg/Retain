@@ -18,35 +18,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import okhttp3.internal.toImmutableList
+import us.huseli.retain.ImageIterator
 import us.huseli.retain.dataclasses.entities.Image
 import us.huseli.retain.viewmodels.ImageViewModel
-
-class ImageIterator(
-    private val objects: List<Image>,
-    private val maxRows: Int = Int.MAX_VALUE
-) : Iterator<List<Image>> {
-    private var currentIndex = 0
-    private var currentRow = 0
-
-    override fun hasNext() = currentIndex < objects.size && currentRow < maxRows
-
-    override fun next(): List<Image> {
-        val result = mutableListOf<Image>()
-        var collectedRatio = 0f
-
-        for (i in currentIndex until objects.size) {
-            if (collectedRatio > 0 && collectedRatio + objects[i].ratio > 5) break
-            result.add(objects[i])
-            collectedRatio += objects[i].ratio
-            currentIndex++
-            if (currentIndex == 1) break
-        }
-
-        currentRow++
-        return result.toImmutableList()
-    }
-}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -62,10 +36,11 @@ fun NoteImageGrid(
     val imageLists = ImageIterator(objects = images, maxRows = maxRows)
 
     imageLists.asSequence().forEachIndexed { index, sublist ->
-        var rowModifier = Modifier.fillMaxWidth()
-        if (index > 0) rowModifier = rowModifier.heightIn(max = secondaryRowHeight)
-
-        Row(modifier = rowModifier) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = if (index > 0) secondaryRowHeight else secondaryRowHeight * 2)
+        ) {
             sublist.forEach { image ->
                 val imageBitmap by viewModel.getImageBitmap(image.filename).collectAsStateWithLifecycle(null)
                 val boxModifier =

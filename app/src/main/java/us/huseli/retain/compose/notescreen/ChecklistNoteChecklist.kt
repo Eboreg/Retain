@@ -44,10 +44,12 @@ fun LazyListScope.ChecklistNoteChecklist(
     onItemCheckedChange: (ChecklistItem, Boolean) -> Unit,
     onItemTextChange: (ChecklistItem, String) -> Unit,
     onNextItem: (ChecklistItem, TextFieldValue) -> Unit,
-    onItemFocus: (ChecklistItem) -> Unit,
+    onItemFocusChange: (ChecklistItem, Boolean) -> Unit,
     onShowCheckedClick: () -> Unit,
     backgroundColor: Color,
     onAddItemClick: () -> Unit,
+    getAutocomplete: (String) -> List<ChecklistItem>,
+    onAutocompleteSelect: (ChecklistItem, ChecklistItem) -> Unit,
 ) {
     items(uncheckedItems, key = { it.id }) { item ->
         ReorderableItem(state, key = item.id) { isDragging ->
@@ -57,12 +59,14 @@ fun LazyListScope.ChecklistNoteChecklist(
                 isFocused = focusedItemId == item.id,
                 isDragging = isDragging,
                 checked = item.checked,
-                onFocus = { onItemFocus(item) },
+                onFocusChange = { onItemFocusChange(item, it) },
                 onDeleteClick = { onItemDeleteClick(item) },
                 onCheckedChange = { onItemCheckedChange(item, it) },
                 onNext = { onNextItem(item, it) },
                 reorderableState = state,
                 onTextChange = { onItemTextChange(item, it) },
+                getAutocomplete = getAutocomplete,
+                onAutocompleteSelect = { onAutocompleteSelect(item, it) },
             )
         }
     }
@@ -102,12 +106,14 @@ fun LazyListScope.ChecklistNoteChecklist(
                         isFocused = focusedItemId == item.id,
                         isDragging = isDragging,
                         checked = item.checked,
-                        onFocus = { onItemFocus(item) },
+                        onFocusChange = { onItemFocusChange(item, it) },
                         onDeleteClick = { onItemDeleteClick(item) },
                         onCheckedChange = { onItemCheckedChange(item, it) },
                         onNext = { onNextItem(item, it) },
                         reorderableState = state,
                         onTextChange = { onItemTextChange(item, it) },
+                        getAutocomplete = getAutocomplete,
+                        onAutocompleteSelect = { onAutocompleteSelect(item, it) },
                     )
                 }
             }

@@ -17,6 +17,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,6 +45,7 @@ import us.huseli.retain.Enums.NoteType
 import us.huseli.retain.R
 import us.huseli.retain.compose.NoteImageGrid
 import us.huseli.retain.compose.RetainScaffold
+import us.huseli.retain.dataclasses.entities.ChecklistItem
 import us.huseli.retain.outlinedTextFieldColors
 import us.huseli.retain.ui.theme.getAppBarColor
 import us.huseli.retain.ui.theme.getNoteColor
@@ -69,7 +71,7 @@ fun NoteScreen(
     val uncheckedItems by viewModel.uncheckedItems.collectAsStateWithLifecycle(emptyList())
     val focusedChecklistItemId by viewModel.focusedChecklistItemId.collectAsStateWithLifecycle()
     var textFieldValue by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
-    val isUnsaved by viewModel.isUnsaved.collectAsStateWithLifecycle()
+    val isUnsaved by viewModel.isUnsaved.collectAsStateWithLifecycle(false)
 
     val appBarColor by remember(note?.color) {
         mutableStateOf(note?.color?.let { getAppBarColor(context, it, surface) } ?: surface)
@@ -80,45 +82,61 @@ fun NoteScreen(
     val reorderableState = rememberReorderableLazyListState(
         onMove = { from, to -> viewModel.switchItemPositions(from, to) },
     )
-
-    note?.text?.also { textFieldValue = textFieldValue.copy(text = it) }
+    val getAutocomplete: (String) -> List<ChecklistItem> = remember(checkedItems) {
+        { string ->
+            if (string.length >= 2) checkedItems.filter { it.text.startsWith(string, ignoreCase = true) }.take(5)
+            else emptyList()
+        }
+    }
 
     BackHandler(selectedImages.isNotEmpty()) {
         viewModel.deselectAllImages()
     }
 
+    DisposableEffect(Unit) {
+        onDispose { viewModel.save() }
+    }
+
+    LaunchedEffect(note?.text) {
+        note?.text?.also { textFieldValue = textFieldValue.copy(text = it) }
+    }
+
     LaunchedEffect(Unit) {
         while (true) {
-            if (isUnsaved) viewModel.save()
-            delay(10_000)
+            viewModel.save()
+            delay(2_000)
         }
     }
 
-    val onImagesDeleted = { count: Int ->
-        if (count > 0) {
-            SnackbarEngine.addInfo(
-                message = context.resources.getQuantityString(
-                    R.plurals.x_images_trashed,
-                    count,
-                    count,
-                ),
-                actionLabel = context.getString(R.string.undo).uppercase(),
-                onActionPerformed = { viewModel.undeleteImages() },
-            )
+    val onImagesDeleted = remember {
+        { count: Int ->
+            if (count > 0) {
+                SnackbarEngine.addInfo(
+                    message = context.resources.getQuantityString(
+                        R.plurals.x_images_trashed,
+                        count,
+                        count,
+                    ),
+                    actionLabel = context.getString(R.string.undo).uppercase(),
+                    onActionPerformed = { viewModel.undeleteImages() },
+                )
+            }
         }
     }
 
-    val onChecklistItemsDeleted = { count: Int ->
-        if (count > 0) {
-            SnackbarEngine.addInfo(
-                message = context.resources.getQuantityString(
-                    R.plurals.x_checklistitems_trashed,
-                    count,
-                    count,
-                ),
-                actionLabel = context.getString(R.string.undo).uppercase(),
-                onActionPerformed = { viewModel.undeleteChecklistItems() },
-            )
+    val onChecklistItemsDeleted = remember {
+        { count: Int ->
+            if (count > 0) {
+                SnackbarEngine.addInfo(
+                    message = context.resources.getQuantityString(
+                        R.plurals.x_checklistitems_trashed,
+                        count,
+                        count,
+                    ),
+                    actionLabel = context.getString(R.string.undo).uppercase(),
+                    onActionPerformed = { viewModel.undeleteChecklistItems() },
+                )
+            }
         }
     }
 
@@ -188,7 +206,7 @@ fun NoteScreen(
                     OutlinedTextField(
                         modifier = Modifier
                             .weight(1f)
-                            .onFocusChanged { if (it.isFocused) viewModel.setChecklistItemFocus(null) },
+                            .onFocusChanged { if (it.isFocused) viewModel.clearChecklistItemFocus() },
                         value = note?.title ?: "",
                         onValueChange = { viewModel.setTitle(it) },
                         textStyle = MaterialTheme.typography.headlineSmall,
@@ -257,13 +275,17 @@ fun NoteScreen(
                             onShowCheckedClick = { viewModel.toggleShowCheckedItems() },
                             backgroundColor = noteColor,
                             focusedItemId = focusedChecklistItemId,
-                            onItemFocus = { viewModel.setChecklistItemFocus(it) },
+                            onItemFocusChange = { item, isFocused -> viewModel.setChecklistItemFocus(item, isFocused) },
                             onAddItemClick = {
                                 viewModel.insertChecklistItem(
                                     text = "",
                                     checked = false,
                                     position = uncheckedItems.size,
                                 )
+                            },
+                            getAutocomplete = getAutocomplete,
+                            onAutocompleteSelect = { currentItem, selectedItem ->
+                                viewModel.onAutocompleteSelect(currentItem, selectedItem)
                             },
                         )
                     }

@@ -40,8 +40,8 @@ android {
         applicationId = "us.huseli.retain"
         minSdk = 26
         targetSdk = targetSdk
-        versionCode = 6
-        versionName = "1.0.0-beta.6"
+        versionCode = 7
+        versionName = "1.0.0-beta.7"
         vectorDrawables.useSupportLibrary = true
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // buildConfigField("String", "dropboxAppKey", "\"${dropboxAppKey}\"")
@@ -109,7 +109,7 @@ dependencies {
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("androidx.preference:preference-ktx:1.2.1")
     implementation("androidx.activity:activity-compose:1.9.3")
-    implementation("androidx.navigation:navigation-compose:2.8.3")
+    implementation("androidx.navigation:navigation-compose:2.8.4")
     // For PickVisualMedia contract:
     implementation("androidx.activity:activity-ktx:1.9.3")
 
