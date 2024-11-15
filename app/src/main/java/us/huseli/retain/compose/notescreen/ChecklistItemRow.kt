@@ -18,11 +18,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ShapeDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,14 +44,11 @@ import androidx.compose.ui.unit.sp
 import org.burnoutcrew.reorderable.ReorderableLazyListState
 import org.burnoutcrew.reorderable.detectReorder
 import us.huseli.retain.dataclasses.entities.ChecklistItem
+import us.huseli.retain.dataclasses.uistate.ChecklistItemUiState
 
 @Composable
-fun ChecklistNoteChecklistRow(
-    modifier: Modifier = Modifier,
-    item: ChecklistItem,
-    isFocused: Boolean,
-    isDragging: Boolean,
-    isChecked: Boolean,
+fun ChecklistItemRow(
+    state: ChecklistItemUiState,
     onFocusChange: (Boolean) -> Unit,
     onDeleteClick: () -> Unit,
     onCheckedChange: (Boolean) -> Unit,
@@ -62,28 +57,23 @@ fun ChecklistNoteChecklistRow(
     reorderableState: ReorderableLazyListState,
     getAutocomplete: (String) -> List<ChecklistItem>,
     onAutocompleteSelect: (ChecklistItem) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val alpha = remember(isChecked) { if (isChecked) 0.5f else 1f }
+    var text by remember(state.text) { mutableStateOf(state.text) }
+    var selection by remember(state.text) { mutableStateOf(TextRange(state.text.length)) }
+    val textFieldValue by remember(text, selection) { mutableStateOf(TextFieldValue(text = text, selection = selection)) }
     val focusRequester = remember { FocusRequester() }
-    var textFieldValue by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
-    val autocomplete = remember(textFieldValue) { getAutocomplete(textFieldValue.text) }
+    val autocomplete = remember(state.text) { getAutocomplete(state.text) }
     var textFieldRect by remember { mutableStateOf(Rect.Zero) }
-    val showAutocomplete = remember(isFocused, isDragging, isChecked) { isFocused && !isDragging && !isChecked }
-
-    LaunchedEffect(item.text) {
-        textFieldValue = textFieldValue.copy(text = item.text)
-    }
-
-    val realModifier =
-        if (isDragging) modifier.border(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-            shape = ShapeDefaults.ExtraSmall,
-        )
-        else modifier
 
     Row(
-        modifier = realModifier,
+        modifier = modifier.then(
+            if (state.isDragging) Modifier.border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                shape = ShapeDefaults.ExtraSmall,
+            ) else Modifier
+        ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -95,24 +85,25 @@ fun ChecklistNoteChecklistRow(
         )
         Checkbox(
             modifier = Modifier.padding(start = 0.dp),
-            checked = isChecked,
+            checked = state.isChecked,
             onCheckedChange = onCheckedChange,
             colors = CheckboxDefaults.colors(
-                checkedColor = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
-                uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha),
-                checkmarkColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = alpha),
+                checkedColor = MaterialTheme.colorScheme.primary.copy(alpha = state.alpha),
+                uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = state.alpha),
+                checkmarkColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = state.alpha),
             )
         )
         BasicTextField(
             value = textFieldValue,
-            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary.copy(alpha = alpha)),
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary.copy(alpha = state.alpha)),
             textStyle = TextStyle.Default.copy(
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = state.alpha),
                 fontSize = 16.sp,
             ),
             onValueChange = {
-                textFieldValue = it
-                onTextChange(it.text)
+                text = it.text
+                selection = it.selection
+                if (it.text != state.text) onTextChange(it.text)
             },
             keyboardOptions = KeyboardOptions.Default.copy(
                 imeAction = ImeAction.Next,
@@ -121,7 +112,10 @@ fun ChecklistNoteChecklistRow(
             keyboardActions = KeyboardActions(onNext = { onNext(textFieldValue) }),
             modifier = Modifier
                 .onFocusChanged {
-                    Log.i("ChecklistNoteChecklistRow", "onFocusChanged: ${item.text}, .isFocused=${it.isFocused}")
+                    Log.i(
+                        "ChecklistNoteChecklistRow",
+                        "onFocusChanged: ${textFieldValue.text}, .isFocused=${it.isFocused}"
+                    )
                     onFocusChange(it.isFocused)
                 }
                 .weight(1f)
@@ -136,7 +130,7 @@ fun ChecklistNoteChecklistRow(
                     )
                     if (!bounds.isEmpty) textFieldRect = bounds
                 }
-                .onGloballyPositioned { if (isFocused) focusRequester.requestFocus() },
+                .onGloballyPositioned { if (state.isFocused) focusRequester.requestFocus() },
         )
         IconButton(
             onClick = onDeleteClick,
@@ -144,14 +138,11 @@ fun ChecklistNoteChecklistRow(
         )
     }
 
-    if (showAutocomplete) {
+    if (state.showAutocomplete) {
         ChecklistAutocomplete(
             items = autocomplete,
             textFieldRect = { textFieldRect },
-            onItemClick = {
-                textFieldValue = TextFieldValue(text = it.text, selection = TextRange(it.text.length))
-                onAutocompleteSelect(it)
-            },
+            onItemClick = onAutocompleteSelect,
             onDismissRequest = {},
         )
     }

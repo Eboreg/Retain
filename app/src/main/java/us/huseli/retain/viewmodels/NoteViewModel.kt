@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
@@ -22,6 +23,7 @@ import us.huseli.retain.dataclasses.NotePojo
 import us.huseli.retain.dataclasses.entities.ChecklistItem
 import us.huseli.retain.dataclasses.entities.Image
 import us.huseli.retain.dataclasses.entities.Note
+import us.huseli.retain.dataclasses.uistate.ChecklistItemUiState
 import us.huseli.retain.repositories.NoteRepository
 import java.util.UUID
 import javax.inject.Inject
@@ -52,6 +54,16 @@ class NoteViewModel @Inject constructor(
     val selectedImages = _selectedImages.asStateFlow()
     val focusedChecklistItemId = _focusedChecklistItemId.asStateFlow()
     val isUnsaved = _unsavedComponents.map { it.isNotEmpty() }
+    val uiStates = combine(_checklistItems, _focusedChecklistItemId) { items, focusedId ->
+        items.map { item ->
+            ChecklistItemUiState(
+                text = item.text,
+                isChecked = item.checked,
+                isFocused = item.id == focusedId,
+                isDragging = false,
+            )
+        }
+    }
 
     init {
         viewModelScope.launch {

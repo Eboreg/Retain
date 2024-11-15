@@ -262,6 +262,7 @@ fun NoteScreen(
                             )
                         }
                     }
+
                     NoteType.CHECKLIST -> {
                         ChecklistNoteChecklist(
                             state = reorderableState,
