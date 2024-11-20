@@ -3,11 +3,14 @@ package us.huseli.retain.syncbackend.tasks
 import us.huseli.retain.Constants.SYNCBACKEND_IMAGE_SUBDIR
 import us.huseli.retain.dataclasses.entities.Image
 import us.huseli.retain.syncbackend.Engine
+import us.huseli.retain.syncbackend.tasks.abstr.AbstractListTask
+import us.huseli.retain.syncbackend.tasks.result.OperationTaskResult
+import us.huseli.retain.syncbackend.tasks.result.TaskResult
 import java.io.File
 
 /** Down: 0..n images */
 class DownloadImagesTask<ET : Engine>(engine: ET, images: Collection<Image>) :
-    ListTask<ET, OperationTaskResult, DownloadFileTask<ET, OperationTaskResult>, Image>(
+    AbstractListTask<ET, OperationTaskResult, DownloadFileTask<ET, OperationTaskResult>, Image>(
         engine = engine,
         objects = images
     ) {

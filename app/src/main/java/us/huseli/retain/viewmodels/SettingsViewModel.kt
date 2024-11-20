@@ -8,7 +8,6 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import androidx.preference.PreferenceManager
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
@@ -19,7 +18,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.internal.toImmutableList
 import org.jsoup.Jsoup
@@ -28,21 +26,21 @@ import us.huseli.retain.Constants.PREF_MIN_COLUMN_WIDTH
 import us.huseli.retain.Constants.PREF_SYNC_BACKEND
 import us.huseli.retain.Enums.NoteType
 import us.huseli.retain.Enums.SyncBackend
-import us.huseli.retain.LogInterface
-import us.huseli.retain.Logger
+import us.huseli.retain.ILogger
 import us.huseli.retain.copyFileToLocal
-import us.huseli.retain.dataclasses.GoogleNoteEntry
+import us.huseli.retain.dataclasses.ImageData
 import us.huseli.retain.dataclasses.NotePojo
 import us.huseli.retain.dataclasses.QuickNoteEntry
 import us.huseli.retain.dataclasses.entities.ChecklistItem
-import us.huseli.retain.dataclasses.entities.Image
 import us.huseli.retain.dataclasses.entities.Note
+import us.huseli.retain.dataclasses.google.GoogleNoteEntry
 import us.huseli.retain.extractFile
 import us.huseli.retain.isImageFile
 import us.huseli.retain.readTextFile
 import us.huseli.retain.repositories.NoteRepository
 import us.huseli.retain.repositories.SyncBackendRepository
-import us.huseli.retain.uriToImage
+import us.huseli.retain.uriToImageData
+import us.huseli.retaintheme.extensions.launchOnIOThread
 import java.io.File
 import java.time.Instant
 import java.util.zip.ZipFile
@@ -53,12 +51,12 @@ class SettingsViewModel @Inject constructor(
     @ApplicationContext context: Context,
     private val repository: NoteRepository,
     private val syncBackendRepository: SyncBackendRepository,
-    override val logger: Logger,
-) : ViewModel(), SharedPreferences.OnSharedPreferenceChangeListener, LogInterface {
+) : ViewModel(), SharedPreferences.OnSharedPreferenceChangeListener, ILogger {
     private val preferences = PreferenceManager.getDefaultSharedPreferences(context)
     private var importJob: Job? = null
     private val sectionsShown = mutableMapOf<String, MutableState<Boolean>>()
     private var originalSyncBackend = preferences.getString(PREF_SYNC_BACKEND, null)?.let { SyncBackend.valueOf(it) }
+
     private val _importActionCount = MutableStateFlow<Int?>(null)
     private val _importCurrentAction = MutableStateFlow("")
     private val _importCurrentActionIndex = MutableStateFlow(0)
@@ -96,7 +94,7 @@ class SettingsViewModel @Inject constructor(
         _importCurrentActionIndex.value = 0
         _importCurrentAction.value = ""
 
-        importJob = viewModelScope.launch {
+        importJob = launchOnIOThread {
             try {
                 val tempDir = File(context.cacheDir, "keep").apply { mkdirs() }
                 val keepFile = File(
@@ -175,16 +173,15 @@ class SettingsViewModel @Inject constructor(
                     val images = noteEntry.attachments?.mapIndexedNotNull { imageIndex, imageEntry ->
                         updateCurrentAction("Moving ${imageEntry.filePath}")
                         val imageFile = File(tempDir, imageEntry.filePath)
-                        if (imageFile.exists()) {
-                            uriToImage(context, imageFile.toUri(), note.id)?.copy(position = imageIndex)
-                        } else null
+                        if (imageFile.exists()) uriToImageData(context, imageFile.toUri()) else null
                     }
 
                     pojos.add(
                         NotePojo(
                             note = note,
                             checklistItems = checklistItems ?: emptyList(),
-                            images = images ?: emptyList()
+                            // images = images ?: emptyList(),
+                            images = emptyList(), // TODO: fix
                         )
                     )
                 }
@@ -193,9 +190,9 @@ class SettingsViewModel @Inject constructor(
                     updateCurrentAction("Saving to database")
                     repository.insertNotePojos(pojos)
                 }
-                log("Imported ${pojos.size} notes.", showInSnackbar = true)
+                log("Imported ${pojos.size} notes.", showSnackbar = true)
             } catch (e: Exception) {
-                showError("Error: $e", e)
+                logError("Error: $e", e, showSnackbar = true)
             } finally {
                 _keepImportIsActive.value = false
             }
@@ -207,7 +204,7 @@ class SettingsViewModel @Inject constructor(
         _importCurrentActionIndex.value = 0
         _importCurrentAction.value = ""
 
-        viewModelScope.launch {
+        launchOnIOThread {
             try {
                 val tempDir = File(context.cacheDir, "quicknote").apply { mkdirs() }
                 val quickNoteFile = File(
@@ -251,9 +248,9 @@ class SettingsViewModel @Inject constructor(
                     updateCurrentAction("Saving to database")
                     repository.insertNotePojos(pojos)
                 }
-                log("Imported ${pojos.size} notes.", showInSnackbar = true)
+                log("Imported ${pojos.size} notes.", showSnackbar = true)
             } catch (e: Exception) {
-                showError("Error: $e", e)
+                logError("Error: $e", e, showSnackbar = true)
             } finally {
                 _quickNoteImportIsActive.value = false
             }
@@ -268,9 +265,7 @@ class SettingsViewModel @Inject constructor(
             .apply()
         if (!listOf(SyncBackend.NONE, originalSyncBackend, null).contains(_syncBackend.value)) {
             originalSyncBackend = _syncBackend.value
-            viewModelScope.launch {
-                syncBackendRepository.sync()
-            }
+            launchOnIOThread { syncBackendRepository.sync() }
         }
     }
 
@@ -322,7 +317,7 @@ class SettingsViewModel @Inject constructor(
             }
 
             val checklistItems = mutableListOf<ChecklistItem>()
-            val images = mutableListOf<Image>()
+            val images = mutableListOf<ImageData>()
             var imagePosition = 0
             var checklistItemPosition = 0
             val title = entry.title
@@ -375,8 +370,8 @@ class SettingsViewModel @Inject constructor(
                         zipFile.extractFile(zipEntry, imageFile)
                         if (imageFile.exists()) {
                             updateCurrentAction("Copying ${imageFile.name}")
-                            uriToImage(context, imageFile.toUri(), note.id)?.let { image ->
-                                images.add(image.copy(position = imagePosition++))
+                            uriToImageData(context, imageFile.toUri())?.let { image ->
+                                images.add(image)
                             }
                         }
                     }
@@ -386,7 +381,8 @@ class SettingsViewModel @Inject constructor(
             return NotePojo(
                 note = note,
                 checklistItems = checklistItems.toImmutableList(),
-                images = images.toImmutableList()
+                images = emptyList(), // TODO: fix
+                // images = images.toImmutableList(),
             )
         }
 

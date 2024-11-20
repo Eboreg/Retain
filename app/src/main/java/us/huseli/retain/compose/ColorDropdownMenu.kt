@@ -12,8 +12,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.sharp.FormatColorReset
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -22,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import us.huseli.retain.R
+import us.huseli.retain.ui.theme.NoteColorKey
 
 @Composable
 fun ColorCircle(modifier: Modifier = Modifier, color: Color, onClick: () -> Unit) {
@@ -38,13 +43,13 @@ fun ColorCircle(modifier: Modifier = Modifier, color: Color, onClick: () -> Unit
 @Composable
 fun ColorDropdownMenu(
     modifier: Modifier = Modifier,
-    colors: Map<String, Color>,
+    colors: Map<NoteColorKey, Color>,
     isExpanded: Boolean,
     width: Dp = 200.dp,
     circleHeight: Dp = 50.dp,
     padding: Dp = 5.dp,
     onDismiss: () -> Unit,
-    onColorClick: (String) -> Unit,
+    onColorClick: (NoteColorKey) -> Unit,
 ) {
     DropdownMenu(
         modifier = modifier,
@@ -54,6 +59,16 @@ fun ColorDropdownMenu(
         Column {
             Text(stringResource(R.string.select_note_colour), modifier = Modifier.padding(horizontal = padding))
             FlowRow(modifier = Modifier.width(width)) {
+                Surface(
+                    shape = CircleShape,
+                    modifier = modifier
+                        .height(circleHeight)
+                        .padding(padding)
+                        .aspectRatio(1f, true)
+                        .border(1.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
+                        .clickable { onColorClick(NoteColorKey.DEFAULT) },
+                    content = { Icon(Icons.Sharp.FormatColorReset, null) },
+                )
                 colors.forEach { (key, color) ->
                     ColorCircle(
                         modifier = Modifier.height(circleHeight).padding(padding),

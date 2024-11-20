@@ -40,7 +40,7 @@ import us.huseli.retain.Constants.PREF_SFTP_PORT
 import us.huseli.retain.Constants.PREF_SFTP_USERNAME
 import us.huseli.retain.R
 import us.huseli.retain.compose.SweepLoadingOverlay
-import us.huseli.retain.syncbackend.tasks.TestTaskResult
+import us.huseli.retain.syncbackend.tasks.result.TestTaskResult
 import us.huseli.retain.viewmodels.SFTPViewModel
 
 @Composable

@@ -4,6 +4,9 @@ import us.huseli.retain.Constants
 import us.huseli.retain.Constants.SYNCBACKEND_IMAGE_SUBDIR
 import us.huseli.retain.dataclasses.entities.Image
 import us.huseli.retain.syncbackend.Engine
+import us.huseli.retain.syncbackend.tasks.abstr.AbstractListFilesTask
+import us.huseli.retain.syncbackend.tasks.result.OperationTaskResult
+import us.huseli.retain.syncbackend.tasks.result.TaskResult
 import java.io.File
 
 /**
@@ -12,7 +15,7 @@ import java.io.File
  * and that subset isn't known until ListFilesTask has been run.
  */
 class UploadMissingImagesTask<ET : Engine>(engine: ET, private val images: Collection<Image>) :
-    ListFilesTask<ET>(engine, engine.getAbsolutePath(SYNCBACKEND_IMAGE_SUBDIR), { true }) {
+    AbstractListFilesTask<ET>(engine, engine.getAbsolutePath(SYNCBACKEND_IMAGE_SUBDIR), { true }) {
     private var processedFiles = 0
     private var missingImages = mutableListOf<Image>()
 
@@ -31,7 +34,7 @@ class UploadMissingImagesTask<ET : Engine>(engine: ET, private val images: Colle
                     // Then filter DB images for those where the corresponding
                     // remote images either don't exist or have different size:
                     images.filter { image ->
-                        remoteImageLengths[image.filename]?.let { image.size.toLong() != it } ?: true
+                        remoteImageLengths[image.filename]?.let { image.size.toLong() != it } != false
                     }
                 } else images.toList()
             )

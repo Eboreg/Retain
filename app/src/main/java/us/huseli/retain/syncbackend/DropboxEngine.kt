@@ -2,7 +2,6 @@ package us.huseli.retain.syncbackend
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.util.Log
 import com.dropbox.core.AccessErrorException
 import com.dropbox.core.DbxRequestConfig
 import com.dropbox.core.InvalidAccessTokenException
@@ -17,22 +16,18 @@ import com.dropbox.core.v2.files.FileMetadata
 import com.dropbox.core.v2.files.FolderMetadata
 import com.dropbox.core.v2.files.WriteMode
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 import us.huseli.retain.BuildConfig
 import us.huseli.retain.Constants.PREF_DROPBOX_CREDENTIAL
 import us.huseli.retain.Constants.PREF_SYNC_BACKEND
 import us.huseli.retain.Enums.SyncBackend
-import us.huseli.retain.Logger
-import us.huseli.retain.syncbackend.tasks.OperationTaskResult
 import us.huseli.retain.syncbackend.tasks.RemoteFile
-import us.huseli.retain.syncbackend.tasks.TaskResult
-import us.huseli.retain.syncbackend.tasks.TestTaskResult
+import us.huseli.retain.syncbackend.tasks.result.OperationTaskResult
+import us.huseli.retain.syncbackend.tasks.result.TaskResult
+import us.huseli.retain.syncbackend.tasks.result.TestTaskResult
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -40,11 +35,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class DropboxEngine @Inject constructor(
-    @ApplicationContext context: Context,
-    ioScope: CoroutineScope,
-    override val logger: Logger,
-) : Engine(context, ioScope), SharedPreferences.OnSharedPreferenceChangeListener {
+class DropboxEngine @Inject constructor(@ApplicationContext context: Context) : Engine(context),
+    SharedPreferences.OnSharedPreferenceChangeListener {
     override val backend: SyncBackend = SyncBackend.DROPBOX
 
     private val scopes = listOf(
@@ -72,7 +64,7 @@ class DropboxEngine @Inject constructor(
             if (preferences.getString(PREF_SYNC_BACKEND, null) == SyncBackend.DROPBOX.name) STATUS_READY
             else STATUS_DISABLED
 
-        ioScope.launch {
+        launchOnIOThread {
             syncBackend.collect {
                 if (it != backend) status = STATUS_DISABLED
                 else if (status == STATUS_DISABLED) status = STATUS_READY
@@ -86,11 +78,11 @@ class DropboxEngine @Inject constructor(
     }
 
     fun revoke() {
-        ioScope.launch(Dispatchers.IO) {
+        launchOnIOThread {
             try {
                 wrapRequest { client.auth().tokenRevoke() }
             } catch (e: Exception) {
-                log("DropboxEnging.revoke(): $e", level = Log.ERROR)
+                logError("DropboxEnging.revoke(): $e", e)
             }
         }
         preferences.edit().putString(PREF_DROPBOX_CREDENTIAL, null).apply()
@@ -123,11 +115,11 @@ class DropboxEngine @Inject constructor(
         return OperationTaskResult(status = status, exception = exception, localFiles = localFiles, objects = objects)
     }
 
-    private fun getAccountEmail() = ioScope.launch(Dispatchers.IO) {
+    private fun getAccountEmail() = launchOnIOThread {
         try {
             _accountEmail.value = wrapRequest { client.users().currentAccount.email }
         } catch (e: Exception) {
-            showError("DropboxEngine.getAccountEmail()", e)
+            logError("DropboxEngine.getAccountEmail()", e)
         }
     }
 
@@ -140,7 +132,7 @@ class DropboxEngine @Inject constructor(
                     getAccountEmail()
                 }
             } catch (e: Exception) {
-                showError("DropboxEngine.updateClient()", e)
+                logError("DropboxEngine.updateClient()", e)
             }
         }
     }
@@ -162,7 +154,7 @@ class DropboxEngine @Inject constructor(
     override fun createDir(
         remoteDir: String,
         onResult: (OperationTaskResult) -> Unit
-    ) = ioScope.launch(Dispatchers.IO) {
+    ) = launchOnIOThread {
         val okResult = OperationTaskResult(status = TaskResult.Status.OK, objects = listOf(remoteDir))
 
         try {
@@ -180,26 +172,28 @@ class DropboxEngine @Inject constructor(
         remotePath: String,
         localFile: File,
         onResult: (OperationTaskResult) -> Unit
-    ) = ioScope.launch(Dispatchers.IO) {
+    ) = launchOnIOThread {
         try {
             val fileMeta: FileMetadata
 
             FileOutputStream(localFile).use { outputStream ->
                 fileMeta = wrapRequest { client.files().download(remotePath).download(outputStream) }
             }
-            onResult(
-                OperationTaskResult(
-                    status = TaskResult.Status.OK,
-                    remoteFiles = listOf(
-                        RemoteFile(
-                            name = fileMeta.pathLower,
-                            size = fileMeta.size,
-                            isDirectory = false
-                        )
-                    ),
-                    localFiles = listOf(localFile),
+            fileMeta.pathLower?.also { path ->
+                onResult(
+                    OperationTaskResult(
+                        status = TaskResult.Status.OK,
+                        remoteFiles = listOf(
+                            RemoteFile(
+                                name = path,
+                                size = fileMeta.size,
+                                isDirectory = false
+                            )
+                        ),
+                        localFiles = listOf(localFile),
+                    )
                 )
-            )
+            }
         } catch (e: Exception) {
             if (e is DownloadErrorException && e.errorValue.pathValue.isNotFound)
                 onResult(
@@ -218,17 +212,19 @@ class DropboxEngine @Inject constructor(
         remoteDir: String,
         filter: (RemoteFile) -> Boolean,
         onResult: (OperationTaskResult) -> Unit
-    ) = ioScope.launch(Dispatchers.IO) {
+    ) = launchOnIOThread {
         try {
             onResult(
                 OperationTaskResult(
                     status = TaskResult.Status.OK,
-                    remoteFiles = wrapRequest { client.files().listFolder(remoteDir) }.entries.map {
-                        RemoteFile(
-                            name = it.pathLower,
-                            size = (it as? FileMetadata)?.size ?: 0,
-                            isDirectory = it is FolderMetadata,
-                        )
+                    remoteFiles = wrapRequest { client.files().listFolder(remoteDir) }.entries.mapNotNull { entry ->
+                        entry.pathLower?.let { path ->
+                            RemoteFile(
+                                name = path,
+                                size = (entry as? FileMetadata)?.size ?: 0,
+                                isDirectory = entry is FolderMetadata,
+                            )
+                        }
                     }.filter(filter)
                 )
             )
@@ -240,7 +236,7 @@ class DropboxEngine @Inject constructor(
     override fun removeFile(
         remotePath: String,
         onResult: (OperationTaskResult) -> Unit
-    ) = ioScope.launch(Dispatchers.IO) {
+    ) = launchOnIOThread {
         try {
             wrapRequest { client.files().deleteV2(remotePath) }
             onResult(OperationTaskResult(status = TaskResult.Status.OK, objects = listOf(remotePath)))
@@ -254,7 +250,7 @@ class DropboxEngine @Inject constructor(
         remotePath: String,
         mimeType: String?,
         onResult: (OperationTaskResult) -> Unit
-    ) = ioScope.launch(Dispatchers.IO) {
+    ) = launchOnIOThread {
         try {
             FileInputStream(localFile).use { inputStream ->
                 wrapRequest {

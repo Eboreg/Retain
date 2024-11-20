@@ -23,7 +23,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import us.huseli.retain.R
 import us.huseli.retain.compose.SweepLoadingOverlay
-import us.huseli.retain.syncbackend.tasks.TestTaskResult
+import us.huseli.retain.syncbackend.tasks.result.TestTaskResult
 import us.huseli.retain.viewmodels.DropboxViewModel
 
 @Composable

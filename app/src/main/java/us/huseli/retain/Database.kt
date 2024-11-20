@@ -5,10 +5,6 @@ import android.util.Log
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import dagger.hilt.EntryPoint
-import dagger.hilt.InstallIn
-import dagger.hilt.android.EntryPointAccessors
-import dagger.hilt.components.SingletonComponent
 import us.huseli.retain.dao.ChecklistItemDao
 import us.huseli.retain.dao.ImageDao
 import us.huseli.retain.dao.NoteDao
@@ -29,20 +25,8 @@ abstract class Database : RoomDatabase() {
     abstract fun checklistItemDao(): ChecklistItemDao
     abstract fun imageDao(): ImageDao
 
-    @EntryPoint
-    @InstallIn(SingletonComponent::class)
-    interface DatabaseEntryPoint {
-        fun logger(): Logger
-    }
-
-    companion object {
+    companion object : ILogger {
         fun build(context: Context): Database {
-            val hiltEntryPoint = EntryPointAccessors.fromApplication(
-                context.applicationContext,
-                DatabaseEntryPoint::class.java
-            )
-            val logger = hiltEntryPoint.logger()
-
             val builder = Room
                 .databaseBuilder(context.applicationContext, Database::class.java, "db.sqlite3")
                 .fallbackToDestructiveMigration()
@@ -50,13 +34,10 @@ abstract class Database : RoomDatabase() {
             if (BuildConfig.DEBUG) {
                 class Callback : QueryCallback {
                     override fun onQuery(sqlQuery: String, bindArgs: List<Any?>) {
-                        logger.log(
-                            LogMessage(
-                                level = Log.DEBUG,
-                                tag = "Database<${System.identityHashCode(this)}>",
-                                thread = Thread.currentThread().name,
-                                message = "$sqlQuery, bindArgs=$bindArgs",
-                            )
+                        log(
+                            priority = Log.DEBUG,
+                            tag = "Database<${System.identityHashCode(this)}>",
+                            message = "$sqlQuery, bindArgs=$bindArgs",
                         )
                     }
                 }

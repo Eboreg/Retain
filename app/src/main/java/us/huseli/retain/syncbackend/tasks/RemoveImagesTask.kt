@@ -3,10 +3,13 @@ package us.huseli.retain.syncbackend.tasks
 import us.huseli.retain.Constants.SYNCBACKEND_IMAGE_SUBDIR
 import us.huseli.retain.dataclasses.entities.Image
 import us.huseli.retain.syncbackend.Engine
+import us.huseli.retain.syncbackend.tasks.abstr.AbstractListTask
+import us.huseli.retain.syncbackend.tasks.result.OperationTaskResult
+import us.huseli.retain.syncbackend.tasks.result.TaskResult
 
 /** Remove: 0..n image files */
 class RemoveImagesTask<ET : Engine>(engine: ET, images: Collection<Image>) :
-    ListTask<ET, OperationTaskResult, RemoveFileTask<ET>, Image>(engine = engine, objects = images) {
+    AbstractListTask<ET, OperationTaskResult, RemoveFileTask<ET>, Image>(engine = engine, objects = images) {
     override val failOnUnsuccessfulChildTask = false
     override fun getResultForEmptyList() = TaskResult(status = TaskResult.Status.OK)
 

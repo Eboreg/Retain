@@ -2,13 +2,10 @@ package us.huseli.retain.syncbackend.tasks
 
 import us.huseli.retain.dataclasses.NotePojo
 import us.huseli.retain.syncbackend.Engine
+import us.huseli.retain.syncbackend.tasks.abstr.AbstractTask
+import us.huseli.retain.syncbackend.tasks.result.TaskResult
 import java.io.File
 import java.util.UUID
-
-data class TaskLog(val simpleName: String, val totalCount: Int = 1, var finishedCount: Int = 0) {
-    val isFinished: Boolean
-        get() = finishedCount >= totalCount
-}
 
 class SyncTask<ET : Engine>(
     engine: ET,
@@ -16,7 +13,7 @@ class SyncTask<ET : Engine>(
     private val deletedNoteIds: Collection<UUID>,
     private val onRemotePojoUpdated: (NotePojo) -> Unit,
     private val localImageDir: File,
-) : Task<ET, TaskResult>(engine = engine) {
+) : AbstractTask<ET, TaskResult>(engine = engine) {
     private var isCancelled = false
     private var remoteUpdatedPojos: List<NotePojo> = emptyList()
     private val finishedTasks = listOf(
@@ -29,7 +26,7 @@ class SyncTask<ET : Engine>(
     private var onResult: (TaskResult) -> Unit = {}
 
     private fun <CRT : TaskResult> runChildTask(
-        task: Task<ET, CRT>,
+        task: AbstractTask<ET, CRT>,
         onChildResult: ((CRT) -> Unit)? = null,
     ) {
         if (!isCancelled) {
@@ -64,8 +61,7 @@ class SyncTask<ET : Engine>(
             remoteUpdatedPojos = downTaskResult.objects.filter { remote ->
                 localPojos
                     .find { it.note.id == remote.note.id }
-                    ?.let { local -> local.note < remote.note }
-                    ?: true
+                    ?.let { local -> local.note < remote.note } != false
             }
             remoteUpdatedPojos.forEach { pojo ->
                 images.addAll(pojo.images)
@@ -75,7 +71,7 @@ class SyncTask<ET : Engine>(
             if (remoteUpdatedPojos.isNotEmpty()) {
                 log(
                     message = "${remoteUpdatedPojos.size} new or updated notes synced from ${engine.backend.displayName}.",
-                    showInSnackbar = true,
+                    showSnackbar = true,
                 )
             }
             runChildTask(DownloadImagesTask(engine, remoteUpdatedPojos.flatMap { it.images }))

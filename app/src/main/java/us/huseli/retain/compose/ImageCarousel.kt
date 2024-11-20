@@ -74,10 +74,6 @@ fun ImageCarousel(
     val containerWidth = remember { with(density) { context.resources.configuration.screenWidthDp.dp.toPx() } }
     val containerRatio = if (containerHeight > 0f) containerWidth / containerHeight else 0f
 
-    @Suppress("UNUSED_VARIABLE")
-    val originalImageWidth =
-        if (image.ratio >= containerRatio) containerWidth
-        else imageBitmap.width * (containerHeight / imageBitmap.height)
     val originalImageHeight =
         if (image.ratio <= containerRatio) containerHeight
         else imageBitmap.height * (containerWidth / imageBitmap.width)

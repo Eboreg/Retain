@@ -1,19 +1,19 @@
 package us.huseli.retain
 
 import okhttp3.internal.toImmutableList
-import us.huseli.retain.dataclasses.entities.Image
+import us.huseli.retain.dataclasses.uistate.IImageUiState
 
 class ImageIterator(
-    private val objects: List<Image>,
+    private val objects: List<IImageUiState>,
     private val maxRows: Int = Int.MAX_VALUE
-) : Iterator<List<Image>> {
+) : Iterator<List<IImageUiState>> {
     private var currentIndex = 0
     private var currentRow = 0
 
     override fun hasNext() = currentIndex < objects.size && currentRow < maxRows
 
-    override fun next(): List<Image> {
-        val result = mutableListOf<Image>()
+    override fun next(): List<IImageUiState> {
+        val result = mutableListOf<IImageUiState>()
         var collectedRatio = 0f
 
         for (i in currentIndex until objects.size) {

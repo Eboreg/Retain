@@ -1,14 +1,4 @@
-package us.huseli.retain.dataclasses
-
-data class GoogleNoteListContent(
-    val text: String,
-    val isChecked: Boolean,
-)
-
-data class GoogleNoteAttachment(
-    val filePath: String,
-    val mimetype: String,
-)
+package us.huseli.retain.dataclasses.google
 
 data class GoogleNoteEntry(
     val attachments: List<GoogleNoteAttachment>? = null,

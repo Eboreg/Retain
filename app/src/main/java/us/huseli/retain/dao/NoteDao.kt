@@ -11,24 +11,25 @@ import kotlinx.coroutines.flow.Flow
 import us.huseli.retain.dataclasses.NotePojo
 import us.huseli.retain.dataclasses.entities.DeletedNote
 import us.huseli.retain.dataclasses.entities.Note
+import java.time.Instant
 import java.util.UUID
 
 @Dao
-interface NoteDao {
+abstract class NoteDao {
     @Delete
-    suspend fun _delete(notes: Collection<Note>)
+    protected abstract suspend fun _delete(notes: Collection<Note>)
 
     @Query("SELECT EXISTS(SELECT * FROM note WHERE noteId = :noteId)")
-    suspend fun _exists(noteId: UUID): Boolean
+    protected abstract suspend fun _exists(noteId: UUID): Boolean
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun _insert(note: Note)
+    protected abstract suspend fun _insert(note: Note)
 
     @Insert
-    suspend fun _insertDeletedNotes(objs: Collection<DeletedNote>)
+    protected abstract suspend fun _insertDeletedNotes(objs: Collection<DeletedNote>)
 
     @Query("SELECT * FROM Note WHERE noteIsDeleted = 1")
-    suspend fun _listDeletedNotes(): List<Note>
+    protected abstract suspend fun _listDeletedNotes(): List<Note>
 
     @Query(
         """
@@ -36,51 +37,62 @@ interface NoteDao {
         EXISTS(SELECT * FROM note WHERE noteId != :id AND notePosition = :position)
         """
     )
-    suspend fun _makePlaceFor(id: UUID, position: Int)
+    protected abstract suspend fun _makePlaceFor(id: UUID, position: Int)
+
+    @Update
+    protected abstract suspend fun _update(vararg notes: Note)
 
     @Query("UPDATE note SET notePosition = :position WHERE noteId = :id")
-    suspend fun _updatePosition(id: UUID, position: Int)
+    protected abstract suspend fun _updatePosition(id: UUID, position: Int)
 
     @Transaction
-    suspend fun deleteTrashed() {
+    open suspend fun deleteTrashed() {
         val notes = _listDeletedNotes()
         _insertDeletedNotes(notes.map { DeletedNote(it.id) })
         _delete(notes)
     }
 
+    @Query("SELECT * FROM Note WHERE noteId = :noteId")
+    abstract fun flowNote(noteId: UUID): Flow<Note>
+
     @Transaction
     @Query("SELECT * FROM Note WHERE noteId = :noteId")
-    fun flowNotePojo(noteId: UUID): Flow<NotePojo?>
+    abstract fun flowNotePojo(noteId: UUID): Flow<NotePojo?>
 
     @Transaction
     @Query("SELECT * FROM note WHERE noteIsDeleted = 0 ORDER BY notePosition")
-    fun flowNotePojoList(): Flow<List<NotePojo>>
+    abstract fun flowNotePojoList(): Flow<List<NotePojo>>
 
     @Query("SELECT COALESCE(MAX(notePosition), -1) FROM note")
-    suspend fun getMaxPosition(): Int
+    abstract suspend fun getMaxPosition(): Int
+
+    @Query("SELECT * FROM Note WHERE noteId = :noteId")
+    abstract suspend fun getNote(noteId: UUID): Note
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(notes: Collection<Note>)
+    abstract suspend fun insert(notes: Collection<Note>)
 
     @Transaction
     @Query("SELECT * FROM note")
-    suspend fun listNotePojos(): List<NotePojo>
+    abstract suspend fun listNotePojos(): List<NotePojo>
 
     @Query("SELECT deletedNoteId FROM deletednote")
-    suspend fun listDeletedIds(): List<UUID>
+    abstract suspend fun listDeletedIds(): List<UUID>
 
-    @Update
-    suspend fun update(notes: Collection<Note>)
+    suspend fun update(notes: Collection<Note>) {
+        _update(*notes.map { it.copy(updated = Instant.now()) }.toTypedArray())
+    }
 
     @Transaction
-    suspend fun updatePositions(notes: Collection<Note>) {
+    open suspend fun updatePositions(notes: Collection<Note>) {
         notes.forEach { _updatePosition(it.id, it.position) }
     }
 
     @Transaction
-    suspend fun upsert(note: Note) {
+    open suspend fun upsert(note: Note): Note {
         _makePlaceFor(note.id, note.position)
         if (_exists(note.id)) update(listOf(note))
         else _insert(note)
+        return getNote(note.id)
     }
 }

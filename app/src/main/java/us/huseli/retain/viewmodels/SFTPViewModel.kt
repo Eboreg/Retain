@@ -3,14 +3,11 @@ package us.huseli.retain.viewmodels
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import androidx.preference.PreferenceManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import us.huseli.retain.Constants.DEFAULT_SFTP_BASE_DIR
 import us.huseli.retain.Constants.PREF_SFTP_BASE_DIR
 import us.huseli.retain.Constants.PREF_SFTP_HOSTNAME
@@ -19,7 +16,8 @@ import us.huseli.retain.Constants.PREF_SFTP_PORT
 import us.huseli.retain.Constants.PREF_SFTP_USERNAME
 import us.huseli.retain.repositories.SyncBackendRepository
 import us.huseli.retain.syncbackend.SFTPEngine
-import us.huseli.retain.syncbackend.tasks.TestTaskResult
+import us.huseli.retain.syncbackend.tasks.result.TestTaskResult
+import us.huseli.retaintheme.extensions.launchOnIOThread
 import javax.inject.Inject
 
 @HiltViewModel
@@ -70,7 +68,7 @@ class SFTPViewModel @Inject constructor(
         }
     }
 
-    fun test(onResult: (TestTaskResult) -> Unit) = viewModelScope.launch(Dispatchers.IO) {
+    fun test(onResult: (TestTaskResult) -> Unit) = launchOnIOThread {
         repository.needsTesting.value = false
         engine.test(
             hostname = _hostname.value,
@@ -92,6 +90,7 @@ class SFTPViewModel @Inject constructor(
                     resetStatus()
                 }
             }
+
             PREF_SFTP_HOSTNAME -> {
                 if (value != _hostname.value) {
                     _hostname.value = value as String
@@ -99,6 +98,7 @@ class SFTPViewModel @Inject constructor(
                     resetStatus()
                 }
             }
+
             PREF_SFTP_PASSWORD -> {
                 if (value != _password.value) {
                     _password.value = value as String
@@ -106,6 +106,7 @@ class SFTPViewModel @Inject constructor(
                     resetStatus()
                 }
             }
+
             PREF_SFTP_PORT -> {
                 if (value != _port.value) {
                     _port.value = value as Int
@@ -113,6 +114,7 @@ class SFTPViewModel @Inject constructor(
                     resetStatus()
                 }
             }
+
             PREF_SFTP_USERNAME -> {
                 if (value != _username.value) {
                     _username.value = value as String
@@ -131,6 +133,7 @@ class SFTPViewModel @Inject constructor(
         when (key) {
             PREF_SFTP_BASE_DIR -> _baseDir.value =
                 preferences.getString(key, DEFAULT_SFTP_BASE_DIR) ?: DEFAULT_SFTP_BASE_DIR
+
             PREF_SFTP_HOSTNAME -> _hostname.value = preferences.getString(key, "") ?: ""
             PREF_SFTP_PASSWORD -> _password.value = preferences.getString(key, "") ?: ""
             PREF_SFTP_PORT -> _port.value = preferences.getInt(key, 22)

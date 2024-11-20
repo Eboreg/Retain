@@ -6,7 +6,6 @@ import androidx.room.Relation
 import us.huseli.retain.dataclasses.entities.ChecklistItem
 import us.huseli.retain.dataclasses.entities.Image
 import us.huseli.retain.dataclasses.entities.Note
-import kotlin.math.min
 
 data class NotePojo(
     @Embedded val note: Note,
@@ -17,12 +16,11 @@ data class NotePojo(
     constructor(note: Note, checklistItems: List<ChecklistItem>, images: List<Image>) :
         this(note, checklistItems, images, null)
 
-    enum class Component { NOTE, CHECKLIST_ITEMS, IMAGES }
-
     fun getCardChecklist(): NoteCardChecklistData {
-        val filteredItems = if (note.showChecked) checklistItems else checklistItems.filter { !it.checked }
-        val shownItems = filteredItems.subList(0, min(filteredItems.size, 5))
-        val hiddenItems = checklistItems.minus(shownItems.toSet())
+        val items = checklistItems.sorted()
+        val filteredItems = if (note.showChecked) items else items.filter { !it.checked }
+        val shownItems = filteredItems.take(5)
+        val hiddenItems = items.minus(shownItems.toSet())
 
         return NoteCardChecklistData(
             noteId = note.id,

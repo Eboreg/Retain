@@ -1,13 +1,15 @@
-package us.huseli.retain.syncbackend.tasks
+package us.huseli.retain.syncbackend.tasks.abstr
 
 import us.huseli.retain.syncbackend.Engine
+import us.huseli.retain.syncbackend.tasks.RemoteFile
+import us.huseli.retain.syncbackend.tasks.result.OperationTaskResult
 
 /** List: arbitrary files */
-abstract class ListFilesTask<ET : Engine>(
+abstract class AbstractListFilesTask<ET : Engine>(
     engine: ET,
     private val remoteDir: String,
     protected val filter: (RemoteFile) -> Boolean,
-) : OperationTask<ET, OperationTaskResult>(engine) {
+) : AbstractOperationTask<ET, OperationTaskResult>(engine) {
     protected val remoteFiles = mutableListOf<String>()
 
     abstract fun getResultForEmptyList(): OperationTaskResult

@@ -15,10 +15,8 @@ import com.owncloud.android.lib.resources.files.ReadFolderRemoteOperation
 import com.owncloud.android.lib.resources.files.RemoveFileRemoteOperation
 import com.owncloud.android.lib.resources.files.UploadFileRemoteOperation
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import us.huseli.retain.Constants.DEFAULT_NEXTCLOUD_BASE_DIR
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_BASE_DIR
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_PASSWORD
@@ -26,22 +24,18 @@ import us.huseli.retain.Constants.PREF_NEXTCLOUD_URI
 import us.huseli.retain.Constants.PREF_NEXTCLOUD_USERNAME
 import us.huseli.retain.Constants.PREF_SYNC_BACKEND
 import us.huseli.retain.Enums.SyncBackend
-import us.huseli.retain.Logger
-import us.huseli.retain.syncbackend.tasks.OperationTaskResult
 import us.huseli.retain.syncbackend.tasks.RemoteFile
-import us.huseli.retain.syncbackend.tasks.TaskResult
-import us.huseli.retain.syncbackend.tasks.TestTaskResult
+import us.huseli.retain.syncbackend.tasks.result.OperationTaskResult
+import us.huseli.retain.syncbackend.tasks.result.TaskResult
+import us.huseli.retain.syncbackend.tasks.result.TestTaskResult
 import java.io.File
 import java.net.UnknownHostException
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class NextCloudEngine @Inject constructor(
-    @ApplicationContext context: Context,
-    ioScope: CoroutineScope,
-    override val logger: Logger,
-) : SharedPreferences.OnSharedPreferenceChangeListener, Engine(context, ioScope) {
+class NextCloudEngine @Inject constructor(@ApplicationContext context: Context) :
+    SharedPreferences.OnSharedPreferenceChangeListener, Engine(context) {
     override val backend: SyncBackend = SyncBackend.NEXTCLOUD
 
     private val _isTesting = MutableStateFlow(false)
@@ -95,7 +89,7 @@ class NextCloudEngine @Inject constructor(
             else STATUS_DISABLED
         preferences.registerOnSharedPreferenceChangeListener(this)
 
-        ioScope.launch {
+        launchOnIOThread {
             syncBackend.collect {
                 if (it != backend) status = STATUS_DISABLED
                 else if (status == STATUS_DISABLED) status = STATUS_READY
@@ -144,7 +138,7 @@ class NextCloudEngine @Inject constructor(
     ) {
         log(
             message = "updateClient: uri=$uri, username=$username, password=$password, isEnabled=$isEnabled",
-            level = Log.DEBUG
+            priority = Log.DEBUG,
         )
         if (uri != null) client.baseUri = uri
         if (username != null || password != null) {
@@ -249,6 +243,7 @@ class NextCloudEngine @Inject constructor(
             PREF_NEXTCLOUD_PASSWORD -> password = preferences.getString(key, "") ?: ""
             PREF_NEXTCLOUD_BASE_DIR -> baseDir =
                 preferences.getString(key, DEFAULT_NEXTCLOUD_BASE_DIR) ?: DEFAULT_NEXTCLOUD_BASE_DIR
+
             PREF_SYNC_BACKEND -> updateSyncBackend()
         }
     }

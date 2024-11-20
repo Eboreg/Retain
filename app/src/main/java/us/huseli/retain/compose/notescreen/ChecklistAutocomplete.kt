@@ -28,13 +28,13 @@ import androidx.compose.ui.unit.roundToIntRect
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
-import us.huseli.retain.dataclasses.entities.ChecklistItem
+import us.huseli.retain.dataclasses.uistate.IChecklistItemUiState
 
 @Composable
 fun ChecklistAutocomplete(
-    items: List<ChecklistItem>,
+    items: List<IChecklistItemUiState>,
     textFieldRect: () -> Rect,
-    onItemClick: (ChecklistItem) -> Unit,
+    onItemClick: (IChecklistItemUiState) -> Unit,
     onDismissRequest: () -> Unit,
 ) {
     Popup(

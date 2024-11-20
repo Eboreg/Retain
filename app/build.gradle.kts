@@ -152,7 +152,7 @@ dependencies {
     implementation("com.google.code.gson:gson:2.11.0")
 
     // Reorder:
-    implementation("org.burnoutcrew.composereorderable:reorderable:0.9.6")
+    implementation("sh.calvin.reorderable:reorderable:2.4.0")
 
     // To change status bar colour etc:
     implementation("com.google.accompanist:accompanist-systemuicontroller:0.36.0")
@@ -164,8 +164,9 @@ dependencies {
     implementation(group = "com.github.mwiede", name = "jsch", version = "0.2.12")
 
     // Dropbox:
-    implementation("com.dropbox.core:dropbox-core-sdk:5.4.6")
+    implementation("com.dropbox.core:dropbox-core-sdk:7.0.0")
+    implementation("com.dropbox.core:dropbox-android-sdk:7.0.0")
 
     // Theme:
-    implementation("com.github.Eboreg:RetainTheme:2.2.1")
+    implementation("com.github.Eboreg:RetainTheme:4.6.4")
 }

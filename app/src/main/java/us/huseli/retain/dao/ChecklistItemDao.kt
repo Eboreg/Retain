@@ -9,16 +9,22 @@ import us.huseli.retain.dataclasses.entities.ChecklistItem
 import java.util.UUID
 
 @Dao
-interface ChecklistItemDao {
+abstract class ChecklistItemDao {
     @Query("DELETE FROM checklistitem WHERE checklistItemNoteId=:noteId AND checklistItemId NOT IN (:except)")
-    suspend fun _deleteByNoteId(noteId: UUID, except: Collection<UUID> = emptyList())
+    protected abstract suspend fun _deleteByNoteId(noteId: UUID, except: Collection<UUID> = emptyList())
+
+    @Query("DELETE FROM checklistitem WHERE checklistItemId IN (:itemIds)")
+    abstract suspend fun delete(vararg itemIds: UUID)
+
+    @Query("SELECT * FROM checklistitem WHERE checklistItemNoteId=:noteId ORDER BY checklistItemChecked, checklistItemPosition")
+    abstract suspend fun listByNoteId(noteId: UUID): List<ChecklistItem>
 
     @Transaction
-    suspend fun replace(noteId: UUID, items: Collection<ChecklistItem>) {
+    open suspend fun replace(noteId: UUID, items: Collection<ChecklistItem>) {
         _deleteByNoteId(noteId, except = items.map { it.id })
-        upsert(items)
+        upsert(*items.toTypedArray())
     }
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(items: Collection<ChecklistItem>)
+    abstract suspend fun upsert(vararg items: ChecklistItem)
 }

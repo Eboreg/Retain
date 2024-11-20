@@ -2,31 +2,25 @@ package us.huseli.retain.viewmodels
 
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.mapLatest
 import us.huseli.retain.Constants
 import us.huseli.retain.Constants.NAV_ARG_IMAGE_CAROUSEL_CURRENT_ID
-import us.huseli.retain.LogInterface
-import us.huseli.retain.Logger
+import us.huseli.retain.ILogger
 import us.huseli.retain.dataclasses.entities.Image
 import us.huseli.retain.repositories.NoteRepository
+import us.huseli.retaintheme.extensions.launchOnIOThread
+import us.huseli.retaintheme.utils.AbstractBaseViewModel
 import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
-class ImageCarouselViewModel @Inject constructor(
-    repository: NoteRepository,
-    savedStateHandle: SavedStateHandle,
-    override val logger: Logger,
-) : ViewModel(), LogInterface {
+class ImageCarouselViewModel @Inject constructor(repository: NoteRepository, savedStateHandle: SavedStateHandle) :
+    AbstractBaseViewModel(), ILogger {
     private val _noteId = UUID.fromString(savedStateHandle.get<String>(Constants.NAV_ARG_NOTE_ID)!!)
     private val _startImageId = savedStateHandle.get<String>(NAV_ARG_IMAGE_CAROUSEL_CURRENT_ID)!!
     private val _images = MutableStateFlow<List<Image>>(emptyList())
@@ -36,12 +30,12 @@ class ImageCarouselViewModel @Inject constructor(
     val currentImage = _currentImage.asStateFlow()
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val currentImageBitmap: Flow<ImageBitmap?> = _currentImage.flatMapLatest { image ->
-        image?.let { repository.getImageBitmap(it.filename) } ?: emptyFlow()
-    }
+    val currentImageBitmap: StateFlow<ImageBitmap?> = _currentImage.mapLatest { image ->
+        image?.let { repository.getImageBitmap(it.filename) }
+    }.stateWhileSubscribed()
 
     init {
-        viewModelScope.launch {
+        launchOnIOThread {
             _images.value = repository.listImagesByNoteId(_noteId)
             _currentImage.value = _images.value.find { it.filename == _startImageId }
         }

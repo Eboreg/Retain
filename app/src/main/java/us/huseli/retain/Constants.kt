@@ -7,7 +7,6 @@ object Constants {
     const val DEFAULT_SFTP_BASE_DIR = ".retain"
     const val IMAGE_SUBDIR = "images"
     const val NAV_ARG_IMAGE_CAROUSEL_CURRENT_ID = "imageCarouselCurrentId"
-    const val NAV_ARG_NEW_NOTE_TYPE = "noteType"
     const val NAV_ARG_NOTE_ID = "noteId"
     const val PREF_DROPBOX_CREDENTIAL = "dropboxCredential"
     const val PREF_MIN_COLUMN_WIDTH = "minColumnWidth"
@@ -21,6 +20,7 @@ object Constants {
     const val PREF_SFTP_PORT = "sftpPort"
     const val PREF_SFTP_USERNAME = "sftpUsername"
     const val PREF_SYNC_BACKEND = "syncBackend"
+    const val PREF_SYSTEM_BAR_COLOR_KEY = "systemBarColorKey"
     const val SYNCBACKEND_IMAGE_SUBDIR = "images"
     const val SYNCBACKEND_JSON_SUBDIR = "json"
     const val ZIP_BUFFER_SIZE = 2048

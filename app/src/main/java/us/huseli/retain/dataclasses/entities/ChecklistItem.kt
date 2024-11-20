@@ -24,7 +24,10 @@ data class ChecklistItem(
     @ColumnInfo(name = "checklistItemChecked", defaultValue = "0") val checked: Boolean = false,
     @ColumnInfo(name = "checklistItemPosition", defaultValue = "0") val position: Int = 0,
 ) : Comparable<ChecklistItem> {
-    override fun compareTo(other: ChecklistItem): Int = position - other.position
+    val compareValue: Int
+        get() = position + if (checked) 100_000 else 0
+
+    override fun compareTo(other: ChecklistItem): Int = compareValue - other.compareValue
 
     override fun equals(other: Any?) = other is ChecklistItem &&
         other.id == id &&

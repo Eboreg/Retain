@@ -17,8 +17,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
@@ -83,13 +85,14 @@ fun HomeScreenTopAppBar(
     modifier: Modifier = Modifier,
     viewType: HomeScreenViewType,
     onSettingsClick: () -> Unit,
-    onDebugClick: () -> Unit,
     onViewTypeClick: (HomeScreenViewType) -> Unit,
     onArchiveClick: () -> Unit,
+    onTestClick: () -> Unit,
     showArchive: Boolean,
 ) {
     TopAppBar(
         modifier = modifier,
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         title = { if (showArchive) Text(stringResource(R.string.archive)) },
         navigationIcon = {
             if (!showArchive) {
@@ -120,14 +123,6 @@ fun HomeScreenTopAppBar(
                     }
                 }
             }
-            if (BuildConfig.DEBUG) {
-                IconButton(onClick = onDebugClick) {
-                    Icon(
-                        imageVector = Icons.Sharp.BugReport,
-                        contentDescription = stringResource(R.string.debug),
-                    )
-                }
-            }
             IconButton(onClick = onArchiveClick) {
                 Icon(
                     imageVector = Icons.Sharp.Archive,
@@ -140,6 +135,11 @@ fun HomeScreenTopAppBar(
                     imageVector = Icons.Sharp.Settings,
                     contentDescription = stringResource(R.string.app_settings),
                 )
+            }
+            if (BuildConfig.DEBUG) {
+                IconButton(onClick = onTestClick) {
+                    Icon(Icons.Sharp.BugReport, null)
+                }
             }
         }
     )

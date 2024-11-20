@@ -11,25 +11,25 @@ import com.google.gson.GsonBuilder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.launch
 import us.huseli.retain.Constants.PREF_SYNC_BACKEND
 import us.huseli.retain.Enums.SyncBackend
+import us.huseli.retain.ILogger
 import us.huseli.retain.InstantAdapter
-import us.huseli.retain.LogInterface
-import us.huseli.retain.syncbackend.tasks.OperationTaskResult
 import us.huseli.retain.syncbackend.tasks.RemoteFile
-import us.huseli.retain.syncbackend.tasks.Task
-import us.huseli.retain.syncbackend.tasks.TaskResult
 import us.huseli.retain.syncbackend.tasks.TestTask
-import us.huseli.retain.syncbackend.tasks.TestTaskResult
+import us.huseli.retain.syncbackend.tasks.abstr.AbstractTask
+import us.huseli.retain.syncbackend.tasks.result.OperationTaskResult
+import us.huseli.retain.syncbackend.tasks.result.TaskResult
+import us.huseli.retain.syncbackend.tasks.result.TestTaskResult
+import us.huseli.retaintheme.utils.AbstractScopeHolder
 import java.io.File
 import java.time.Instant
 
-abstract class Engine(internal val context: Context, internal val ioScope: CoroutineScope) : LogInterface {
+abstract class Engine(internal val context: Context) : ILogger, AbstractScopeHolder() {
     abstract val backend: SyncBackend
 
     protected val preferences: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
-    protected val tasks = MutableStateFlow<List<Task<*, *>>>(emptyList())
+    protected val tasks = MutableStateFlow<List<AbstractTask<*, *>>>(emptyList())
     protected var status = STATUS_DISABLED
     protected val syncBackend: MutableStateFlow<SyncBackend> = MutableStateFlow(
         preferences.getString(PREF_SYNC_BACKEND, null)?.let { SyncBackend.valueOf(it) } ?: SyncBackend.NONE
@@ -42,14 +42,14 @@ abstract class Engine(internal val context: Context, internal val ioScope: Corou
     internal val tempDirDown = File(context.cacheDir, "down").apply { mkdirs() }
     internal val listenerHandler = Handler(Looper.getMainLooper())
 
-    private val runningTasks: List<Task<*, *>>
-        get() = tasks.value.filter { it.status.value == Task.STATUS_RUNNING }
+    private val runningTasks: List<AbstractTask<*, *>>
+        get() = tasks.value.filter { it.status.value == AbstractTask.STATUS_RUNNING }
 
-    private val runningNonMetaTasks: List<Task<*, *>>
+    private val runningNonMetaTasks: List<AbstractTask<*, *>>
         get() = runningTasks.filter { !it.isMetaTask }
 
-    private val waitingTasks: List<Task<*, *>>
-        get() = tasks.value.filter { it.status.value == Task.STATUS_WAITING }
+    private val waitingTasks: List<AbstractTask<*, *>>
+        get() = tasks.value.filter { it.status.value == AbstractTask.STATUS_WAITING }
 
     val isSyncing = MutableStateFlow(false)
 
@@ -86,15 +86,15 @@ abstract class Engine(internal val context: Context, internal val ioScope: Corou
 
     open fun getAbsolutePath(vararg segments: String) = segments.joinToString("/") { it.trim('/') }
 
-    fun registerTask(task: Task<*, *>, triggerStatus: Int, startTask: () -> Unit) {
+    fun registerTask(task: AbstractTask<*, *>, triggerStatus: Int, startTask: () -> Unit) {
         log(
             message = "registerTask: task=${task.javaClass.simpleName}, triggerStatus=$triggerStatus, status=$status",
-            level = Log.DEBUG
+            priority = Log.DEBUG,
         )
         tasks.value = tasks.value.toMutableList().apply { add(task) }
         task.addOnFinishedListener { logTasks() }
         if (status >= triggerStatus && runningNonMetaTasks.size < 3) startTask()
-        else ioScope.launch {
+        else launchOnIOThread {
             while (status < triggerStatus || runningNonMetaTasks.size >= 3) delay(1_000)
             startTask()
         }
@@ -114,6 +114,8 @@ abstract class Engine(internal val context: Context, internal val ioScope: Corou
             }
         }
     }
+
+    fun launch(block: suspend CoroutineScope.() -> Unit) = launchOnIOThread(block)
 
     companion object {
         const val STATUS_DISABLED = 0

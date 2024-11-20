@@ -1,10 +1,5 @@
 package us.huseli.retain.dataclasses
 
-data class QuickNoteTodoList(
-    val todo: Collection<String>? = null,
-    val done: Collection<String>? = null,
-)
-
 @Suppress("PropertyName")
 data class QuickNoteEntry(
     val creation_date: Long? = null,

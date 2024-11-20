@@ -31,8 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import org.burnoutcrew.reorderable.ReorderableLazyListState
-import org.burnoutcrew.reorderable.detectReorder
+import sh.calvin.reorderable.ReorderableCollectionItemScope
 import us.huseli.retain.Enums
 import us.huseli.retain.R
 import us.huseli.retain.dataclasses.NotePojo
@@ -46,14 +45,13 @@ fun NoteCard(
     onLongClick: () -> Unit,
     pojo: NotePojo,
     isSelected: Boolean,
-    reorderableState: ReorderableLazyListState? = null,
-    showDragHandle: Boolean = false,
     isDragging: Boolean,
     secondaryImageGridRowHeight: Dp = 100.dp,
+    scope: ReorderableCollectionItemScope,
+    onDragEnd: () -> Unit,
 ) {
     val elevation by animateDpAsState(if (isDragging) 16.dp else 0.dp)
-    val defaultColor = MaterialTheme.colorScheme.background
-    val noteColor = getNoteColor(pojo.note.color, defaultColor)
+    val noteColor = getNoteColor(pojo.note.colorKey, MaterialTheme.colorScheme.background)
     val border =
         if (isSelected) BorderStroke(3.dp, MaterialTheme.colorScheme.primary)
         else BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f))
@@ -84,7 +82,8 @@ fun NoteCard(
                     if (pojo.note.title.isNotBlank()) {
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            modifier = if (showDragHandle) Modifier.padding(end = 24.dp) else Modifier,
+                            // modifier = if (showDragHandle) Modifier.padding(end = 24.dp) else Modifier,
+                            modifier = Modifier.padding(end = 24.dp),
                             text = pojo.note.title,
                             style = MaterialTheme.typography.bodyLarge,
                             maxLines = 1,
@@ -125,21 +124,16 @@ fun NoteCard(
             }
         }
 
-        if (showDragHandle && reorderableState != null) {
+        with(scope) {
             FilledTonalIconButton(
                 modifier = Modifier
-                    .detectReorder(reorderableState)
+                    .draggableHandle(onDragStopped = onDragEnd)
                     .align(Alignment.TopEnd),
                 colors = IconButtonDefaults.filledTonalIconButtonColors(
                     containerColor = if (pojo.images.isEmpty()) noteColor else Color.Transparent
                 ),
                 onClick = {},
-            ) {
-                Icon(
-                    imageVector = Icons.Sharp.DragIndicator,
-                    contentDescription = stringResource(R.string.move_card),
-                )
-            }
+            ) { Icon(Icons.Sharp.DragIndicator, stringResource(R.string.move_card)) }
         }
     }
 }

@@ -1,7 +1,7 @@
-package us.huseli.retain.syncbackend.tasks
+package us.huseli.retain.syncbackend.tasks.abstr
 
 import us.huseli.retain.syncbackend.Engine
-import us.huseli.retain.syncbackend.Engine.Companion.STATUS_OK
+import us.huseli.retain.syncbackend.tasks.result.TaskResult
 
 /**
  * Default behaviour: Fail immediately when any child task fails. If this is
@@ -10,10 +10,10 @@ import us.huseli.retain.syncbackend.Engine.Companion.STATUS_OK
  * By default, this.error will be the same as the error from the latest failed
  * child task, which is not super optimal, but I guess we can live with it.
  */
-abstract class BaseListTask<ET : Engine, RT : TaskResult, CRT : TaskResult, CT : Task<ET, CRT>, LT>(
+abstract class AbstractBaseListTask<ET : Engine, RT : TaskResult, CRT : TaskResult, CT : AbstractTask<ET, CRT>, LT>(
     engine: ET,
     protected val objects: Collection<LT>,
-) : Task<ET, RT>(engine) {
+) : AbstractTask<ET, RT>(engine) {
     private var onEachCallback: ((LT, CRT) -> Unit)? = null
     protected val successfulObjects = mutableListOf<LT>()
     protected val unsuccessfulObjects = mutableListOf<LT>()
@@ -25,7 +25,7 @@ abstract class BaseListTask<ET : Engine, RT : TaskResult, CRT : TaskResult, CT :
     abstract fun getResultForEmptyList(): RT
 
     fun run(
-        triggerStatus: Int = STATUS_OK,
+        triggerStatus: Int = Engine.Companion.STATUS_OK,
         onEachCallback: ((LT, CRT) -> Unit)?,
         onReadyCallback: ((RT) -> Unit)?
     ) {
@@ -46,9 +46,3 @@ abstract class BaseListTask<ET : Engine, RT : TaskResult, CRT : TaskResult, CT :
         } else onResult(getResultForEmptyList())
     }
 }
-
-
-abstract class ListTask<ET : Engine, CRT : TaskResult, CT : Task<ET, CRT>, LT>(
-    engine: ET,
-    objects: Collection<LT>
-) : BaseListTask<ET, TaskResult, CRT, CT, LT>(engine, objects)

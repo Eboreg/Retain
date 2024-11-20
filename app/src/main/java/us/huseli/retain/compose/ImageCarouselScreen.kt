@@ -14,9 +14,9 @@ fun ImageCarouselScreen(
     viewModel: ImageCarouselViewModel = hiltViewModel(),
     onClose: () -> Unit,
 ) {
-    val images by viewModel.images.collectAsStateWithLifecycle(emptyList())
-    val currentImage by viewModel.currentImage.collectAsStateWithLifecycle(null)
-    val currentImageBitmap by viewModel.currentImageBitmap.collectAsStateWithLifecycle(null)
+    val images by viewModel.images.collectAsStateWithLifecycle()
+    val currentImage by viewModel.currentImage.collectAsStateWithLifecycle()
+    val currentImageBitmap by viewModel.currentImageBitmap.collectAsStateWithLifecycle()
 
     RetainScaffold { innerPadding ->
         currentImage?.let { image ->

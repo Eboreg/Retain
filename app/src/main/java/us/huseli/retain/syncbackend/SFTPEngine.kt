@@ -2,7 +2,6 @@ package us.huseli.retain.syncbackend
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.util.Log
 import com.jcraft.jsch.ChannelSftp
 import com.jcraft.jsch.ChannelSftp.SSH_FX_NO_SUCH_FILE
 import com.jcraft.jsch.JSch
@@ -10,10 +9,8 @@ import com.jcraft.jsch.JSchException
 import com.jcraft.jsch.SftpException
 import com.jcraft.jsch.UserInfo
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import us.huseli.retain.Constants.DEFAULT_SFTP_BASE_DIR
 import us.huseli.retain.Constants.PREF_SFTP_BASE_DIR
 import us.huseli.retain.Constants.PREF_SFTP_HOSTNAME
@@ -22,11 +19,10 @@ import us.huseli.retain.Constants.PREF_SFTP_PORT
 import us.huseli.retain.Constants.PREF_SFTP_USERNAME
 import us.huseli.retain.Constants.PREF_SYNC_BACKEND
 import us.huseli.retain.Enums
-import us.huseli.retain.Logger
-import us.huseli.retain.syncbackend.tasks.OperationTaskResult
 import us.huseli.retain.syncbackend.tasks.RemoteFile
-import us.huseli.retain.syncbackend.tasks.TaskResult
-import us.huseli.retain.syncbackend.tasks.TestTaskResult
+import us.huseli.retain.syncbackend.tasks.result.OperationTaskResult
+import us.huseli.retain.syncbackend.tasks.result.TaskResult
+import us.huseli.retain.syncbackend.tasks.result.TestTaskResult
 import java.io.File
 import java.net.ConnectException
 import java.net.UnknownHostException
@@ -34,11 +30,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class SFTPEngine @Inject constructor(
-    @ApplicationContext context: Context,
-    override val logger: Logger,
-    ioScope: CoroutineScope,
-) : SharedPreferences.OnSharedPreferenceChangeListener, Engine(context, ioScope) {
+class SFTPEngine @Inject constructor(@ApplicationContext context: Context) :
+    SharedPreferences.OnSharedPreferenceChangeListener, Engine(context) {
     override val backend: Enums.SyncBackend = Enums.SyncBackend.SFTP
     private val jsch = JSch()
     private val knownHostsFile = File(context.filesDir, "known_hosts")
@@ -75,7 +68,7 @@ class SFTPEngine @Inject constructor(
             else STATUS_DISABLED
         preferences.registerOnSharedPreferenceChangeListener(this)
         jsch.setKnownHosts(knownHostsFile.absolutePath)
-        ioScope.launch {
+        launchOnIOThread {
             syncBackend.collect {
                 if (it != backend) status = STATUS_DISABLED
                 else if (status == STATUS_DISABLED) status = STATUS_READY
@@ -122,7 +115,7 @@ class SFTPEngine @Inject constructor(
             session.disconnect()
             if (onResult != null) onResult(OperationTaskResult(status = TaskResult.Status.OK))
         } catch (e: Exception) {
-            log("runCommand: error=$e, session=$session", level = Log.ERROR)
+            logError("runCommand: error=$e, session=$session", e)
             if (onResult != null) onResult(exceptionToResult(e))
             else throw e
         }
@@ -148,7 +141,7 @@ class SFTPEngine @Inject constructor(
         }
     }
 
-    override fun createDir(remoteDir: String, onResult: (OperationTaskResult) -> Unit) = ioScope.launch {
+    override fun createDir(remoteDir: String, onResult: (OperationTaskResult) -> Unit) = launchOnIOThread {
         runCommand(
             command = {
                 val dirs = remoteDir.split('/')
@@ -169,7 +162,7 @@ class SFTPEngine @Inject constructor(
         remotePath: String,
         localFile: File,
         onResult: (OperationTaskResult) -> Unit
-    ) = ioScope.launch {
+    ) = launchOnIOThread {
         runCommand(
             command = { get(remotePath, tempDirDown.absolutePath) },
             onResult = { result ->
@@ -189,7 +182,7 @@ class SFTPEngine @Inject constructor(
         remoteDir: String,
         filter: (RemoteFile) -> Boolean,
         onResult: (OperationTaskResult) -> Unit
-    ) = ioScope.launch {
+    ) = launchOnIOThread {
         try {
             runCommand {
                 val lsResult = ls(remoteDir)
@@ -208,7 +201,7 @@ class SFTPEngine @Inject constructor(
         }
     }
 
-    override fun removeFile(remotePath: String, onResult: (OperationTaskResult) -> Unit) = ioScope.launch {
+    override fun removeFile(remotePath: String, onResult: (OperationTaskResult) -> Unit) = launchOnIOThread {
         runCommand(
             command = { rm(remotePath) },
             onResult = { result -> onResult(result.copy(objects = listOf(remotePath))) },
@@ -220,7 +213,7 @@ class SFTPEngine @Inject constructor(
         remotePath: String,
         mimeType: String?,
         onResult: (OperationTaskResult) -> Unit
-    ) = ioScope.launch {
+    ) = launchOnIOThread {
         runCommand(
             command = { put(localFile.absolutePath, remotePath) },
             onResult = { result ->
@@ -233,6 +226,7 @@ class SFTPEngine @Inject constructor(
         when (key) {
             PREF_SFTP_BASE_DIR -> baseDir.value =
                 preferences.getString(key, DEFAULT_SFTP_BASE_DIR) ?: DEFAULT_SFTP_BASE_DIR
+
             PREF_SFTP_HOSTNAME -> hostname.value = preferences.getString(key, "") ?: ""
             PREF_SFTP_PASSWORD -> password.value = preferences.getString(key, "") ?: ""
             PREF_SFTP_PORT -> port.value = preferences.getInt(key, 22)

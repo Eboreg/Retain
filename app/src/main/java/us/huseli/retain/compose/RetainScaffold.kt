@@ -1,32 +1,33 @@
 package us.huseli.retain.compose
 
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.zIndex
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import androidx.preference.PreferenceManager
+import us.huseli.retain.Constants.PREF_SYSTEM_BAR_COLOR_KEY
+import us.huseli.retain.Logger
+import us.huseli.retain.ui.theme.NoteColorKey
 import us.huseli.retaintheme.compose.SnackbarHosts
 
 @Composable
 fun RetainScaffold(
     modifier: Modifier = Modifier,
-    statusBarColor: Color = MaterialTheme.colorScheme.surface,
-    navigationBarColor: Color = MaterialTheme.colorScheme.background,
+    systemBarColorKey: NoteColorKey = NoteColorKey.DEFAULT,
     topBar: @Composable () -> Unit = {},
+    bottomBar: @Composable () -> Unit = {},
     content: @Composable (PaddingValues) -> Unit
 ) {
-    val systemUiController = rememberSystemUiController()
+    val context = LocalContext.current
 
-    LaunchedEffect(statusBarColor) {
-        systemUiController.setStatusBarColor(statusBarColor)
-    }
+    LaunchedEffect(systemBarColorKey) {
+        val preferences = PreferenceManager.getDefaultSharedPreferences(context)
 
-    LaunchedEffect(navigationBarColor) {
-        systemUiController.setNavigationBarColor(navigationBarColor)
+        Logger.log("colorKey=$systemBarColorKey", tag = "RetainScaffold")
+        preferences.edit().putString(PREF_SYSTEM_BAR_COLOR_KEY, systemBarColorKey.name).apply()
     }
 
     Scaffold(
@@ -34,5 +35,6 @@ fun RetainScaffold(
         topBar = topBar,
         snackbarHost = { SnackbarHosts(modifier = Modifier.zIndex(2f)) },
         content = content,
+        bottomBar = bottomBar,
     )
 }

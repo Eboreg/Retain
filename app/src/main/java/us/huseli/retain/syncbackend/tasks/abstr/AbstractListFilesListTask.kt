@@ -1,13 +1,15 @@
-package us.huseli.retain.syncbackend.tasks
+package us.huseli.retain.syncbackend.tasks.abstr
 
 import us.huseli.retain.syncbackend.Engine
 import us.huseli.retain.syncbackend.Engine.Companion.STATUS_OK
+import us.huseli.retain.syncbackend.tasks.RemoteFile
+import us.huseli.retain.syncbackend.tasks.result.OperationTaskResult
 
-abstract class ListFilesListTask<ET : Engine, CRT : OperationTaskResult, CT : Task<ET, CRT>>(
+abstract class AbstractListFilesListTask<ET : Engine, CRT : OperationTaskResult, CT : AbstractTask<ET, CRT>>(
     engine: ET,
     remoteDir: String,
     filter: (RemoteFile) -> Boolean,
-) : ListFilesTask<ET>(engine, remoteDir, filter) {
+) : AbstractListFilesTask<ET>(engine, remoteDir, filter) {
     private var onEachCallback: ((RemoteFile, CRT) -> Unit)? = null
     protected val successfulRemoteFiles = mutableListOf<RemoteFile>()
     protected val unsuccessfulRemoteFiles = mutableListOf<RemoteFile>()

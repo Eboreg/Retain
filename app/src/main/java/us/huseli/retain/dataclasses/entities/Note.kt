@@ -5,6 +5,7 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import us.huseli.retain.Enums.NoteType
+import us.huseli.retain.ui.theme.NoteColorKey
 import java.time.Instant
 import java.util.UUID
 
@@ -22,6 +23,15 @@ data class Note(
     @ColumnInfo(name = "noteIsDeleted", defaultValue = "0") val isDeleted: Boolean = false,
     @ColumnInfo(name = "noteIsArchived", defaultValue = "0") val isArchived: Boolean = false,
 ) : Comparable<Note> {
+    val colorKey: NoteColorKey
+        get() {
+            return try {
+                NoteColorKey.valueOf(color)
+            } catch (_: Throwable) {
+                NoteColorKey.DEFAULT
+            }
+        }
+
     override fun compareTo(other: Note) = (updated.epochSecond - other.updated.epochSecond).toInt()
 
     override fun equals(other: Any?) = other is Note &&

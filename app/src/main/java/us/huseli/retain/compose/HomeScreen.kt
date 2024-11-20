@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,9 +13,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
@@ -35,13 +38,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.burnoutcrew.reorderable.ReorderableItem
-import org.burnoutcrew.reorderable.detectReorder
-import org.burnoutcrew.reorderable.rememberReorderableLazyListState
-import org.burnoutcrew.reorderable.reorderable
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
+import sh.calvin.reorderable.rememberReorderableLazyStaggeredGridState
 import us.huseli.retain.Enums.HomeScreenViewType
 import us.huseli.retain.R
-import us.huseli.retain.dataclasses.NotePojo
 import us.huseli.retain.dataclasses.entities.Note
 import us.huseli.retain.viewmodels.NoteListViewModel
 import us.huseli.retain.viewmodels.SettingsViewModel
@@ -57,7 +58,7 @@ fun HomeScreen(
     onAddChecklistClick: () -> Unit,
     onCardClick: (Note) -> Unit,
     onSettingsClick: () -> Unit,
-    onDebugClick: () -> Unit,
+    onTestClick: () -> Unit,
 ) {
     val context = LocalContext.current
     val syncBackend by viewModel.syncBackend.collectAsStateWithLifecycle()
@@ -70,25 +71,8 @@ fun HomeScreen(
     val showArchive by viewModel.showArchive.collectAsStateWithLifecycle()
     val trashedPojos by viewModel.trashedPojos.collectAsStateWithLifecycle()
 
-    val reorderableState = rememberReorderableLazyListState(
-        onMove = { from, to -> viewModel.switchNotePositions(from, to) },
-        onDragEnd = { _, _ -> viewModel.saveNotePositions() }
-    )
     var isFABExpanded by rememberSaveable { mutableStateOf(false) }
     var viewType by rememberSaveable { mutableStateOf(HomeScreenViewType.GRID) }
-    var lazyModifier = modifier
-        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
-            isFABExpanded = false
-        }
-        .fillMaxHeight()
-
-    if (isSyncBackendEnabled) {
-        val refreshState = rememberPullRefreshState(
-            refreshing = isSyncBackendSyncing,
-            onRefresh = { viewModel.syncBackend() },
-        )
-        lazyModifier = lazyModifier.pullRefresh(state = refreshState)
-    }
 
     BackHandler(isSelectEnabled) {
         viewModel.deselectAllNotes()
@@ -117,27 +101,6 @@ fun HomeScreen(
         }
     }
 
-    val lazyContent: @Composable (NotePojo, Boolean) -> Unit = { pojo, isDragging ->
-        NoteCard(
-            modifier = Modifier.fillMaxWidth(),
-            pojo = pojo,
-            isDragging = isDragging,
-            onClick = {
-                if (isSelectEnabled) viewModel.toggleNoteSelected(pojo.note.id)
-                else onCardClick(pojo.note)
-                isFABExpanded = false
-            },
-            onLongClick = {
-                viewModel.toggleNoteSelected(pojo.note.id)
-                isFABExpanded = false
-            },
-            isSelected = selectedNoteIds.contains(pojo.note.id),
-            showDragHandle = viewType == HomeScreenViewType.LIST,
-            reorderableState = reorderableState,
-            secondaryImageGridRowHeight = if (viewType == HomeScreenViewType.LIST) 200.dp else 100.dp,
-        )
-    }
-
     RetainScaffold(
         topBar = {
             if (isSelectEnabled) SelectionTopAppBar(
@@ -153,10 +116,10 @@ fun HomeScreen(
             ) else HomeScreenTopAppBar(
                 viewType = viewType,
                 onSettingsClick = onSettingsClick,
-                onDebugClick = onDebugClick,
                 onViewTypeClick = { viewType = it },
                 onArchiveClick = { viewModel.toggleShowArchive() },
                 showArchive = showArchive,
+                onTestClick = onTestClick,
             )
         },
     ) { innerPadding ->
@@ -178,7 +141,25 @@ fun HomeScreen(
             )
         }
 
-        Column(modifier = lazyModifier.padding(innerPadding).padding(horizontal = 8.dp).fillMaxWidth()) {
+        Column(
+            modifier = modifier
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                    isFABExpanded = false
+                }
+                .fillMaxHeight()
+                .then(
+                    if (isSyncBackendEnabled) {
+                        val refreshState = rememberPullRefreshState(
+                            refreshing = isSyncBackendSyncing,
+                            onRefresh = { viewModel.syncBackend() },
+                        )
+                        Modifier.pullRefresh(state = refreshState)
+                    } else Modifier
+                )
+                .padding(innerPadding)
+                .padding(horizontal = 8.dp)
+                .fillMaxWidth()
+        ) {
             if (isSyncBackendSyncing) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -195,25 +176,76 @@ fun HomeScreen(
             }
 
             if (viewType == HomeScreenViewType.GRID) {
+                val gridState = rememberLazyStaggeredGridState()
+                val reorderableState = rememberReorderableLazyStaggeredGridState(
+                    lazyStaggeredGridState = gridState,
+                    onMove = { from, to -> viewModel.switchNotePositions(from.index, to.index) },
+                )
+
                 LazyVerticalStaggeredGrid(
+                    state = gridState,
                     columns = StaggeredGridCells.Adaptive(minSize = minColumnWidth.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalItemSpacing = 8.dp,
+                    contentPadding = PaddingValues(top = 8.dp),
+                    modifier = Modifier.fillMaxHeight(),
                 ) {
-                    items(pojos, key = { it.note.id }) { pojo -> lazyContent(pojo, false) }
+                    items(pojos, key = { it.note.id }) { pojo ->
+                        ReorderableItem(state = reorderableState, key = pojo.note.id) { isDragging ->
+                            NoteCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                pojo = pojo,
+                                isDragging = isDragging,
+                                onClick = {
+                                    if (isSelectEnabled) viewModel.toggleNoteSelected(pojo.note.id)
+                                    else onCardClick(pojo.note)
+                                    isFABExpanded = false
+                                },
+                                onLongClick = {
+                                    viewModel.toggleNoteSelected(pojo.note.id)
+                                    isFABExpanded = false
+                                },
+                                isSelected = selectedNoteIds.contains(pojo.note.id),
+                                secondaryImageGridRowHeight = if (viewType == HomeScreenViewType.LIST) 200.dp else 100.dp,
+                                scope = this,
+                                onDragEnd = { viewModel.saveNotePositions() },
+                            )
+                        }
+                    }
                 }
             } else {
+                val listState = rememberLazyListState()
+                val reorderableState = rememberReorderableLazyListState(
+                    lazyListState = listState,
+                    onMove = { from, to -> viewModel.switchNotePositions(from.index, to.index) },
+                )
+
                 LazyColumn(
-                    modifier = Modifier
-                        .reorderable(reorderableState)
-                        .detectReorder(reorderableState)
-                        .fillMaxHeight(),
-                    state = reorderableState.listState,
+                    modifier = Modifier.fillMaxHeight(),
+                    state = listState,
                     verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(top = 8.dp),
                 ) {
                     items(pojos, key = { it.note.id }) { pojo ->
                         ReorderableItem(reorderableState, key = pojo.note.id) { isDragging ->
-                            lazyContent(pojo, isDragging)
+                            NoteCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                pojo = pojo,
+                                isDragging = isDragging,
+                                onClick = {
+                                    if (isSelectEnabled) viewModel.toggleNoteSelected(pojo.note.id)
+                                    else onCardClick(pojo.note)
+                                    isFABExpanded = false
+                                },
+                                onLongClick = {
+                                    viewModel.toggleNoteSelected(pojo.note.id)
+                                    isFABExpanded = false
+                                },
+                                isSelected = selectedNoteIds.contains(pojo.note.id),
+                                secondaryImageGridRowHeight = if (viewType == HomeScreenViewType.LIST) 200.dp else 100.dp,
+                                scope = this,
+                                onDragEnd = { viewModel.saveNotePositions() },
+                            )
                         }
                     }
                 }

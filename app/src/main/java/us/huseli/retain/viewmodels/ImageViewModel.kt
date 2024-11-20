@@ -7,5 +7,5 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ImageViewModel @Inject constructor(private val repository: NoteRepository) : ViewModel() {
-    fun getImageBitmap(filename: String) = repository.getImageBitmap(filename)
+    suspend fun getImageBitmap(filename: String) = repository.getImageBitmap(filename)
 }

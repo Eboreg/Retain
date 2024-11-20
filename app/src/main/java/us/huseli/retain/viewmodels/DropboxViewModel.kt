@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import us.huseli.retain.repositories.SyncBackendRepository
 import us.huseli.retain.syncbackend.DropboxEngine
-import us.huseli.retain.syncbackend.tasks.TestTaskResult
+import us.huseli.retain.syncbackend.tasks.result.TestTaskResult
 import javax.inject.Inject
 
 @HiltViewModel

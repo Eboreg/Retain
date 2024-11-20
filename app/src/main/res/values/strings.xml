@@ -72,9 +72,11 @@
     <string name="unarchive_selected_notes">Unarchive selected notes</string>
     <string name="uncheck_all">Uncheck all</string>
     <string name="undo">Undo</string>
+    <string name="redo">Redo</string>
     <string name="unknown_host">No host with this name was found.</string>
     <string name="yes">Yes</string>
     <string name="failed_to_upload_notes_to">Failed to upload note(s) to %1$s: %2$s</string>
+    <string name="updated_x">Updated %1$s</string>
     <plurals name="plus_x_checked_items">
         <item quantity="one">+ 1 checked item</item>
         <item quantity="other">+ %1$d checked items</item>

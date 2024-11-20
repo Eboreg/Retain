@@ -1,6 +1,8 @@
 package us.huseli.retain.syncbackend.tasks
 
 import us.huseli.retain.syncbackend.Engine
+import us.huseli.retain.syncbackend.tasks.abstr.AbstractOperationTask
+import us.huseli.retain.syncbackend.tasks.result.OperationTaskResult
 import java.io.File
 
 /** Down: 1 arbitrary file */
@@ -8,7 +10,7 @@ open class DownloadFileTask<ET : Engine, RT : OperationTaskResult>(
     engine: ET,
     protected val remotePath: String,
     protected val localFile: File,
-) : OperationTask<ET, RT>(engine) {
+) : AbstractOperationTask<ET, RT>(engine) {
     override val successMessageString = "Successfully downloaded $remotePath"
 
     override fun start(onResult: (RT) -> Unit) {

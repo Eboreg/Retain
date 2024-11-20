@@ -1,9 +1,7 @@
-package us.huseli.retain.syncbackend.tasks
+package us.huseli.retain.syncbackend.tasks.result
 
-import us.huseli.retain.syncbackend.Engine
+import us.huseli.retain.syncbackend.tasks.RemoteFile
 import java.io.File
-
-data class RemoteFile(val name: String, val size: Long, val isDirectory: Boolean)
 
 open class OperationTaskResult(
     status: Status,
@@ -22,6 +20,3 @@ open class OperationTaskResult(
         objects: List<Any> = this.objects,
     ) = OperationTaskResult(status, message, exception, remoteFiles, localFiles, objects)
 }
-
-
-abstract class OperationTask<ET : Engine, RT : OperationTaskResult>(engine: ET) : Task<ET, RT>(engine)
