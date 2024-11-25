@@ -2,9 +2,11 @@ package us.huseli.retain.dataclasses.entities
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Ignore
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import us.huseli.retain.Enums.NoteType
+import us.huseli.retain.annotation.RetainAnnotatedString
 import us.huseli.retain.ui.theme.NoteColorKey
 import java.time.Instant
 import java.util.UUID
@@ -23,6 +25,8 @@ data class Note(
     @ColumnInfo(name = "noteIsDeleted", defaultValue = "0") val isDeleted: Boolean = false,
     @ColumnInfo(name = "noteIsArchived", defaultValue = "0") val isArchived: Boolean = false,
 ) : Comparable<Note> {
+    @Ignore val annotatedText: RetainAnnotatedString = RetainAnnotatedString.deserialize(text)
+
     val colorKey: NoteColorKey
         get() {
             return try {

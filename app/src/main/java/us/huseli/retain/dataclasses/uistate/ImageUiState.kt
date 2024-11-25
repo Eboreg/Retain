@@ -5,35 +5,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.unit.IntSize
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import us.huseli.retain.dataclasses.entities.Image
+import us.huseli.retain.interfaces.IImage
 
 @Stable
-interface IImageUiState : Comparable<IImageUiState> {
-    val filename: String
-    val position: Int
-    val isSelected: Boolean
-    val width: Int?
-    val height: Int?
-
-    val dimensions: IntSize?
-        get() {
-            val width = this.width
-            val height = this.height
-
-            return if (width != null && height != null) IntSize(width, height) else null
-        }
-
-    val ratio: Float
-        get() = dimensions?.let { it.width.toFloat() / it.height.toFloat() } ?: 0f
-
-    override fun compareTo(other: IImageUiState): Int = position - other.position
-}
-
-@Stable
-class MutableImageUiState(private var image: Image, isNew: Boolean = false) : IImageUiState {
+class ImageUiState(private var image: Image, isNew: Boolean = false) : IImage {
     override var position by mutableIntStateOf(image.position)
     override val filename = image.filename
     override var isSelected by mutableStateOf(false)
@@ -44,7 +22,13 @@ class MutableImageUiState(private var image: Image, isNew: Boolean = false) : II
     val isChanged: Boolean
         get() = image.position != position
 
-    fun clone() = MutableImageUiState(image = toImage())
+    fun clone() = ImageUiState(image = toImage())
+
+    override fun equals(other: Any?): Boolean = other is IImage &&
+        other.position == position &&
+        other.filename == filename
+
+    override fun hashCode(): Int = 31 * position + filename.hashCode()
 
     fun onSaved() {
         isNew = false
@@ -54,7 +38,7 @@ class MutableImageUiState(private var image: Image, isNew: Boolean = false) : II
     fun toImage() = image.copy(position = position)
 }
 
-suspend fun Collection<MutableImageUiState>.save(dbSaveFunc: suspend (Collection<Image>) -> Unit) {
+suspend fun Collection<ImageUiState>.save(dbSaveFunc: suspend (Collection<Image>) -> Unit) {
     val states = filter { it.isNew || it.isChanged }
 
     if (states.isNotEmpty()) {
@@ -63,4 +47,4 @@ suspend fun Collection<MutableImageUiState>.save(dbSaveFunc: suspend (Collection
     }
 }
 
-fun Collection<MutableImageUiState>.clone() = map { it.clone() }
+fun Collection<ImageUiState>.clone() = map { it.clone() }

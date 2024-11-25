@@ -16,6 +16,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import us.huseli.retain.compose.RetainScaffold
+import us.huseli.retain.compose.settings.sections.GeneralSection
+import us.huseli.retain.compose.settings.sections.KeepImportSection
+import us.huseli.retain.compose.settings.sections.QuickNoteImportSection
+import us.huseli.retain.compose.settings.sections.SyncBackendSection
 import us.huseli.retain.viewmodels.SettingsViewModel
 
 

@@ -5,58 +5,52 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.text.TextRange
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import us.huseli.retain.annotation.RetainAnnotatedString
 import us.huseli.retain.dataclasses.entities.ChecklistItem
-import java.util.UUID
+import us.huseli.retain.interfaces.IChecklistItem
 
 @Stable
-interface IChecklistItemUiState : Comparable<IChecklistItemUiState> {
-    val text: String
-    val selection: TextRange
-    val isChecked: Boolean
-    val isFocused: Boolean
-    val isDragging: Boolean
-    val showAutocomplete: Boolean
-    val alpha: Float
-    val id: UUID
-    val position: Int
-
-    val compareValue: Int
-        get() = position + if (isChecked) 100_000 else 0
-
-    override fun compareTo(other: IChecklistItemUiState): Int = compareValue - other.compareValue
-}
-
-@Stable
-class MutableChecklistItemUiState(
+class ChecklistItemUiState(
     private var item: ChecklistItem,
     isFocused: Boolean = false,
     isNew: Boolean = false,
-) : IChecklistItemUiState {
+) : IChecklistItem {
     override val id = item.id
-    override var text by mutableStateOf(item.text)
-    override var selection by mutableStateOf(TextRange(item.text.length))
-    override var isChecked by mutableStateOf(item.checked)
+    override var isChecked by mutableStateOf(item.isChecked)
     override var isFocused by mutableStateOf(isFocused)
     override var isDragging by mutableStateOf(false)
     override var position by mutableIntStateOf(item.position)
+    override var annotatedText: RetainAnnotatedString by mutableStateOf(item.annotatedText)
+
     var isNew by mutableStateOf(isNew)
 
-    override val showAutocomplete: Boolean
-        get() = isFocused && !isDragging && !isChecked
-
-    override val alpha: Float
-        get() = if (isChecked) 0.5f else 1f
+    val serializedText: String
+        get() = annotatedText.serialize()
 
     val isChanged: Boolean
-        get() = item.text != text || item.checked != isChecked || item.position != position
+        get() = item.annotatedText != annotatedText || item.isChecked != isChecked || item.position != position
 
     val isTextChanged: Boolean
-        get() = item.text != text
+        get() = item.annotatedText != annotatedText
 
-    fun clone() = MutableChecklistItemUiState(item = toItem())
+    fun clone() = ChecklistItemUiState(item = toItem())
+
+    override fun equals(other: Any?): Boolean = other is IChecklistItem &&
+        other.id == id &&
+        other.isChecked == isChecked &&
+        other.position == position &&
+        other.annotatedText == annotatedText
+
+    override fun hashCode(): Int {
+        var result = id.hashCode()
+
+        result = 31 * result + isChecked.hashCode()
+        result = 31 * result + position
+        result = 31 * result + annotatedText.hashCode()
+        return result
+    }
 
     fun onSaved() {
         item = toItem()
@@ -70,10 +64,10 @@ class MutableChecklistItemUiState(
         }
     }
 
-    fun toItem() = item.copy(text = text, checked = isChecked, position = position)
+    fun toItem() = item.copy(text = annotatedText.serialize(), isChecked = isChecked, position = position)
 }
 
-suspend fun Collection<MutableChecklistItemUiState>.save(dbSaveFunc: suspend (Collection<ChecklistItem>) -> Unit) {
+suspend fun Collection<ChecklistItemUiState>.save(dbSaveFunc: suspend (Collection<ChecklistItem>) -> Unit) {
     val states = filter { it.isNew || it.isChanged }
 
     if (states.isNotEmpty()) {
@@ -82,4 +76,4 @@ suspend fun Collection<MutableChecklistItemUiState>.save(dbSaveFunc: suspend (Co
     }
 }
 
-fun Collection<MutableChecklistItemUiState>.clone() = map { it.clone() }
+fun Collection<ChecklistItemUiState>.clone() = map { it.clone() }

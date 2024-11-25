@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.mapLatest
 import us.huseli.retain.Constants
 import us.huseli.retain.Constants.NAV_ARG_IMAGE_CAROUSEL_CURRENT_ID
-import us.huseli.retain.ILogger
+import us.huseli.retain.interfaces.ILogger
 import us.huseli.retain.dataclasses.entities.Image
 import us.huseli.retain.repositories.NoteRepository
 import us.huseli.retaintheme.extensions.launchOnIOThread

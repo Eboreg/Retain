@@ -4,7 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import dagger.hilt.android.lifecycle.HiltViewModel
 import us.huseli.retain.Enums.NoteType
 import us.huseli.retain.dataclasses.entities.Note
-import us.huseli.retain.dataclasses.uistate.MutableImageUiState
+import us.huseli.retain.dataclasses.uistate.ImageUiState
 import us.huseli.retain.dataclasses.uistate.clone
 import us.huseli.retain.repositories.NoteRepository
 import us.huseli.retain.viewmodels.TextNoteViewModel.UndoState
@@ -20,24 +20,36 @@ class TextNoteViewModel @Inject constructor(
     savedStateHandle = savedStateHandle,
     noteType = NoteType.TEXT,
 ) {
-    data class UndoState(val note: Note?, val images: List<MutableImageUiState>)
+    data class UndoState(val note: Note?, val imageUiStates: List<ImageUiState>)
+
+    override val shouldSaveUndoState: Boolean
+        get() {
+            val state = _undoStates.value.getOrNull(_undoStateIdx.value)
+
+            if (state == null) return noteUiState.isChanged || _imageUiStates.value.any { it.isChanged }
+            return state.note != noteUiState.toNote() || state.imageUiStates != _imageUiStates.value
+        }
 
     override fun applyUndoState(idx: Int) {
-        val images = _undoStates.value[idx].images
-        val deletedImageFilenames = _images.value.map { it.filename }.toSet().minus(images.map { it.filename })
+        val images = _undoStates.value[idx].imageUiStates
+        val deletedImageFilenames = _imageUiStates.value.map { it.filename }.toSet().minus(images.map { it.filename })
 
-        _undoStates.value[idx].note?.also { noteUiState.refreshFromNote(it) }
-        _images.value = images
+        _undoStates.value[idx].note?.also { noteUiState.onNoteFetched(it) }
+        _imageUiStates.value = images
         if (deletedImageFilenames.isNotEmpty()) launchOnIOThread { repository.deleteImages(deletedImageFilenames) }
         _undoStateIdx.value = idx
     }
 
     override fun saveUndoState() {
-        _undoStateIdx.value?.also { _undoStates.value = _undoStates.value.take(it + 1) }
+        _undoStates.value = _undoStates.value.take(_undoStateIdx.value + 1)
+        if (_undoStates.value.size > 50) {
+            _undoStates.value = _undoStates.value.take(50)
+            _undoStateIdx.value = 49
+        }
         _undoStates.value += UndoState(
             note = if (!noteUiState.isReadOnly) noteUiState.toNote() else null,
-            images = _images.value.clone()
+            imageUiStates = _imageUiStates.value.clone()
         )
-        _undoStateIdx.value = (_undoStateIdx.value ?: -1) + 1
+        _undoStateIdx.value += 1
     }
 }

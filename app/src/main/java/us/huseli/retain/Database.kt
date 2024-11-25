@@ -12,6 +12,7 @@ import us.huseli.retain.dataclasses.entities.ChecklistItem
 import us.huseli.retain.dataclasses.entities.DeletedNote
 import us.huseli.retain.dataclasses.entities.Image
 import us.huseli.retain.dataclasses.entities.Note
+import us.huseli.retain.interfaces.ILogger
 import java.util.concurrent.Executors
 
 @androidx.room.Database(

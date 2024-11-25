@@ -1,4 +1,4 @@
-package us.huseli.retain.compose.notescreen
+package us.huseli.retain.compose.notescreen.bars
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
@@ -61,40 +62,17 @@ fun NoteScreenBottomBar(
     onUndoClick: () -> Unit,
     onRedoClick: () -> Unit,
 ) {
-    /*
-    BottomAppBar(containerColor = backgroundColor, modifier = Modifier.height(40.dp)) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            if (isUndoPossible || isRedoPossible) {
-                IconButton(onClick = onUndoClick, enabled = isUndoPossible) {
-                    Icon(Icons.AutoMirrored.Sharp.Undo, stringResource(R.string.undo))
-                }
-                IconButton(onClick = onRedoClick, enabled = isRedoPossible) {
-                    Icon(Icons.AutoMirrored.Sharp.Redo, stringResource(R.string.redo))
-                }
-            } else {
-                val updatedString = if (updated.isAfter(Instant.now().truncatedTo(ChronoUnit.DAYS)))
-                    updated.isoTime(DateTimePrecision.MINUTE)
-                else updated.isoDateTime(DateTimePrecision.MINUTE)
-
-                Text(stringResource(R.string.updated_x, updatedString), style = MaterialTheme.typography.bodySmall)
-            }
-        }
-    }
-     */
     val insets = WindowInsets.navigationBars.union(WindowInsets.ime)
 
     Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceEvenly,
         modifier = Modifier
             .background(backgroundColor)
             .fillMaxWidth()
             .windowInsetsPadding(insets)
-            .heightIn(min = 40.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceEvenly,
+            .heightIn(min = 40.dp)
+            .padding(horizontal = 8.dp)
     ) {
         if (isUndoPossible || isRedoPossible) {
             IconButton(onClick = onUndoClick, enabled = isUndoPossible) {

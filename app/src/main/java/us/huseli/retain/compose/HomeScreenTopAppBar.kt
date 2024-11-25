@@ -6,12 +6,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.sharp.Archive
 import androidx.compose.material.icons.sharp.BugReport
-import androidx.compose.material.icons.sharp.Close
-import androidx.compose.material.icons.sharp.Delete
 import androidx.compose.material.icons.sharp.GridView
-import androidx.compose.material.icons.sharp.SelectAll
 import androidx.compose.material.icons.sharp.Settings
-import androidx.compose.material.icons.sharp.Unarchive
 import androidx.compose.material.icons.sharp.ViewAgenda
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -30,54 +26,6 @@ import androidx.compose.ui.unit.dp
 import us.huseli.retain.BuildConfig
 import us.huseli.retain.Enums.HomeScreenViewType
 import us.huseli.retain.R
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun SelectionTopAppBar(
-    modifier: Modifier = Modifier,
-    selectedCount: Int,
-    onCloseClick: () -> Unit,
-    onTrashClick: () -> Unit,
-    onSelectAllClick: () -> Unit,
-    onArchiveClick: () -> Unit,
-    showArchive: Boolean,
-) {
-    TopAppBar(
-        title = { Text(selectedCount.toString()) },
-        modifier = modifier,
-        navigationIcon = {
-            IconButton(onClick = onCloseClick) {
-                Icon(
-                    imageVector = Icons.Sharp.Close,
-                    contentDescription = stringResource(R.string.exit_selection_mode)
-                )
-            }
-        },
-        actions = {
-            IconButton(onClick = onSelectAllClick) {
-                Icon(
-                    imageVector = Icons.Sharp.SelectAll,
-                    contentDescription = stringResource(R.string.select_all_notes)
-                )
-            }
-            IconButton(onClick = onArchiveClick) {
-                Icon(
-                    imageVector = if (showArchive) Icons.Sharp.Unarchive else Icons.Sharp.Archive,
-                    contentDescription = stringResource(
-                        if (showArchive) R.string.unarchive_selected_notes
-                        else R.string.archive_selected_notes
-                    )
-                )
-            }
-            IconButton(onClick = onTrashClick) {
-                Icon(
-                    imageVector = Icons.Sharp.Delete,
-                    contentDescription = stringResource(R.string.delete_selected_notes)
-                )
-            }
-        }
-    )
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

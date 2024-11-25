@@ -3,7 +3,7 @@ package us.huseli.retain.syncbackend.tasks.abstr
 import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import us.huseli.retain.ILogger
+import us.huseli.retain.interfaces.ILogger
 import us.huseli.retain.syncbackend.Engine
 import us.huseli.retain.syncbackend.Engine.Companion.STATUS_OK
 import us.huseli.retain.syncbackend.tasks.result.TaskResult
@@ -38,16 +38,16 @@ abstract class AbstractTask<ET : Engine, RT : TaskResult>(protected val engine: 
                 _status.value = STATUS_CANCELLED
             } else {
                 _status.value = STATUS_RUNNING
-                log("${javaClass.simpleName}: START", priority = Log.DEBUG)
+                log(message = "${javaClass.simpleName}: START", priority = Log.DEBUG)
                 startMessageString?.let { log(it) }
                 start { result ->
                     _status.value = STATUS_FINISHED
                     if (result.success) {
                         successMessageString?.let { log(it) }
-                        log("${javaClass.simpleName}: FINISH SUCCESSFULLY", priority = Log.DEBUG)
+                        log(message = "${javaClass.simpleName}: FINISH SUCCESSFULLY", priority = Log.DEBUG)
                     } else {
                         result.message?.let { log(it) }
-                        log("${javaClass.simpleName}: FINISH FAILINGLY", priority = Log.ERROR)
+                        log(message = "${javaClass.simpleName}: FINISH FAILINGLY", priority = Log.ERROR)
                     }
                     onFinishedListeners.forEach { it.invoke(result) }
                 }

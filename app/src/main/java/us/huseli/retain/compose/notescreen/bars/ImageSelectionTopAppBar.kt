@@ -1,4 +1,4 @@
-package us.huseli.retain.compose.notescreen
+package us.huseli.retain.compose.notescreen.bars
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.sharp.Close
@@ -7,7 +7,6 @@ import androidx.compose.material.icons.sharp.SelectAll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -18,20 +17,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import us.huseli.retain.R
-import us.huseli.retain.ui.theme.getDarkenedNoteColor
 import us.huseli.retain.viewmodels.AbstractNoteViewModel
 
 @Composable
-fun ImageSelectionTopAppBar(viewModel: AbstractNoteViewModel<*>, modifier: Modifier = Modifier) {
-    val images by viewModel.images.collectAsStateWithLifecycle()
+fun ImageSelectionTopAppBar(
+    viewModel: AbstractNoteViewModel<*>,
+    backgroundColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    val imageUiStates by viewModel.imageUiStates.collectAsStateWithLifecycle()
 
     ImageSelectionTopAppBar(
         modifier = modifier,
-        backgroundColor = getDarkenedNoteColor(
-            viewModel.noteUiState.colorKey,
-            MaterialTheme.colorScheme.surfaceContainer,
-        ),
-        selectedImageCount = images.filter { it.isSelected }.size,
+        backgroundColor = backgroundColor,
+        selectedImageCount = imageUiStates.filter { it.isSelected }.size,
         onCloseClick = { viewModel.deselectAllImages() },
         onSelectAllClick = { viewModel.selectAllImages() },
         onTrashClick = { viewModel.deleteSelectedImages() },

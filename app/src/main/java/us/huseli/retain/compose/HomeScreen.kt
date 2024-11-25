@@ -18,11 +18,11 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.pullrefresh.pullRefresh
-import androidx.compose.material.pullrefresh.rememberPullRefreshState
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.pullToRefresh
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,7 +48,7 @@ import us.huseli.retain.viewmodels.NoteListViewModel
 import us.huseli.retain.viewmodels.SettingsViewModel
 import us.huseli.retaintheme.snackbar.SnackbarEngine
 
-@OptIn(ExperimentalMaterialApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
@@ -103,7 +103,7 @@ fun HomeScreen(
 
     RetainScaffold(
         topBar = {
-            if (isSelectEnabled) SelectionTopAppBar(
+            if (isSelectEnabled) HomeScreenSelectionTopAppBar(
                 selectedCount = selectedNoteIds.size,
                 onCloseClick = { viewModel.deselectAllNotes() },
                 onTrashClick = { viewModel.trashSelectedNotes() },
@@ -149,11 +149,13 @@ fun HomeScreen(
                 .fillMaxHeight()
                 .then(
                     if (isSyncBackendEnabled) {
-                        val refreshState = rememberPullRefreshState(
-                            refreshing = isSyncBackendSyncing,
+                        val refreshState = rememberPullToRefreshState()
+
+                        Modifier.pullToRefresh(
+                            isRefreshing = isSyncBackendSyncing,
+                            state = refreshState,
                             onRefresh = { viewModel.syncBackend() },
                         )
-                        Modifier.pullRefresh(state = refreshState)
                     } else Modifier
                 )
                 .padding(innerPadding)
@@ -193,7 +195,6 @@ fun HomeScreen(
                     items(pojos, key = { it.note.id }) { pojo ->
                         ReorderableItem(state = reorderableState, key = pojo.note.id) { isDragging ->
                             NoteCard(
-                                modifier = Modifier.fillMaxWidth(),
                                 pojo = pojo,
                                 isDragging = isDragging,
                                 onClick = {
@@ -209,6 +210,7 @@ fun HomeScreen(
                                 secondaryImageGridRowHeight = if (viewType == HomeScreenViewType.LIST) 200.dp else 100.dp,
                                 scope = this,
                                 onDragEnd = { viewModel.saveNotePositions() },
+                                modifier = Modifier.fillMaxWidth(),
                             )
                         }
                     }
@@ -229,7 +231,6 @@ fun HomeScreen(
                     items(pojos, key = { it.note.id }) { pojo ->
                         ReorderableItem(reorderableState, key = pojo.note.id) { isDragging ->
                             NoteCard(
-                                modifier = Modifier.fillMaxWidth(),
                                 pojo = pojo,
                                 isDragging = isDragging,
                                 onClick = {
@@ -245,6 +246,7 @@ fun HomeScreen(
                                 secondaryImageGridRowHeight = if (viewType == HomeScreenViewType.LIST) 200.dp else 100.dp,
                                 scope = this,
                                 onDragEnd = { viewModel.saveNotePositions() },
+                                modifier = Modifier.fillMaxWidth(),
                             )
                         }
                     }

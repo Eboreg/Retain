@@ -1,3 +1,4 @@
+
 import java.io.FileInputStream
 import java.util.Properties
 
@@ -106,7 +107,7 @@ dependencies {
     implementation("com.google.devtools.ksp:symbol-processing-api:2.0.21-1.0.25")
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.core:core-splashscreen:1.0.1")
-    implementation("androidx.recyclerview:recyclerview:1.3.2")
+    // implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("androidx.preference:preference-ktx:1.2.1")
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.navigation:navigation-compose:2.8.4")
@@ -134,8 +135,8 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-test-manifest:$composeVersion")
 
     // Material:
-    implementation("androidx.compose.material:material:$composeVersion")
-    implementation("androidx.compose.material3:material3:1.3.1")
+    // implementation("androidx.compose.material:material:$composeVersion")
+    implementation("androidx.compose.material3:material3:1.4.0-alpha04")
     implementation("androidx.compose.material:material-icons-extended:$composeVersion")
 
     // Room:
@@ -168,5 +169,8 @@ dependencies {
     implementation("com.dropbox.core:dropbox-android-sdk:7.0.0")
 
     // Theme:
-    implementation("com.github.Eboreg:RetainTheme:4.6.4")
+    implementation("com.github.Eboreg:RetainTheme:4.6.5")
+
+    // Text diff:
+    implementation("io.github.java-diff-utils:java-diff-utils:4.12")
 }

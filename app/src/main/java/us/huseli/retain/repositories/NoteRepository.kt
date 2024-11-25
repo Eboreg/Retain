@@ -17,7 +17,7 @@ import us.huseli.retain.dataclasses.NotePojo
 import us.huseli.retain.dataclasses.entities.ChecklistItem
 import us.huseli.retain.dataclasses.entities.Image
 import us.huseli.retain.dataclasses.entities.Note
-import us.huseli.retain.dataclasses.uistate.MutableNoteUiState
+import us.huseli.retain.dataclasses.uistate.NoteUiState
 import us.huseli.retain.toBitmap
 import us.huseli.retaintheme.utils.AbstractScopeHolder
 import java.io.File
@@ -82,14 +82,14 @@ class NoteRepository @Inject constructor(
         onIOThread { imageDao.upsert(images) }
     }
 
-    suspend fun saveMutableNoteUiState(state: MutableNoteUiState) {
+    suspend fun saveNoteUiState(state: NoteUiState) {
         if (state.shouldSave) {
             val note = state.toNote()
             val savedNote = onIOThread { noteDao.upsert(note) }
 
             onMainThread {
-                state.refreshFromNote(savedNote)
-                state.status = MutableNoteUiState.Status.REGULAR
+                state.onNoteUpdated(savedNote)
+                state.status = NoteUiState.Status.REGULAR
             }
         }
     }

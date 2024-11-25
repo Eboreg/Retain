@@ -14,11 +14,11 @@ import us.huseli.retain.Constants
 import us.huseli.retain.Constants.PREF_SYNC_BACKEND
 import us.huseli.retain.Database
 import us.huseli.retain.Enums.SyncBackend
-import us.huseli.retain.ILogger
 import us.huseli.retain.dao.ChecklistItemDao
 import us.huseli.retain.dao.ImageDao
 import us.huseli.retain.dao.NoteDao
 import us.huseli.retain.dataclasses.entities.Image
+import us.huseli.retain.interfaces.ILogger
 import us.huseli.retain.syncbackend.DropboxEngine
 import us.huseli.retain.syncbackend.Engine
 import us.huseli.retain.syncbackend.NextCloudEngine
@@ -99,7 +99,10 @@ class SyncBackendRepository @Inject constructor(
                 localImageDir = imageDir,
                 deletedNoteIds = noteDao.listDeletedIds(),
             ).run { result ->
-                if (!result.success) logError("Sync with ${it.backend.displayName} failed", result.exception)
+                if (!result.success) logError(
+                    message = "Sync with ${it.backend.displayName} failed",
+                    exception = result.exception,
+                )
             }
         }
     }

@@ -115,7 +115,7 @@ class SFTPEngine @Inject constructor(@ApplicationContext context: Context) :
             session.disconnect()
             if (onResult != null) onResult(OperationTaskResult(status = TaskResult.Status.OK))
         } catch (e: Exception) {
-            logError("runCommand: error=$e, session=$session", e)
+            logError(message = "runCommand: error=$e, session=$session", exception = e)
             if (onResult != null) onResult(exceptionToResult(e))
             else throw e
         }

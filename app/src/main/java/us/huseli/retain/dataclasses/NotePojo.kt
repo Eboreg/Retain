@@ -18,15 +18,16 @@ data class NotePojo(
 
     fun getCardChecklist(): NoteCardChecklistData {
         val items = checklistItems.sorted()
-        val filteredItems = if (note.showChecked) items else items.filter { !it.checked }
+        val filteredItems = if (note.showChecked) items else items.filter { !it.isChecked }
         val shownItems = filteredItems.take(5)
         val hiddenItems = items.minus(shownItems.toSet())
 
         return NoteCardChecklistData(
             noteId = note.id,
+            padEndOfFirst = note.title.isBlank() && images.isEmpty(),
             shownChecklistItems = shownItems,
             hiddenChecklistItemCount = hiddenItems.size,
-            hiddenChecklistItemAllChecked = hiddenItems.all { it.checked },
+            hiddenChecklistItemAllChecked = hiddenItems.all { it.isChecked },
         )
     }
 }

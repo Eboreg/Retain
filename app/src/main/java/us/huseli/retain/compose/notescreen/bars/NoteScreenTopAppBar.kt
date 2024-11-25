@@ -1,4 +1,4 @@
-package us.huseli.retain.compose.notescreen
+package us.huseli.retain.compose.notescreen.bars
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -11,10 +11,10 @@ import androidx.compose.material.icons.automirrored.sharp.ArrowBack
 import androidx.compose.material.icons.sharp.AddAPhoto
 import androidx.compose.material.icons.sharp.AddPhotoAlternate
 import androidx.compose.material.icons.sharp.Palette
+import androidx.compose.material.icons.sharp.TextFormat
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -32,38 +32,44 @@ import androidx.core.content.FileProvider
 import us.huseli.retain.R
 import us.huseli.retain.compose.ColorDropdownMenu
 import us.huseli.retain.ui.theme.NoteColorKey
-import us.huseli.retain.ui.theme.getDarkenedNoteColor
 import us.huseli.retain.ui.theme.getNoteColors
 import us.huseli.retain.viewmodels.AbstractNoteViewModel
 import java.io.File
 import java.util.UUID
 
 @Composable
-fun NoteScreenTopAppBar(viewModel: AbstractNoteViewModel<*>, onBackClick: () -> Unit, modifier: Modifier = Modifier) {
+fun NoteScreenTopAppBar(
+    viewModel: AbstractNoteViewModel<*>,
+    backgroundColor: Color,
+    isTextFormatEnabled: Boolean,
+    onBackClick: () -> Unit,
+    onTextFormatClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     NoteScreenTopAppBar(
         modifier = modifier,
-        backgroundColor = getDarkenedNoteColor(
-            viewModel.noteUiState.colorKey,
-            MaterialTheme.colorScheme.surfaceContainer,
-        ),
+        backgroundColor = backgroundColor,
         onBackClick = {
             viewModel.save()
             onBackClick()
         },
         onImagePick = { uri -> viewModel.insertImage(uri) },
         onColorSelected = { key -> viewModel.setNoteColor(key) },
+        onTextFormatClick = onTextFormatClick,
+        isTextFormatEnabled = isTextFormatEnabled,
     )
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoteScreenTopAppBar(
     modifier: Modifier = Modifier,
     backgroundColor: Color,
+    isTextFormatEnabled: Boolean,
     onBackClick: () -> Unit,
     onImagePick: (Uri) -> Unit,
     onColorSelected: (NoteColorKey) -> Unit,
+    onTextFormatClick: () -> Unit,
 ) {
     val context = LocalContext.current
     var isColorDropdownExpanded by rememberSaveable { mutableStateOf(false) }
@@ -124,6 +130,13 @@ fun NoteScreenTopAppBar(
                     imageVector = Icons.Sharp.AddPhotoAlternate,
                     modifier = Modifier.scale(1.1f),
                     contentDescription = stringResource(R.string.add_image)
+                )
+            }
+            IconButton(onClick = onTextFormatClick, enabled = isTextFormatEnabled) {
+                Icon(
+                    imageVector = Icons.Sharp.TextFormat,
+                    contentDescription = stringResource(R.string.text_format),
+                    modifier = Modifier.scale(1.2f),
                 )
             }
         }

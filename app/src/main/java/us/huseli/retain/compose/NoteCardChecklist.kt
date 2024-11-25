@@ -17,21 +17,25 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import us.huseli.retain.R
+import us.huseli.retain.annotation.RetainAnnotatedText
 import us.huseli.retain.dataclasses.NoteCardChecklistData
 
 @Composable
 fun NoteCardChecklist(data: NoteCardChecklistData) {
     Column {
-        data.shownChecklistItems.forEach { item ->
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
+        data.shownChecklistItems.forEachIndexed { idx, item ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(vertical = 2.dp).padding(end = if (data.padEndOfFirst) 24.dp else 0.dp)
+            ) {
                 Icon(
-                    imageVector = if (item.checked) Icons.Sharp.CheckBox else Icons.Sharp.CheckBoxOutlineBlank,
+                    imageVector = if (item.isChecked) Icons.Sharp.CheckBox else Icons.Sharp.CheckBoxOutlineBlank,
                     contentDescription = null,
                     modifier = Modifier.padding(end = 8.dp).size(16.dp),
                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
                 )
-                Text(
-                    text = item.text,
+                RetainAnnotatedText(
+                    text = item.annotatedText,
                     overflow = TextOverflow.Ellipsis,
                     maxLines = 1,
                     style = MaterialTheme.typography.bodyMedium,

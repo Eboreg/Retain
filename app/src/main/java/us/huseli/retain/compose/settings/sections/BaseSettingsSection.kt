@@ -1,4 +1,4 @@
-package us.huseli.retain.compose.settings
+package us.huseli.retain.compose.settings.sections
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Column

@@ -30,14 +30,14 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import us.huseli.retain.ImageIterator
-import us.huseli.retain.dataclasses.uistate.IImageUiState
+import us.huseli.retain.interfaces.IImage
 import us.huseli.retain.viewmodels.ImageViewModel
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NoteImageGrid(
     viewModel: ImageViewModel = hiltViewModel(),
-    images: List<IImageUiState>,
+    images: List<IImage>,
     maxRows: Int = Int.MAX_VALUE,
     secondaryRowHeight: Dp,
     onImageClick: ((String) -> Unit)? = null,

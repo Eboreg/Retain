@@ -8,13 +8,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.withContext
 import us.huseli.retain.Enums.NoteType
-import us.huseli.retain.ILogger
 import us.huseli.retain.dataclasses.entities.ChecklistItem
 import us.huseli.retain.dataclasses.entities.Note
-import us.huseli.retain.dataclasses.uistate.MutableChecklistItemUiState
-import us.huseli.retain.dataclasses.uistate.MutableImageUiState
+import us.huseli.retain.dataclasses.uistate.ChecklistItemUiState
+import us.huseli.retain.dataclasses.uistate.ImageUiState
 import us.huseli.retain.dataclasses.uistate.clone
 import us.huseli.retain.dataclasses.uistate.save
+import us.huseli.retain.interfaces.ILogger
 import us.huseli.retain.repositories.NoteRepository
 import us.huseli.retaintheme.extensions.launchOnIOThread
 import java.util.UUID
@@ -33,29 +33,49 @@ class ChecklistNoteViewModel @Inject constructor(
 ), ILogger {
     data class UndoState(
         val note: Note?,
-        val checklistItems: List<MutableChecklistItemUiState>,
-        val images: List<MutableImageUiState>,
+        val itemUiStates: List<ChecklistItemUiState>,
+        val imageUiStates: List<ImageUiState>,
     )
 
     private val _focusedItemId = MutableStateFlow<UUID?>(null)
-    private val _itemUiStates = MutableStateFlow<List<MutableChecklistItemUiState>>(emptyList())
+    private val _itemUiStates = MutableStateFlow<List<ChecklistItemUiState>>(emptyList())
 
     val itemUiStates = combine(_itemUiStates, _focusedItemId) { states, focusedId ->
         states.onEach { it.isFocused = it.id == focusedId }
     }.stateWhileSubscribed(emptyList())
 
-    override fun applyUndoState(idx: Int) {
-        val items = _undoStates.value[idx].checklistItems
-        val images = _undoStates.value[idx].images
-        val deletedItemIds = _itemUiStates.value.map { it.id }.toSet().minus(items.map { it.id })
-        val deletedImageFilenames = _images.value.map { it.filename }.toSet().minus(images.map { it.filename })
+    override val shouldSaveUndoState: Boolean
+        get() {
+            val state = _undoStates.value.getOrNull(_undoStateIdx.value)
 
-        _undoStates.value[idx].note?.also { noteUiState.refreshFromNote(it) }
+            if (state == null) return noteUiState.isChanged ||
+                _imageUiStates.value.any { it.isChanged } ||
+                _itemUiStates.value.any { it.isChanged }
+            return state.note != noteUiState.toNote() ||
+                state.itemUiStates != _itemUiStates.value ||
+                state.imageUiStates != _imageUiStates.value
+        }
+
+    override fun applyUndoState(idx: Int) {
+        val items = _undoStates.value[idx].itemUiStates
+        val images = _undoStates.value[idx].imageUiStates
+        val deletedItemIds = _itemUiStates.value.map { it.id }.toSet().minus(items.map { it.id })
+        val deletedImageFilenames = _imageUiStates.value.map { it.filename }.toSet().minus(images.map { it.filename })
+
+        _undoStates.value[idx].note?.also { noteUiState.onNoteFetched(it) }
         _itemUiStates.value = items
-        _images.value = images
+        _imageUiStates.value = images
         if (deletedItemIds.isNotEmpty()) launchOnIOThread { repository.deleteChecklistItems(deletedItemIds) }
         if (deletedImageFilenames.isNotEmpty()) launchOnIOThread { repository.deleteImages(deletedImageFilenames) }
         _undoStateIdx.value = idx
+    }
+
+    fun deleteChecklistItem(itemId: UUID) {
+        _itemUiStates.value.find { it.id == itemId }?.also {
+            _itemUiStates.value -= it
+            saveUndoState()
+            launchOnIOThread { repository.deleteChecklistItem(itemId) }
+        }
     }
 
     fun deleteCheckedItems() {
@@ -68,20 +88,12 @@ class ChecklistNoteViewModel @Inject constructor(
         }
     }
 
-    fun deleteChecklistItem(itemId: UUID) {
-        _itemUiStates.value.find { it.id == itemId }?.also {
-            _itemUiStates.value -= it
-            saveUndoState()
-            launchOnIOThread { repository.deleteChecklistItem(itemId) }
-        }
-    }
-
     fun insertChecklistItem(position: Int = 0, isChecked: Boolean = false, text: String = "") {
-        val item = ChecklistItem(text = text, noteId = _noteId, checked = isChecked, position = position)
+        val item = ChecklistItem(text = text, noteId = _noteId, isChecked = isChecked, position = position)
 
         _itemUiStates.value.filter { it.position >= position }.forEach { it.position++ }
         _focusedItemId.value = item.id
-        _itemUiStates.value += MutableChecklistItemUiState(item = item, isFocused = true, isNew = true)
+        _itemUiStates.value += ChecklistItemUiState(item = item, isFocused = true, isNew = true)
         saveUndoState()
     }
 
@@ -89,8 +101,7 @@ class ChecklistNoteViewModel @Inject constructor(
         val items = repository.listChecklistItemsByNoteId(_noteId)
 
         withContext(Dispatchers.Main) {
-            _itemUiStates.value = items.map { MutableChecklistItemUiState(item = it, isNew = false) }.sorted()
-            // for (item in items) _itemUiStates.value += MutableChecklistItemUiState(item = item, isNew = false)
+            _itemUiStates.value = items.map { ChecklistItemUiState(item = it, isNew = false) }.sorted()
         }
     }
 
@@ -101,7 +112,7 @@ class ChecklistNoteViewModel @Inject constructor(
     fun saveChecklistItem(itemId: UUID) {
         _itemUiStates.value.find { it.id == itemId }?.also { state ->
             launchOnIOThread {
-                repository.saveMutableNoteUiState(noteUiState)
+                repository.saveNoteUiState(noteUiState)
                 state.save(repository::saveChecklistItem)
                 saveUndoState()
             }
@@ -109,13 +120,17 @@ class ChecklistNoteViewModel @Inject constructor(
     }
 
     override fun saveUndoState() {
-        _undoStateIdx.value?.also { _undoStates.value = _undoStates.value.take(it + 1) }
+        _undoStates.value = _undoStates.value.take(_undoStateIdx.value + 1)
+        if (_undoStates.value.size > 50) {
+            _undoStates.value = _undoStates.value.take(50)
+            _undoStateIdx.value = 49
+        }
         _undoStates.value += UndoState(
             note = if (!noteUiState.isReadOnly) noteUiState.toNote() else null,
-            checklistItems = _itemUiStates.value.clone(),
-            images = _images.value.clone(),
+            itemUiStates = _itemUiStates.value.clone(),
+            imageUiStates = _imageUiStates.value.clone(),
         )
-        _undoStateIdx.value = (_undoStateIdx.value ?: -1) + 1
+        _undoStateIdx.value += 1
     }
 
     fun setChecklistItemIsChecked(itemId: UUID, value: Boolean) {
@@ -141,11 +156,6 @@ class ChecklistNoteViewModel @Inject constructor(
          */
         val from = _itemUiStates.value.find { it.id == fromPos.key }
         val to = _itemUiStates.value.find { it.id == toPos.key }
-
-        log(
-            message = "switchChecklistItemPositions: from=${from?.text}, from.id = ${from?.id}, to=${to?.text}, to.id=${to?.id}",
-            tag = "onMove"
-        )
 
         if (from != null && to != null) {
             val fromPosition = from.position

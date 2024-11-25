@@ -1,4 +1,4 @@
-package us.huseli.retain.compose.settings
+package us.huseli.retain.compose.settings.sections
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row

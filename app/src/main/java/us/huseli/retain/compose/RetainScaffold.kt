@@ -26,7 +26,7 @@ fun RetainScaffold(
     LaunchedEffect(systemBarColorKey) {
         val preferences = PreferenceManager.getDefaultSharedPreferences(context)
 
-        Logger.log("colorKey=$systemBarColorKey", tag = "RetainScaffold")
+        Logger.log("RetainScaffold", "colorKey=$systemBarColorKey")
         preferences.edit().putString(PREF_SYSTEM_BAR_COLOR_KEY, systemBarColorKey.name).apply()
     }
 

@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import us.huseli.retain.ILogger
+import us.huseli.retain.interfaces.ILogger
 import us.huseli.retain.dataclasses.NotePojo
 import us.huseli.retain.repositories.NoteRepository
 import us.huseli.retain.repositories.SyncBackendRepository
@@ -52,7 +52,7 @@ class NoteListViewModel @Inject constructor(
         deselectAllNotes()
         if (selected.isNotEmpty()) {
             repository.archiveNotes(selected)
-            log("Archived ${selected.size} notes.", showSnackbar = true)
+            log(message = "Archived ${selected.size} notes.", showSnackbar = true)
         }
     }
 
@@ -108,7 +108,7 @@ class NoteListViewModel @Inject constructor(
         if (selected.isNotEmpty()) {
             launchOnIOThread {
                 repository.unarchiveNotes(selected)
-                log("Unarchived ${selected.size} notes.", showSnackbar = true)
+                log(message = "Unarchived ${selected.size} notes.", showSnackbar = true)
             }
         }
     }

@@ -11,12 +11,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import us.huseli.retain.Constants.DEFAULT_MAX_IMAGE_DIMEN
 import us.huseli.retain.Constants.IMAGE_SUBDIR
 import us.huseli.retain.Constants.ZIP_BUFFER_SIZE
 import us.huseli.retain.dataclasses.ImageData
+import us.huseli.retain.interfaces.ILogger
 import us.huseli.retaintheme.extensions.DateTimePrecision
 import us.huseli.retaintheme.extensions.scaleToMaxSize
 import java.io.File
@@ -161,3 +163,10 @@ fun Instant.isoTime(precision: DateTimePrecision = DateTimePrecision.SECOND): St
 
 
 object Logger : ILogger
+
+
+fun <T> List<AnnotatedString.Range<T>>.limit(length: Int): List<AnnotatedString.Range<T>> =
+    filter { it.start < length }.map { range ->
+        if (range.end <= length) range
+        else range.copy(end = length)
+    }

@@ -5,7 +5,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Ignore
 import androidx.room.PrimaryKey
-import us.huseli.retain.dataclasses.uistate.IImageUiState
+import us.huseli.retain.interfaces.IImage
 import java.time.Instant
 import java.util.UUID
 
@@ -27,9 +27,8 @@ data class Image(
     @ColumnInfo(name = "imageAdded") val added: Instant = Instant.now(),
     @ColumnInfo(name = "imageSize") val size: Int,
     @ColumnInfo(name = "imagePosition", defaultValue = "0") override val position: Int = 0,
-) : IImageUiState {
-    @Ignore
-    override val isSelected: Boolean = false
+) : IImage {
+    @Ignore override val isSelected: Boolean = false
 
     override fun equals(other: Any?) = other is Image &&
         other.filename == filename &&

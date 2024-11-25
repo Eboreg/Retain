@@ -26,7 +26,7 @@ import us.huseli.retain.Constants.PREF_MIN_COLUMN_WIDTH
 import us.huseli.retain.Constants.PREF_SYNC_BACKEND
 import us.huseli.retain.Enums.NoteType
 import us.huseli.retain.Enums.SyncBackend
-import us.huseli.retain.ILogger
+import us.huseli.retain.interfaces.ILogger
 import us.huseli.retain.copyFileToLocal
 import us.huseli.retain.dataclasses.ImageData
 import us.huseli.retain.dataclasses.NotePojo
@@ -164,7 +164,7 @@ class SettingsViewModel @Inject constructor(
                     val checklistItems = noteEntry.listContent?.mapIndexed { checklistItemIndex, checklistItemEntry ->
                         ChecklistItem(
                             text = checklistItemEntry.text,
-                            checked = checklistItemEntry.isChecked,
+                            isChecked = checklistItemEntry.isChecked,
                             noteId = note.id,
                             position = checklistItemIndex,
                         )
@@ -190,9 +190,9 @@ class SettingsViewModel @Inject constructor(
                     updateCurrentAction("Saving to database")
                     repository.insertNotePojos(pojos)
                 }
-                log("Imported ${pojos.size} notes.", showSnackbar = true)
+                log(message = "Imported ${pojos.size} notes.", showSnackbar = true)
             } catch (e: Exception) {
-                logError("Error: $e", e, showSnackbar = true)
+                logError(message = "Error: $e", e, showSnackbar = true)
             } finally {
                 _keepImportIsActive.value = false
             }
@@ -248,9 +248,9 @@ class SettingsViewModel @Inject constructor(
                     updateCurrentAction("Saving to database")
                     repository.insertNotePojos(pojos)
                 }
-                log("Imported ${pojos.size} notes.", showSnackbar = true)
+                log(message = "Imported ${pojos.size} notes.", showSnackbar = true)
             } catch (e: Exception) {
-                logError("Error: $e", e, showSnackbar = true)
+                logError(message = "Error: $e", e, showSnackbar = true)
             } finally {
                 _quickNoteImportIsActive.value = false
             }
@@ -352,7 +352,7 @@ class SettingsViewModel @Inject constructor(
             }
             entry.todolists?.flatMap { it.done ?: emptyList() }?.forEach {
                 checklistItems.add(
-                    ChecklistItem(text = it, checked = true, noteId = note.id, position = checklistItemPosition++)
+                    ChecklistItem(text = it, isChecked = true, noteId = note.id, position = checklistItemPosition++)
                 )
             }
 

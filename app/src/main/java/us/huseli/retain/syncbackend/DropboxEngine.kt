@@ -82,7 +82,7 @@ class DropboxEngine @Inject constructor(@ApplicationContext context: Context) : 
             try {
                 wrapRequest { client.auth().tokenRevoke() }
             } catch (e: Exception) {
-                logError("DropboxEnging.revoke(): $e", e)
+                logError(message = "DropboxEnging.revoke(): $e", e)
             }
         }
         preferences.edit().putString(PREF_DROPBOX_CREDENTIAL, null).apply()
@@ -119,7 +119,7 @@ class DropboxEngine @Inject constructor(@ApplicationContext context: Context) : 
         try {
             _accountEmail.value = wrapRequest { client.users().currentAccount.email }
         } catch (e: Exception) {
-            logError("DropboxEngine.getAccountEmail()", e)
+            logError(message = "DropboxEngine.getAccountEmail()", e)
         }
     }
 
@@ -132,7 +132,7 @@ class DropboxEngine @Inject constructor(@ApplicationContext context: Context) : 
                     getAccountEmail()
                 }
             } catch (e: Exception) {
-                logError("DropboxEngine.updateClient()", e)
+                logError(message = "DropboxEngine.updateClient()", e)
             }
         }
     }

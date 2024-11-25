@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
@@ -18,22 +19,27 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
+import sh.calvin.reorderable.ReorderableLazyListState
 import sh.calvin.reorderable.rememberReorderableLazyListState
-import us.huseli.retain.Logger
 import us.huseli.retain.R
-import us.huseli.retain.dataclasses.uistate.IChecklistItemUiState
-import us.huseli.retain.dataclasses.uistate.MutableChecklistItemUiState
-import us.huseli.retain.dataclasses.uistate.MutableNoteUiState
+import us.huseli.retain.annotation.RetainAnnotatedStringState
+import us.huseli.retain.annotation.rememberRetainAnnotatedStringState
+import us.huseli.retain.dataclasses.uistate.ChecklistItemUiState
+import us.huseli.retain.dataclasses.uistate.NoteUiState
+import us.huseli.retain.ui.theme.NoteColorKey
 import us.huseli.retain.ui.theme.getNoteColor
 import us.huseli.retain.viewmodels.ChecklistNoteViewModel
 import java.util.UUID
@@ -47,40 +53,13 @@ fun ChecklistNoteScreen(
     val items by viewModel.itemUiStates.collectAsStateWithLifecycle()
     val checkedItems = remember(items) { items.filter { it.isChecked } }
     val uncheckedItems = remember(items) { items.filter { !it.isChecked } }
-    val note: MutableNoteUiState = viewModel.noteUiState
+    val note: NoteUiState = viewModel.noteUiState
     val listState = rememberLazyListState()
+    var currentAnnotatedStringState by remember { mutableStateOf<RetainAnnotatedStringState?>(null) }
     val reorderableState = rememberReorderableLazyListState(
         lazyListState = listState,
-        onMove = { from, to ->
-            Logger.log(
-                message = "onMove: from.key=${from.key}, from.index=${from.index}, to.key=${to.key}, to.index=${to.index}",
-                tag = "onMove"
-            )
-            viewModel.switchChecklistItemPositions(from, to)
-        },
+        onMove = { from, to -> viewModel.switchChecklistItemPositions(from, to) },
     )
-    val getAutocomplete: (String) -> List<IChecklistItemUiState> = remember(checkedItems) {
-        { string ->
-            if (string.length >= 2) checkedItems.filter { it.text.startsWith(string, ignoreCase = true) }.take(5)
-            else emptyList()
-        }
-    }
-    val onNext: (MutableChecklistItemUiState) -> Unit = { state ->
-        val head = state.text.substring(0, state.selection.start)
-        val tail = state.text.substring(state.selection.start)
-
-        state.text = head
-        viewModel.insertChecklistItem(
-            position = state.position + 1,
-            isChecked = state.isChecked,
-            text = tail,
-        )
-    }
-    val onAutocompleteSelect: (MutableChecklistItemUiState, IChecklistItemUiState) -> Unit = { state, otherState ->
-        state.text = otherState.text
-        state.selection = TextRange(otherState.text.length)
-        viewModel.deleteChecklistItem(otherState.id)
-    }
 
     NoteScreenScaffold(
         listState = listState,
@@ -94,30 +73,22 @@ fun ChecklistNoteScreen(
                 onUncheckAllClick = { viewModel.uncheckAllItems() },
             )
         },
-        onTitleFocusChanged = { if (it.isFocused) viewModel.setFocusedChecklistItemId(null) }
+        onTitleFocusChanged = {
+            if (it.isFocused) {
+                currentAnnotatedStringState = null
+                viewModel.setFocusedChecklistItemId(null)
+            }
+        },
+        currentAnnotatedStringState = currentAnnotatedStringState,
     ) {
-        items(uncheckedItems, key = { it.id }) { state ->
-            ChecklistItemRow(
-                state = state,
-                onFocusChange = {
-                    if (it.isFocused) viewModel.setFocusedChecklistItemId(state.id)
-                    else if (state.isTextChanged) viewModel.saveChecklistItem(state.id)
-                },
-                onDeleteClick = { viewModel.deleteChecklistItem(state.id) },
-                onCheckedChange = { viewModel.setChecklistItemIsChecked(state.id, it) },
-                onTextChange = {
-                    state.text = it.text
-                    state.selection = it.selection
-                },
-                onNext = { onNext(state) },
-                reorderableState = reorderableState,
-                getAutocomplete = getAutocomplete,
-                onAutocompleteSelect = { onAutocompleteSelect(state, it) },
-                onDragStart = { state.isDragging = true },
-                onDragEnd = { state.isDragging = false },
-                modifier = Modifier.background(getNoteColor(note.colorKey, MaterialTheme.colorScheme.background)),
-            )
-        }
+        ChecklistItems(
+            states = uncheckedItems,
+            viewModel = viewModel,
+            reorderableState = reorderableState,
+            noteColorKey = note.colorKey,
+            onFocused = { currentAnnotatedStringState = it },
+            checkedStates = checkedItems,
+        )
 
         if (checkedItems.isNotEmpty()) {
             item {
@@ -151,27 +122,14 @@ fun ChecklistNoteScreen(
             }
 
             if (note.showChecked) {
-                items(checkedItems, key = { it.id }) { state ->
-                    ChecklistItemRow(
-                        state = state,
-                        onFocusChange = {
-                            if (it.isFocused) viewModel.setFocusedChecklistItemId(state.id)
-                            else if (state.isTextChanged) viewModel.saveChecklistItem(state.id)
-                        },
-                        onDeleteClick = { viewModel.deleteChecklistItem(state.id) },
-                        onCheckedChange = { viewModel.setChecklistItemIsChecked(state.id, it) },
-                        onTextChange = {
-                            state.text = it.text
-                            state.selection = it.selection
-                        },
-                        onNext = { onNext(state) },
-                        reorderableState = reorderableState,
-                        getAutocomplete = getAutocomplete,
-                        onAutocompleteSelect = { onAutocompleteSelect(state, it) },
-                        onDragStart = { state.isDragging = true },
-                        onDragEnd = { state.isDragging = false },
-                    )
-                }
+                ChecklistItems(
+                    states = checkedItems,
+                    viewModel = viewModel,
+                    reorderableState = reorderableState,
+                    noteColorKey = note.colorKey,
+                    onFocused = { currentAnnotatedStringState = it },
+                    checkedStates = checkedItems,
+                )
             } else item { Spacer(Modifier.height(4.dp)) }
         }
 
@@ -197,5 +155,63 @@ fun ChecklistNoteScreen(
                 )
             }
         }
+    }
+}
+
+
+fun LazyListScope.ChecklistItems(
+    states: List<ChecklistItemUiState>,
+    checkedStates: List<ChecklistItemUiState>?,
+    viewModel: ChecklistNoteViewModel,
+    reorderableState: ReorderableLazyListState,
+    noteColorKey: NoteColorKey,
+    onFocused: (RetainAnnotatedStringState) -> Unit,
+) {
+    items(states, key = { it.id }) { state ->
+        val annotatedStringState = rememberRetainAnnotatedStringState(state.serializedText)
+        val scope = rememberCoroutineScope()
+
+        ChecklistItemRow(
+            state = state,
+            annotatedStringState = annotatedStringState,
+            onFocusChange = {
+                if (it.isFocused) {
+                    onFocused(annotatedStringState)
+                    viewModel.setFocusedChecklistItemId(state.id)
+                } else if (state.isTextChanged) viewModel.saveChecklistItem(state.id)
+            },
+            onDeleteClick = { viewModel.deleteChecklistItem(state.id) },
+            onCheckedChange = { viewModel.setChecklistItemIsChecked(state.id, it) },
+            onValueChange = { state.annotatedText = it },
+            onNext = {
+                scope.launch {
+                    val (head, tail) = annotatedStringState.splitAtSelectionStart()
+
+                    state.annotatedText = head.toImmutable()
+                    viewModel.insertChecklistItem(
+                        position = state.position + 1,
+                        isChecked = state.isChecked,
+                        text = tail.toImmutable().serialize(),
+                    )
+                }
+            },
+            reorderableState = reorderableState,
+            getAutocomplete = { string ->
+                if (string.length >= 2 && checkedStates != null)
+                    checkedStates.filter { it.annotatedText.startsWith(string, ignoreCase = true) }.take(5)
+                else emptyList()
+            },
+            onAutocompleteSelect = {
+                scope.launch {
+                    annotatedStringState.update(it.annotatedText)
+                    annotatedStringState.jumpToLast()
+                }
+                state.annotatedText = it.annotatedText
+                viewModel.deleteChecklistItem(it.id)
+            },
+            onDragStart = { state.isDragging = true },
+            onDragEnd = { state.isDragging = false },
+            modifier = Modifier.background(getNoteColor(noteColorKey, MaterialTheme.colorScheme.background)),
+        )
     }
 }

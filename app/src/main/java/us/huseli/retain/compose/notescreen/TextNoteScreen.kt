@@ -5,21 +5,24 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.hilt.navigation.compose.hiltViewModel
+import us.huseli.retain.Logger
 import us.huseli.retain.R
-import us.huseli.retain.dataclasses.uistate.MutableNoteUiState
-import us.huseli.retain.outlinedTextFieldColors
+import us.huseli.retain.annotation.OutlinedAnnotatedTextField
+import us.huseli.retain.annotation.rememberRetainAnnotatedStringState
+import us.huseli.retain.dataclasses.uistate.NoteUiState
 import us.huseli.retain.viewmodels.TextNoteViewModel
 import java.util.UUID
 
@@ -31,7 +34,9 @@ fun TextNoteScreen(
     viewModel: TextNoteViewModel = hiltViewModel(),
 ) {
     val focusRequester = remember { FocusRequester() }
-    val note: MutableNoteUiState = viewModel.noteUiState
+    val note: NoteUiState = viewModel.noteUiState
+    val textState = rememberRetainAnnotatedStringState(note.serializedText)
+    var isFormattingEnabled by remember { mutableStateOf(false) }
 
     NoteScreenScaffold(
         listState = rememberLazyListState(),
@@ -43,20 +48,20 @@ fun TextNoteScreen(
             indication = null,
             onClick = {
                 focusRequester.requestFocus()
-                note.selection = TextRange(note.text.length)
+                textState.jumpToLast()
             },
         ),
+        currentAnnotatedStringState = if (isFormattingEnabled) textState else null,
     ) {
         item {
-            OutlinedTextField(
-                value = note.textFieldValue,
+            OutlinedAnnotatedTextField(
+                state = textState,
                 onValueChange = {
-                    note.text = it.text
-                    note.selection = it.selection
+                    Logger.log("TextNoteScreen", "onValueChange: note.annotatedText=${note.annotatedText}, it=$it")
+                    note.annotatedText = it
                 },
                 readOnly = note.isReadOnly,
                 placeholder = { Text(text = stringResource(R.string.note)) },
-                colors = outlinedTextFieldColors(),
                 keyboardOptions = KeyboardOptions.Default.copy(
                     capitalization = KeyboardCapitalization.Sentences,
                 ),
@@ -64,6 +69,7 @@ fun TextNoteScreen(
                     .fillMaxWidth()
                     .focusRequester(focusRequester)
                     .onFocusChanged {
+                        isFormattingEnabled = it.isFocused
                         if (!it.isFocused && note.isTextChanged) viewModel.saveNote()
                     },
             )

@@ -13,7 +13,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import us.huseli.retain.Constants.PREF_SYNC_BACKEND
 import us.huseli.retain.Enums.SyncBackend
-import us.huseli.retain.ILogger
+import us.huseli.retain.interfaces.ILogger
 import us.huseli.retain.InstantAdapter
 import us.huseli.retain.syncbackend.tasks.RemoteFile
 import us.huseli.retain.syncbackend.tasks.TestTask

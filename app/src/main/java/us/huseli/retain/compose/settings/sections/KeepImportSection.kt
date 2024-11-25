@@ -1,4 +1,4 @@
-package us.huseli.retain.compose.settings
+package us.huseli.retain.compose.settings.sections
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -15,22 +15,22 @@ import us.huseli.retain.R
 import us.huseli.retain.viewmodels.SettingsViewModel
 
 @Composable
-fun QuickNoteImportSection(modifier: Modifier = Modifier, viewModel: SettingsViewModel) {
+fun KeepImportSection(modifier: Modifier = Modifier, viewModel: SettingsViewModel) {
     val context = LocalContext.current
     val zipFilePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) viewModel.quickNoteImport(uri, context)
+        if (uri != null) viewModel.keepImport(uri, context)
     }
 
     BaseSettingsSection(
         modifier = modifier,
-        isShownDefault = false,
-        title = stringResource(R.string.quicknote_import),
-        key = "quicknote",
+        key = "keepImport",
         viewModel = viewModel,
+        isShownDefault = false,
+        title = stringResource(R.string.google_keep_import)
     ) {
         Text(
-            text = stringResource(R.string.quicknote_import_about),
-            modifier = Modifier.padding(bottom = 8.dp),
+            text = stringResource(R.string.google_keep_import_about),
+            modifier = Modifier.padding(bottom = 8.dp)
         )
         OutlinedButton(
             onClick = { zipFilePicker.launch(arrayOf("application/zip")) },

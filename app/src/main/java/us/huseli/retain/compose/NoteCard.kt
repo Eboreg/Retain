@@ -26,7 +26,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -34,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import sh.calvin.reorderable.ReorderableCollectionItemScope
 import us.huseli.retain.Enums
 import us.huseli.retain.R
+import us.huseli.retain.annotation.RetainAnnotatedText
 import us.huseli.retain.dataclasses.NotePojo
 import us.huseli.retain.ui.theme.getNoteColor
 
@@ -70,20 +70,21 @@ fun NoteCard(
                 )
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
-                if (!isDragging) {
-                    NoteImageGrid(
-                        images = pojo.images,
-                        maxRows = 2,
-                        secondaryRowHeight = secondaryImageGridRowHeight,
-                    )
-                }
+                NoteImageGrid(
+                    images = pojo.images,
+                    maxRows = 2,
+                    secondaryRowHeight = secondaryImageGridRowHeight,
+                )
 
-                Column(modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .fillMaxWidth()
+                ) {
                     if (pojo.note.title.isNotBlank()) {
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            // modifier = if (showDragHandle) Modifier.padding(end = 24.dp) else Modifier,
-                            modifier = Modifier.padding(end = 24.dp),
+                            modifier = Modifier.padding(end = if (pojo.images.isEmpty()) 24.dp else 0.dp),
                             text = pojo.note.title,
                             style = MaterialTheme.typography.bodyLarge,
                             maxLines = 1,
@@ -91,33 +92,31 @@ fun NoteCard(
                         )
                     }
 
-                    if (!isDragging) {
-                        when (pojo.note.type) {
-                            Enums.NoteType.TEXT -> {
-                                if (pojo.note.text.isNotBlank()) {
-                                    Spacer(modifier = Modifier.height(if (pojo.note.title.isNotBlank()) 8.dp else 16.dp))
-                                    Text(
-                                        text = pojo.note.text,
-                                        overflow = TextOverflow.Ellipsis,
-                                        maxLines = 6,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
-                                    )
-                                }
-                                if (pojo.note.text.isNotBlank() || pojo.note.title.isNotBlank())
-                                    Spacer(modifier = Modifier.height(16.dp))
+                    when (pojo.note.type) {
+                        Enums.NoteType.TEXT -> {
+                            if (pojo.note.text.isNotBlank()) {
+                                Spacer(modifier = Modifier.height(if (pojo.note.title.isNotBlank()) 8.dp else 16.dp))
+                                RetainAnnotatedText(
+                                    text = pojo.note.annotatedText,
+                                    overflow = TextOverflow.Ellipsis,
+                                    maxLines = 6,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
+                                )
                             }
+                            if (pojo.note.text.isNotBlank() || pojo.note.title.isNotBlank())
+                                Spacer(modifier = Modifier.height(16.dp))
+                        }
 
-                            Enums.NoteType.CHECKLIST -> {
-                                val checklistData = pojo.getCardChecklist()
+                        Enums.NoteType.CHECKLIST -> {
+                            val checklistData = pojo.getCardChecklist()
 
-                                if (checklistData.shownChecklistItems.isNotEmpty()) {
-                                    Spacer(modifier = Modifier.height(if (pojo.note.title.isNotBlank()) 8.dp else 16.dp))
-                                    NoteCardChecklist(data = checklistData)
-                                }
-                                if (checklistData.shownChecklistItems.isNotEmpty() || pojo.note.title.isNotBlank())
-                                    Spacer(modifier = Modifier.height(16.dp))
+                            if (checklistData.shownChecklistItems.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(if (pojo.note.title.isNotBlank()) 8.dp else 16.dp))
+                                NoteCardChecklist(data = checklistData)
                             }
+                            if (checklistData.shownChecklistItems.isNotEmpty() || pojo.note.title.isNotBlank())
+                                Spacer(modifier = Modifier.height(16.dp))
                         }
                     }
                 }
@@ -129,9 +128,7 @@ fun NoteCard(
                 modifier = Modifier
                     .draggableHandle(onDragStopped = onDragEnd)
                     .align(Alignment.TopEnd),
-                colors = IconButtonDefaults.filledTonalIconButtonColors(
-                    containerColor = if (pojo.images.isEmpty()) noteColor else Color.Transparent
-                ),
+                colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = noteColor.copy(alpha = 0.25f)),
                 onClick = {},
             ) { Icon(Icons.Sharp.DragIndicator, stringResource(R.string.move_card)) }
         }
