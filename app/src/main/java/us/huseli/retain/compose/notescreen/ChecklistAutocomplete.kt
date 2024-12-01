@@ -33,6 +33,7 @@ import us.huseli.retain.interfaces.IChecklistItem
 @Composable
 fun ChecklistAutocomplete(
     items: List<IChecklistItem>,
+    backgroundColor: Color,
     textFieldRect: () -> Rect,
     onItemClick: (IChecklistItem) -> Unit,
     onDismissRequest: () -> Unit,
@@ -54,7 +55,7 @@ fun ChecklistAutocomplete(
             }
         }
     ) {
-        Surface(shape = MaterialTheme.shapes.extraSmall, color = MaterialTheme.colorScheme.surfaceContainer) {
+        Surface(shape = MaterialTheme.shapes.extraSmall, color = backgroundColor) {
             Column(modifier = Modifier.padding(5.dp)) {
                 for (item in items) {
                     Row(

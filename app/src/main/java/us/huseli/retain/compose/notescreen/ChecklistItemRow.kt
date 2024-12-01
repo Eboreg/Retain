@@ -1,5 +1,6 @@
 package us.huseli.retain.compose.notescreen
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -47,6 +48,9 @@ import us.huseli.retain.annotation.AnnotatedTextField
 import us.huseli.retain.annotation.RetainAnnotatedString
 import us.huseli.retain.annotation.RetainAnnotatedStringState
 import us.huseli.retain.interfaces.IChecklistItem
+import us.huseli.retain.ui.theme.NoteColorKey
+import us.huseli.retain.ui.theme.getNoteColorVariant
+import us.huseli.retain.ui.theme.getNoteColor
 
 @Composable
 fun LazyItemScope.ChecklistItemRow(
@@ -62,6 +66,7 @@ fun LazyItemScope.ChecklistItemRow(
     onDragStart: () -> Unit,
     onDragEnd: () -> Unit,
     onValueChange: (RetainAnnotatedString) -> Unit,
+    noteColorKey: NoteColorKey,
     modifier: Modifier = Modifier,
 ) {
     val focusRequester = remember { FocusRequester() }
@@ -70,7 +75,7 @@ fun LazyItemScope.ChecklistItemRow(
 
     ReorderableItem(reorderableState, key = state.id) { isDragging ->
         Row(
-            modifier = modifier.then(
+            modifier = modifier.background(getNoteColor(noteColorKey, MaterialTheme.colorScheme.background)).then(
                 if (state.isDragging) Modifier.border(
                     width = 1.dp,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
@@ -142,6 +147,7 @@ fun LazyItemScope.ChecklistItemRow(
             textFieldRect = { textFieldRect },
             onItemClick = onAutocompleteSelect,
             onDismissRequest = {},
+            backgroundColor = getNoteColorVariant(noteColorKey, MaterialTheme.colorScheme.surfaceContainer),
         )
     }
 }

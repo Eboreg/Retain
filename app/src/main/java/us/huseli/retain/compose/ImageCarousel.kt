@@ -132,13 +132,13 @@ fun ImageCarousel(
     }
 
     BoxWithConstraints(
-        modifier = Modifier.fillMaxSize().zIndex(1f)
+        modifier = modifier.fillMaxSize().zIndex(1f)
     ) {
         maxHeightDp = this.maxHeight
 
         Column(
             verticalArrangement = Arrangement.Center,
-            modifier = modifier
+            modifier = Modifier
                 .fillMaxSize()
                 .transformable(state = transformableState)
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onClose() }

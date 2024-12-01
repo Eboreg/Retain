@@ -38,9 +38,9 @@ fun getNoteColors(): Map<NoteColorKey, Color> {
 fun getNoteColor(key: NoteColorKey?, dark: Boolean): Color? = noteColors(dark)[key]
 
 @Composable
-fun getDarkenedNoteColor(key: NoteColorKey, default: Color): Color {
+fun getNoteColorVariant(key: NoteColorKey, default: Color): Color {
     val dark = isSystemInDarkTheme()
-    return remember(key, dark, default) { (getNoteColor(key, dark) ?: default).darken() }
+    return remember(key, dark, default) { getNoteColor(key, dark)?.darken() ?: default }
 }
 
 @Composable

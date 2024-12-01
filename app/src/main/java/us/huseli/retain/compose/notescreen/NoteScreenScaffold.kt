@@ -40,7 +40,7 @@ import us.huseli.retain.compose.notescreen.bars.NoteScreenTopAppBar
 import us.huseli.retain.compose.notescreen.bars.TextFormatTopAppBar
 import us.huseli.retain.dataclasses.uistate.NoteUiState
 import us.huseli.retain.outlinedTextFieldColors
-import us.huseli.retain.ui.theme.getDarkenedNoteColor
+import us.huseli.retain.ui.theme.getNoteColorVariant
 import us.huseli.retain.ui.theme.getNoteColor
 import us.huseli.retain.viewmodels.AbstractNoteViewModel
 import java.util.UUID
@@ -78,7 +78,7 @@ fun NoteScreenScaffold(
     RetainScaffold(
         systemBarColorKey = note.colorKey,
         topBar = {
-            val backgroundColor = getDarkenedNoteColor(
+            val backgroundColor = getNoteColorVariant(
                 viewModel.noteUiState.colorKey,
                 MaterialTheme.colorScheme.surfaceContainer,
             )

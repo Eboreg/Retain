@@ -212,6 +212,7 @@ fun LazyListScope.ChecklistItems(
             onDragStart = { state.isDragging = true },
             onDragEnd = { state.isDragging = false },
             modifier = Modifier.background(getNoteColor(noteColorKey, MaterialTheme.colorScheme.background)),
+            noteColorKey = noteColorKey,
         )
     }
 }

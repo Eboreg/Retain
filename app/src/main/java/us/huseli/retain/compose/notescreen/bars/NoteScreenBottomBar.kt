@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import us.huseli.retain.R
 import us.huseli.retain.isoTime
-import us.huseli.retain.ui.theme.getDarkenedNoteColor
+import us.huseli.retain.ui.theme.getNoteColorVariant
 import us.huseli.retain.viewmodels.AbstractNoteViewModel
 import us.huseli.retaintheme.extensions.DateTimePrecision
 import us.huseli.retaintheme.extensions.isoDateTime
@@ -41,7 +41,7 @@ fun NoteScreenBottomBar(viewModel: AbstractNoteViewModel<*>) {
     val isRedoPossible by viewModel.isRedoPossible.collectAsStateWithLifecycle()
 
     NoteScreenBottomBar(
-        backgroundColor = getDarkenedNoteColor(
+        backgroundColor = getNoteColorVariant(
             viewModel.noteUiState.colorKey,
             MaterialTheme.colorScheme.surfaceContainer,
         ),
