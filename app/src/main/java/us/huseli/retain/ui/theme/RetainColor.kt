@@ -1,7 +1,5 @@
 package us.huseli.retain.ui.theme
 
-import android.content.Context
-import android.content.res.Configuration
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -54,17 +52,3 @@ fun Color.darken() = copy(
     green = (green - 0.05f).coerceAtLeast(0f),
     blue = (blue - 0.05f).coerceAtLeast(0f),
 )
-
-fun String.colorKeyOrNull(): NoteColorKey? {
-    return try {
-        NoteColorKey.valueOf(this)
-    } catch (_: Throwable) {
-        null
-    }
-}
-
-fun Context.getNoteColor(key: NoteColorKey): Color? {
-    val dark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-
-    return getNoteColor(key, dark)
-}
