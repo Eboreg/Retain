@@ -10,6 +10,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.sharp.ArrowBack
 import androidx.compose.material.icons.sharp.AddAPhoto
 import androidx.compose.material.icons.sharp.AddPhotoAlternate
+import androidx.compose.material.icons.sharp.ContentCopy
+import androidx.compose.material.icons.sharp.Delete
 import androidx.compose.material.icons.sharp.Palette
 import androidx.compose.material.icons.sharp.TextFormat
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -114,6 +116,7 @@ fun NoteScreenTopAppBar(
                     onColorSelected(it)
                 },
             )
+
             IconButton(onClick = { photoLauncher.launch(photoUri) }) {
                 Icon(
                     imageVector = Icons.Sharp.AddAPhoto,
@@ -121,6 +124,7 @@ fun NoteScreenTopAppBar(
                     contentDescription = stringResource(R.string.take_picture)
                 )
             }
+
             IconButton(
                 onClick = {
                     imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
@@ -132,11 +136,26 @@ fun NoteScreenTopAppBar(
                     contentDescription = stringResource(R.string.add_image)
                 )
             }
+
             IconButton(onClick = onTextFormatClick, enabled = isTextFormatEnabled) {
                 Icon(
                     imageVector = Icons.Sharp.TextFormat,
                     contentDescription = stringResource(R.string.text_format),
                     modifier = Modifier.scale(1.2f),
+                )
+            }
+
+            IconButton(onClick = {}) {
+                Icon(
+                    imageVector = Icons.Sharp.Delete,
+                    contentDescription = stringResource(R.string.delete),
+                )
+            }
+
+            IconButton(onClick = {}) {
+                Icon(
+                    imageVector = Icons.Sharp.ContentCopy,
+                    contentDescription = stringResource(R.string.clone),
                 )
             }
         }

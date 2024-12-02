@@ -1,4 +1,3 @@
-
 import java.io.FileInputStream
 import java.util.Properties
 
@@ -107,7 +106,6 @@ dependencies {
     implementation("com.google.devtools.ksp:symbol-processing-api:2.0.21-1.0.25")
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.core:core-splashscreen:1.0.1")
-    // implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("androidx.preference:preference-ktx:1.2.1")
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.navigation:navigation-compose:2.8.4")
@@ -135,7 +133,6 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-test-manifest:$composeVersion")
 
     // Material:
-    // implementation("androidx.compose.material:material:$composeVersion")
     implementation("androidx.compose.material3:material3:1.4.0-alpha04")
     implementation("androidx.compose.material:material-icons-extended:$composeVersion")
 
@@ -156,10 +153,10 @@ dependencies {
     implementation("sh.calvin.reorderable:reorderable:2.4.0")
 
     // To change status bar colour etc:
-    implementation("com.google.accompanist:accompanist-systemuicontroller:0.36.0")
+    // implementation("com.google.accompanist:accompanist-systemuicontroller:0.36.0")
 
     // HTML parsing:
-    implementation("org.jsoup:jsoup:1.18.1")
+    implementation("org.jsoup:jsoup:1.18.2")
 
     // SFTP:
     implementation(group = "com.github.mwiede", name = "jsch", version = "0.2.12")
@@ -172,5 +169,5 @@ dependencies {
     implementation("com.github.Eboreg:RetainTheme:4.6.5")
 
     // Text diff:
-    implementation("io.github.java-diff-utils:java-diff-utils:4.12")
+    implementation("io.github.java-diff-utils:java-diff-utils:4.15")
 }
