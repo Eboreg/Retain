@@ -52,7 +52,7 @@ class SyncBackendRepository @Inject constructor(
     private val engine = MutableStateFlow<Engine?>(null).apply {
         launchOnIOThread {
             _syncBackend.collect {
-                value = syncBackendToEngine(it)
+                this.images = syncBackendToEngine(it)
             }
         }
     }

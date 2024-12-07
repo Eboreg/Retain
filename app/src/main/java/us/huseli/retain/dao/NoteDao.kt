@@ -52,13 +52,6 @@ abstract class NoteDao {
         _delete(notes)
     }
 
-    @Query("SELECT * FROM Note WHERE noteId = :noteId")
-    abstract fun flowNote(noteId: UUID): Flow<Note>
-
-    @Transaction
-    @Query("SELECT * FROM Note WHERE noteId = :noteId")
-    abstract fun flowNotePojo(noteId: UUID): Flow<NotePojo?>
-
     @Transaction
     @Query("SELECT * FROM note WHERE noteIsDeleted = 0 ORDER BY notePosition")
     abstract fun flowNotePojoList(): Flow<List<NotePojo>>

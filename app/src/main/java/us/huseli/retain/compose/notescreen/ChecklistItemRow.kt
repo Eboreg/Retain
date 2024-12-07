@@ -65,7 +65,8 @@ fun LazyItemScope.ChecklistItemRow(
     onAutocompleteSelect: (IChecklistItem) -> Unit,
     onDragStart: () -> Unit,
     onDragEnd: () -> Unit,
-    onValueChange: (RetainAnnotatedString) -> Unit,
+    // onValueChange: (RetainAnnotatedString) -> Unit,
+    onChange: (RetainAnnotatedStringState.Change) -> Unit,
     noteColorKey: NoteColorKey,
     modifier: Modifier = Modifier,
 ) {
@@ -121,7 +122,8 @@ fun LazyItemScope.ChecklistItemRow(
                         imeAction = ImeAction.Next,
                         capitalization = KeyboardCapitalization.Sentences,
                     ),
-                    onValueChange = onValueChange,
+                    // onValueChange = onValueChange,
+                    onChange = onChange,
                     keyboardActions = KeyboardActions(onNext = { onNext() }),
                     modifier = Modifier
                         .onFocusChanged(onFocusChange)

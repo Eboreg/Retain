@@ -60,21 +60,21 @@ fun TextFormatTopAppBar(
                 TextFormatToggleButton(
                     checked = state.selectionStartStyle.size == RetainSpanStyle.Size.Small,
                     onCheckedChange = {
-                        if (it) scope.launch { state.setStyle(NullableRetainSpanStyle(size = RetainSpanStyle.Size.Small)) }
+                        if (it) scope.launch { state.setCurrentSelectionStyle(NullableRetainSpanStyle(size = RetainSpanStyle.Size.Small)) }
                     },
                     content = { Text("Aa", style = TextStyle(fontSize = textStyle.fontSize * 0.75)) },
                 )
                 TextFormatToggleButton(
                     checked = state.selectionStartStyle.size == RetainSpanStyle.Size.Normal,
                     onCheckedChange = {
-                        if (it) scope.launch { state.setStyle(NullableRetainSpanStyle(size = RetainSpanStyle.Size.Normal)) }
+                        if (it) scope.launch { state.setCurrentSelectionStyle(NullableRetainSpanStyle(size = RetainSpanStyle.Size.Normal)) }
                     },
                     content = { Text("Aa") },
                 )
                 TextFormatToggleButton(
                     checked = state.selectionStartStyle.size == RetainSpanStyle.Size.Large,
                     onCheckedChange = {
-                        if (it) scope.launch { state.setStyle(NullableRetainSpanStyle(size = RetainSpanStyle.Size.Large)) }
+                        if (it) scope.launch { state.setCurrentSelectionStyle(NullableRetainSpanStyle(size = RetainSpanStyle.Size.Large)) }
                     },
                     content = { Text("Aa", style = TextStyle(fontSize = textStyle.fontSize * 1.25)) },
                 )
@@ -87,23 +87,23 @@ fun TextFormatTopAppBar(
 
                 TextFormatToggleButton(
                     checked = state.selectionStartStyle.isBold,
-                    onCheckedChange = { scope.launch { state.setStyle(NullableRetainSpanStyle(isBold = it)) } },
+                    onCheckedChange = { scope.launch { state.setCurrentSelectionStyle(NullableRetainSpanStyle(isBold = it)) } },
                     content = { Icon(Icons.Sharp.FormatBold, stringResource(R.string.bold)) },
                 )
                 TextFormatToggleButton(
                     checked = state.selectionStartStyle.isItalic,
-                    onCheckedChange = { scope.launch { state.setStyle(NullableRetainSpanStyle(isItalic = it)) } },
+                    onCheckedChange = { scope.launch { state.setCurrentSelectionStyle(NullableRetainSpanStyle(isItalic = it)) } },
                     content = { Icon(Icons.Sharp.FormatItalic, stringResource(R.string.italic)) },
                 )
                 TextFormatToggleButton(
                     checked = state.selectionStartStyle.isUnderlined,
-                    onCheckedChange = { scope.launch { state.setStyle(NullableRetainSpanStyle(isUnderlined = it)) } },
+                    onCheckedChange = { scope.launch { state.setCurrentSelectionStyle(NullableRetainSpanStyle(isUnderlined = it)) } },
                     content = { Icon(Icons.Sharp.FormatUnderlined, stringResource(R.string.underlined)) },
                 )
                 IconButton(
                     onClick = {
                         scope.launch {
-                            state.setStyle(
+                            state.setCurrentSelectionStyle(
                                 NullableRetainSpanStyle(isBold = false, isUnderlined = false, isItalic = false)
                             )
                         }

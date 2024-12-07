@@ -22,8 +22,6 @@ class ImageUiState(private var image: Image, isNew: Boolean = false) : IImage {
     val isChanged: Boolean
         get() = image.position != position
 
-    fun clone() = ImageUiState(image = toImage())
-
     override fun equals(other: Any?): Boolean = other is IImage &&
         other.position == position &&
         other.filename == filename
@@ -47,4 +45,4 @@ suspend fun Collection<ImageUiState>.save(dbSaveFunc: suspend (Collection<Image>
     }
 }
 
-fun Collection<ImageUiState>.clone() = map { it.clone() }
+fun Collection<ImageUiState>.toImages() = map { it.toImage() }

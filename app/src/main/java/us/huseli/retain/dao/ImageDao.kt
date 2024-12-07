@@ -16,9 +16,6 @@ abstract class ImageDao {
     @Query("DELETE FROM Image WHERE imageFilename IN (:filenames)")
     abstract suspend fun delete(vararg filenames: String)
 
-    @Query("SELECT COALESCE(MAX(imagePosition), -1) FROM image WHERE imageNoteId = :noteId")
-    abstract suspend fun getMaxPosition(noteId: UUID): Int
-
     @Query("SELECT * FROM image WHERE imageNoteId = :noteId ORDER BY imagePosition")
     abstract suspend fun listByNoteId(noteId: UUID): List<Image>
 

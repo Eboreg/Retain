@@ -99,11 +99,11 @@ android {
 
 val lifecycleVersion = "2.8.7"
 val composeVersion = "1.7.5"
-val daggerVersion = "2.52"
+val daggerVersion = "2.53"
 val roomVersion = "2.6.1"
 
 dependencies {
-    implementation("com.google.devtools.ksp:symbol-processing-api:2.0.21-1.0.25")
+    implementation("com.google.devtools.ksp:symbol-processing-api:2.1.0-1.0.29")
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.preference:preference-ktx:1.2.1")
@@ -156,7 +156,7 @@ dependencies {
     // implementation("com.google.accompanist:accompanist-systemuicontroller:0.36.0")
 
     // HTML parsing:
-    implementation("org.jsoup:jsoup:1.18.2")
+    implementation("org.jsoup:jsoup:1.18.3")
 
     // SFTP:
     implementation(group = "com.github.mwiede", name = "jsch", version = "0.2.12")
@@ -166,7 +166,7 @@ dependencies {
     implementation("com.dropbox.core:dropbox-android-sdk:7.0.0")
 
     // Theme:
-    implementation("com.github.Eboreg:RetainTheme:4.6.5")
+    implementation("com.github.Eboreg:RetainTheme:4.6.6")
 
     // Text diff:
     implementation("io.github.java-diff-utils:java-diff-utils:4.15")

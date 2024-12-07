@@ -8,13 +8,12 @@ import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import dagger.hilt.android.AndroidEntryPoint
 import us.huseli.retain.compose.App
-import us.huseli.retain.interfaces.ILogger
 import us.huseli.retain.syncbackend.DropboxEngine
 import us.huseli.retaintheme.ui.theme.RetainTheme
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class RetainActivity : ComponentActivity(), ILogger {
+class RetainActivity : ComponentActivity() {
     @Inject
     lateinit var dropboxEngine: DropboxEngine
 

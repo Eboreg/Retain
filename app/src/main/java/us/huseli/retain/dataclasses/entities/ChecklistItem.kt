@@ -30,6 +30,7 @@ data class ChecklistItem(
     @Ignore override val isFocused: Boolean = false
     @Ignore override val isDragging: Boolean = false
     @Ignore override val annotatedText: RetainAnnotatedString = RetainAnnotatedString.deserialize(text)
+    @Ignore override val serializedText: String = text
 
     override fun equals(other: Any?) = other is ChecklistItem &&
         other.id == id &&

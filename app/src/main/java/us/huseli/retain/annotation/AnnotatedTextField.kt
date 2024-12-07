@@ -7,18 +7,18 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.TransformedText
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
-import us.huseli.retain.Logger
 import us.huseli.retain.outlinedTextFieldColors
 
 internal suspend fun onTextFieldValueChange(
@@ -26,48 +26,22 @@ internal suspend fun onTextFieldValueChange(
     state: RetainAnnotatedStringState,
     callback: (RetainAnnotatedString) -> Unit,
 ) {
-    if (state.textFieldValue2 != value) {
-        Logger.log(
-            "AnnotatedTextField",
-            "onValueChange: " +
-                "value.text=${value.text}, " +
-                "textState.textFieldValue.text=${state.textFieldValue2.text}, " +
-                "value.selection = ${value.selection}, " +
-                "textState.textFieldValue.selection = ${state.textFieldValue2.selection}, " +
-                "value.composition = ${value.composition}, " +
-                "textState.textFieldValue.composition = ${state.textFieldValue2.composition}"
-        )
-
+    if (state.textFieldValue != value) {
         state.onTextFieldValueChange(value)
-        callback(state.toAnnotatedString())
+        callback(state.getAnnotatedString())
     }
 }
 
-internal fun getVisualTransformation(
-    annotatedString: AnnotatedString,
-    textState: RetainAnnotatedStringState,
-    textStyle: TextStyle,
-): TransformedText {
-    Logger.log(
-        "getVisualTransformation",
-        "annotatedString.text=${annotatedString.text}, " +
-            "annotatedString.spanStyles=${annotatedString.spanStyles}, " +
-            "textState.spanStyles=${textState.spanStyles}",
-    )
-
+internal fun getVisualTransformation(textState: RetainAnnotatedStringState, textStyle: TextStyle): TransformedText {
     textState.baseFontSize = textStyle.fontSize
-
-    return TransformedText(
-        // RetainAnnotatedString(annotatedString.text, textState.spanStyles).toNative(textStyle.fontSize),
-        textState.nativeAnnotatedString,
-        OffsetMapping.Identity,
-    )
+    return TransformedText(textState.nativeAnnotatedString, OffsetMapping.Identity)
 }
 
 @Composable
 fun AnnotatedTextField(
     state: RetainAnnotatedStringState,
     onValueChange: (RetainAnnotatedString) -> Unit = {},
+    onChange: (RetainAnnotatedStringState.Change) -> Unit = {},
     modifier: Modifier = Modifier,
     cursorBrush: Brush = SolidColor(Color.Black),
     enabled: Boolean = true,
@@ -79,8 +53,12 @@ fun AnnotatedTextField(
 ) {
     val scope = rememberCoroutineScope()
 
+    LaunchedEffect(state) {
+        state.changeChan.receiveAsFlow().collect { onChange(it) }
+    }
+
     BasicTextField(
-        value = state.textFieldValue2,
+        value = state.textFieldValue,
         modifier = modifier,
         readOnly = readOnly,
         keyboardOptions = keyboardOptions,
@@ -88,7 +66,7 @@ fun AnnotatedTextField(
         textStyle = textStyle,
         keyboardActions = keyboardActions,
         singleLine = singleLine,
-        visualTransformation = { getVisualTransformation(it, state, textStyle) },
+        visualTransformation = { getVisualTransformation(state, textStyle) },
         onValueChange = { scope.launch { onTextFieldValueChange(it, state, onValueChange) } },
         cursorBrush = cursorBrush,
     )
@@ -98,6 +76,7 @@ fun AnnotatedTextField(
 fun OutlinedAnnotatedTextField(
     state: RetainAnnotatedStringState,
     onValueChange: (RetainAnnotatedString) -> Unit = {},
+    onChange: (RetainAnnotatedStringState.Change) -> Unit = {},
     modifier: Modifier = Modifier,
     colors: TextFieldColors = outlinedTextFieldColors(),
     enabled: Boolean = true,
@@ -110,8 +89,12 @@ fun OutlinedAnnotatedTextField(
 ) {
     val scope = rememberCoroutineScope()
 
+    LaunchedEffect(state) {
+        state.changeChan.receiveAsFlow().collect { onChange(it) }
+    }
+
     OutlinedTextField(
-        value = state.textFieldValue2,
+        value = state.textFieldValue,
         modifier = modifier,
         readOnly = readOnly,
         keyboardOptions = keyboardOptions,
@@ -119,7 +102,7 @@ fun OutlinedAnnotatedTextField(
         textStyle = textStyle,
         keyboardActions = keyboardActions,
         singleLine = singleLine,
-        visualTransformation = { getVisualTransformation(it, state, textStyle) },
+        visualTransformation = { getVisualTransformation(state, textStyle) },
         onValueChange = { scope.launch { onTextFieldValueChange(it, state, onValueChange) } },
         placeholder = placeholder,
         colors = colors,

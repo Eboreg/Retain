@@ -182,7 +182,11 @@ fun LazyListScope.ChecklistItems(
             },
             onDeleteClick = { viewModel.deleteChecklistItem(state.id) },
             onCheckedChange = { viewModel.setChecklistItemIsChecked(state.id, it) },
-            onValueChange = { state.annotatedText = it },
+            // onValueChange = { state.annotatedText = it },
+            onChange = { change ->
+                state.annotatedText = annotatedStringState.getAnnotatedString()
+                if (change.style || change.wholeWords) viewModel.saveUndoState()
+            },
             onNext = {
                 scope.launch {
                     val (head, tail) = annotatedStringState.splitAtSelectionStart()
@@ -203,7 +207,7 @@ fun LazyListScope.ChecklistItems(
             },
             onAutocompleteSelect = {
                 scope.launch {
-                    annotatedStringState.update(it.annotatedText)
+                    annotatedStringState.setAnnotatedString(it.annotatedText)
                     annotatedStringState.jumpToLast()
                 }
                 state.annotatedText = it.annotatedText

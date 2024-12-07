@@ -26,6 +26,7 @@ import us.huseli.retain.Constants.PREF_MIN_COLUMN_WIDTH
 import us.huseli.retain.Constants.PREF_SYNC_BACKEND
 import us.huseli.retain.Enums.NoteType
 import us.huseli.retain.Enums.SyncBackend
+import us.huseli.retain.R
 import us.huseli.retain.interfaces.ILogger
 import us.huseli.retain.copyFileToLocal
 import us.huseli.retain.dataclasses.ImageData
@@ -144,7 +145,8 @@ class SettingsViewModel @Inject constructor(
 
                 entries.forEachIndexed { noteIndex, noteEntry ->
                     updateCurrentAction(
-                        if (noteEntry.title != null) "Converting note: ${noteEntry.title}" else "Converting note"
+                        if (noteEntry.title != null) context.getString(R.string.converting_note_x, noteEntry.title)
+                        else context.getString(R.string.converting_note)
                     )
 
                     val note = Note(
@@ -171,7 +173,7 @@ class SettingsViewModel @Inject constructor(
                     }
 
                     val images = noteEntry.attachments?.mapIndexedNotNull { imageIndex, imageEntry ->
-                        updateCurrentAction("Moving ${imageEntry.filePath}")
+                        updateCurrentAction(context.getString(R.string.moving_x, imageEntry.filePath))
                         val imageFile = File(tempDir, imageEntry.filePath)
                         if (imageFile.exists()) uriToImageData(context, imageFile.toUri()) else null
                     }
@@ -187,12 +189,15 @@ class SettingsViewModel @Inject constructor(
                 }
 
                 if (pojos.isNotEmpty()) {
-                    updateCurrentAction("Saving to database")
+                    updateCurrentAction(context.getString(R.string.saving_to_database))
                     repository.insertNotePojos(pojos)
                 }
-                log(message = "Imported ${pojos.size} notes.", showSnackbar = true)
+                log(
+                    message = context.resources.getQuantityString(R.plurals.imported_x_notes, pojos.size, pojos.size),
+                    showSnackbar = true,
+                )
             } catch (e: Exception) {
-                logError(message = "Error: $e", e, showSnackbar = true)
+                logError(message = context.getString(R.string.error_x, e), e, showSnackbar = true)
             } finally {
                 _keepImportIsActive.value = false
             }
@@ -212,7 +217,7 @@ class SettingsViewModel @Inject constructor(
                     zipUri.lastPathSegment?.substringAfterLast('/') ?: "quicknote.zip"
                 ).apply { deleteOnExit() }
 
-                updateCurrentAction("Copying and opening ${quickNoteFile.name}")
+                updateCurrentAction(context.getString(R.string.copying_and_opening_x, quickNoteFile.name))
                 copyFileToLocal(context, zipUri, quickNoteFile)
 
                 val zipFile = withContext(Dispatchers.IO) { ZipFile(quickNoteFile) }
@@ -225,7 +230,7 @@ class SettingsViewModel @Inject constructor(
                     if (zipEntry != null) {
                         if (zipEntry.name.endsWith(".sqd") && !zipEntry.isDirectory) {
                             val sqdFile = File(tempDir, zipEntry.name.substringAfterLast('/'))
-                            updateCurrentAction("Extracting ${sqdFile.name}")
+                            updateCurrentAction(context.getString(R.string.extracting_x, sqdFile.name))
                             zipFile.extractFile(zipEntry, sqdFile)
                             extractQuickNoteSqd(sqdFile, context, notePosition)?.let {
                                 pojos.add(it)
@@ -245,12 +250,15 @@ class SettingsViewModel @Inject constructor(
                 }
 
                 if (pojos.isNotEmpty()) {
-                    updateCurrentAction("Saving to database")
+                    updateCurrentAction(context.getString(R.string.saving_to_database))
                     repository.insertNotePojos(pojos)
                 }
-                log(message = "Imported ${pojos.size} notes.", showSnackbar = true)
+                log(
+                    message = context.resources.getQuantityString(R.plurals.imported_x_notes, pojos.size, pojos.size),
+                    showSnackbar = true,
+                )
             } catch (e: Exception) {
-                logError(message = "Error: $e", e, showSnackbar = true)
+                logError(message = context.getString(R.string.error_x, e), e, showSnackbar = true)
             } finally {
                 _quickNoteImportIsActive.value = false
             }
@@ -298,7 +306,7 @@ class SettingsViewModel @Inject constructor(
         val gson: Gson = GsonBuilder().create()
 
         zipFile.getEntry("${baseDir}metadata.json")?.let { zipEntry ->
-            updateCurrentAction("Parsing ${zipEntry.name}")
+            updateCurrentAction(context.getString(R.string.parsing_x, zipEntry.name))
             val json = zipFile.readTextFile(zipEntry)
             gson.fromJson(json, QuickNoteEntry::class.java)?.let {
                 quickNoteEntry = it
@@ -310,7 +318,7 @@ class SettingsViewModel @Inject constructor(
         @Suppress("destructure")
         quickNoteEntry?.let { entry ->
             zipFile.getEntry("${baseDir}index.html")?.let { zipEntry ->
-                updateCurrentAction("Parsing ${zipEntry.name}")
+                updateCurrentAction(context.getString(R.string.parsing_x, zipEntry.name))
                 val html = zipFile.readTextFile(zipEntry)
                 val doc = Jsoup.parseBodyFragment(html)
                 text = doc.body().wholeText().trim().replace("\n\n", "\n")
@@ -324,7 +332,7 @@ class SettingsViewModel @Inject constructor(
                 ?: (if (baseDir.isNotBlank()) Regex("(?:.*/)?([^/.]+?)(?:\\.sqd)?/?$").find(baseDir)?.groupValues?.last() else null)
                 ?: file.nameWithoutExtension
 
-            updateCurrentAction("Converting note: $title")
+            updateCurrentAction(context.getString(R.string.converting_note_x, title))
 
             val note = Note(
                 type = if (entry.todolists?.isNotEmpty() == true) NoteType.CHECKLIST else NoteType.TEXT,
@@ -366,10 +374,10 @@ class SettingsViewModel @Inject constructor(
                             else "quicknote/${file.name}-images"
                         ).apply { mkdirs() }
                         val imageFile = File(tempDir, basename).apply { deleteOnExit() }
-                        updateCurrentAction("Extracting ${zipEntry.name}")
+                        updateCurrentAction(context.getString(R.string.extracting_x, zipEntry.name))
                         zipFile.extractFile(zipEntry, imageFile)
                         if (imageFile.exists()) {
-                            updateCurrentAction("Copying ${imageFile.name}")
+                            updateCurrentAction(context.getString(R.string.copying_x, imageFile.name))
                             uriToImageData(context, imageFile.toUri())?.let { image ->
                                 images.add(image)
                             }

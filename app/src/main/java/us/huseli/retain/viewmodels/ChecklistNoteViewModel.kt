@@ -9,12 +9,13 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.withContext
 import us.huseli.retain.Enums.NoteType
 import us.huseli.retain.dataclasses.entities.ChecklistItem
+import us.huseli.retain.dataclasses.entities.Image
 import us.huseli.retain.dataclasses.entities.Note
 import us.huseli.retain.dataclasses.uistate.ChecklistItemUiState
 import us.huseli.retain.dataclasses.uistate.ImageUiState
-import us.huseli.retain.dataclasses.uistate.clone
 import us.huseli.retain.dataclasses.uistate.save
-import us.huseli.retain.interfaces.ILogger
+import us.huseli.retain.dataclasses.uistate.toImages
+import us.huseli.retain.dataclasses.uistate.toItems
 import us.huseli.retain.repositories.NoteRepository
 import us.huseli.retaintheme.extensions.launchOnIOThread
 import java.util.UUID
@@ -30,11 +31,11 @@ class ChecklistNoteViewModel @Inject constructor(
     repository = repository,
     savedStateHandle = savedStateHandle,
     noteType = NoteType.CHECKLIST,
-), ILogger {
+) {
     data class UndoState(
         val note: Note?,
-        val itemUiStates: List<ChecklistItemUiState>,
-        val imageUiStates: List<ImageUiState>,
+        val checklistItems: List<ChecklistItem>,
+        val images: List<Image>,
     )
 
     private val _focusedItemId = MutableStateFlow<UUID?>(null)
@@ -52,19 +53,20 @@ class ChecklistNoteViewModel @Inject constructor(
                 _imageUiStates.value.any { it.isChanged } ||
                 _itemUiStates.value.any { it.isChanged }
             return state.note != noteUiState.toNote() ||
-                state.itemUiStates != _itemUiStates.value ||
-                state.imageUiStates != _imageUiStates.value
+                state.checklistItems != _itemUiStates.value ||
+                state.images != _imageUiStates.value
         }
 
     override fun applyUndoState(idx: Int) {
-        val items = _undoStates.value[idx].itemUiStates
-        val images = _undoStates.value[idx].imageUiStates
-        val deletedItemIds = _itemUiStates.value.map { it.id }.toSet().minus(items.map { it.id })
-        val deletedImageFilenames = _imageUiStates.value.map { it.filename }.toSet().minus(images.map { it.filename })
+        val undoState = _undoStates.value[idx]
+        val deletedItemIds = _itemUiStates.value.map { it.id }.toSet().minus(undoState.checklistItems.map { it.id })
+        val deletedImageFilenames =
+            _imageUiStates.value.map { it.filename }.toSet().minus(undoState.images.map { it.filename })
 
-        _undoStates.value[idx].note?.also { noteUiState.onNoteFetched(it) }
-        _itemUiStates.value = items
-        _imageUiStates.value = images
+        undoState.note?.also { noteUiState.onNoteFetched(it) }
+        _itemUiStates.value =
+            undoState.checklistItems.map { ChecklistItemUiState(item = it, isFocused = _focusedItemId.value == it.id) }
+        _imageUiStates.value = undoState.images.map { ImageUiState(image = it) }
         if (deletedItemIds.isNotEmpty()) launchOnIOThread { repository.deleteChecklistItems(deletedItemIds) }
         if (deletedImageFilenames.isNotEmpty()) launchOnIOThread { repository.deleteImages(deletedImageFilenames) }
         _undoStateIdx.value = idx
@@ -120,16 +122,18 @@ class ChecklistNoteViewModel @Inject constructor(
     }
 
     override fun saveUndoState() {
+        val undoState = UndoState(
+            note = if (!noteUiState.isReadOnly) noteUiState.toNote() else null,
+            checklistItems = _itemUiStates.value.toItems(),
+            images = _imageUiStates.value.toImages(),
+        )
+
         _undoStates.value = _undoStates.value.take(_undoStateIdx.value + 1)
         if (_undoStates.value.size > 50) {
             _undoStates.value = _undoStates.value.take(50)
             _undoStateIdx.value = 49
         }
-        _undoStates.value += UndoState(
-            note = if (!noteUiState.isReadOnly) noteUiState.toNote() else null,
-            itemUiStates = _itemUiStates.value.clone(),
-            imageUiStates = _imageUiStates.value.clone(),
-        )
+        _undoStates.value += undoState
         _undoStateIdx.value += 1
     }
 

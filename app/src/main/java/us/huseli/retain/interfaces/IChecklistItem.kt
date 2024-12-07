@@ -12,6 +12,7 @@ interface IChecklistItem : Comparable<IChecklistItem> {
     val id: UUID
     val position: Int
     val annotatedText: RetainAnnotatedString
+    val serializedText: String
 
     val alpha: Float
         get() = if (isChecked) 0.5f else 1f

@@ -1,6 +1,7 @@
 package us.huseli.retain.dataclasses.uistate
 
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -13,10 +14,12 @@ import us.huseli.retain.interfaces.IChecklistItem
 
 @Stable
 class ChecklistItemUiState(
-    private var item: ChecklistItem,
+    item: ChecklistItem,
     isFocused: Boolean = false,
     isNew: Boolean = false,
 ) : IChecklistItem {
+    private var item: ChecklistItem by mutableStateOf(item)
+
     override val id = item.id
     override var isChecked by mutableStateOf(item.isChecked)
     override var isFocused by mutableStateOf(isFocused)
@@ -25,9 +28,9 @@ class ChecklistItemUiState(
     override var annotatedText: RetainAnnotatedString by mutableStateOf(item.annotatedText)
 
     var isNew by mutableStateOf(isNew)
+        private set
 
-    val serializedText: String
-        get() = annotatedText.serialize()
+    override val serializedText: String by derivedStateOf { item.text }
 
     val isChanged: Boolean
         get() = item.annotatedText != annotatedText || item.isChecked != isChecked || item.position != position
@@ -35,13 +38,12 @@ class ChecklistItemUiState(
     val isTextChanged: Boolean
         get() = item.annotatedText != annotatedText
 
-    fun clone() = ChecklistItemUiState(item = toItem())
-
     override fun equals(other: Any?): Boolean = other is IChecklistItem &&
         other.id == id &&
         other.isChecked == isChecked &&
         other.position == position &&
-        other.annotatedText == annotatedText
+        other.annotatedText == annotatedText &&
+        other.serializedText == serializedText
 
     override fun hashCode(): Int {
         var result = id.hashCode()
@@ -65,6 +67,9 @@ class ChecklistItemUiState(
     }
 
     fun toItem() = item.copy(text = annotatedText.serialize(), isChecked = isChecked, position = position)
+
+    override fun toString(): String = "ChecklistItemUiState[id=$id, isChecked=$isChecked, position=$position, " +
+        "serializedText=$serializedText, annotatedText=$annotatedText]"
 }
 
 suspend fun Collection<ChecklistItemUiState>.save(dbSaveFunc: suspend (Collection<ChecklistItem>) -> Unit) {
@@ -76,4 +81,4 @@ suspend fun Collection<ChecklistItemUiState>.save(dbSaveFunc: suspend (Collectio
     }
 }
 
-fun Collection<ChecklistItemUiState>.clone() = map { it.clone() }
+fun Collection<ChecklistItemUiState>.toItems() = map { it.toItem() }

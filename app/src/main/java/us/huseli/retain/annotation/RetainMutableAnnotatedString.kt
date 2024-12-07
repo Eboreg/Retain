@@ -11,10 +11,9 @@ import com.github.difflib.patch.Chunk
 import com.github.difflib.patch.DeltaType
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import us.huseli.retain.interfaces.ILogger
 
 class RetainMutableAnnotatedString(achars: List<AnnotatedChar> = emptyList()) :
-    CharSequence, IRetainAnnotatedString, ILogger {
+    CharSequence, IRetainAnnotatedString {
     private val achars: SnapshotStateList<AnnotatedChar> = achars.toMutableStateList()
     private var startStyle: RetainSpanStyle by mutableStateOf(RetainSpanStyle())
     private val mutex = Mutex()
@@ -24,12 +23,27 @@ class RetainMutableAnnotatedString(achars: List<AnnotatedChar> = emptyList()) :
     override val length: Int
         get() = achars.size
 
-    suspend fun applyDiff(revised: String) {
-        mutex.withLock {
+    private fun splitFinishedWords(string: String): List<String> {
+        // Last word is considered potentially "unfinished" if the whole string ends with a word character.
+        return string.split(Regex("\\s+")).let { if (string.matches(Regex("\\w$"))) it.dropLast(1) else it }
+    }
+
+    suspend fun applyDiff(revised: String): Boolean {
+        return mutex.withLock {
             val diff = DiffUtils.diffInline(text, revised)
+            val oldWords = text.split(Regex("\\s+"))
+            val oldFinishedWords = splitFinishedWords(text)
+            val revisedWords = revised.split(Regex("\\s+"))
+            val revisedFinishedWords = splitFinishedWords(revised)
+            val whiteSpaceAdded =
+                diff?.deltas?.any { delta -> delta?.target?.lines?.any { it.contains(Regex("\\s")) } == true }
+
+            // A word is considered added if new wordlist != old wordlist and target delta contains a non-word char.
+            // A word is considered deleted if new wordlist is shorter than old.
+            val wordsChanged = (whiteSpaceAdded == true && oldFinishedWords != revisedFinishedWords) ||
+                    oldWords.size > revisedWords.size
 
             diff?.deltas?.filterNotNull()?.forEach { delta ->
-                delta.source?.lines?.sumOf { it.length }
                 when (delta.type) {
                     DeltaType.CHANGE -> {
                         delta.source?.also { removeRange(it) }
@@ -41,6 +55,8 @@ class RetainMutableAnnotatedString(achars: List<AnnotatedChar> = emptyList()) :
                     DeltaType.EQUAL -> {}
                 }
             }
+
+            wordsChanged
         }
     }
 

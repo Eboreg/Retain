@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.mapLatest
 import us.huseli.retain.Constants
 import us.huseli.retain.Constants.NAV_ARG_IMAGE_CAROUSEL_CURRENT_ID
-import us.huseli.retain.interfaces.ILogger
 import us.huseli.retain.dataclasses.entities.Image
 import us.huseli.retain.repositories.NoteRepository
 import us.huseli.retaintheme.extensions.launchOnIOThread
@@ -20,7 +19,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ImageCarouselViewModel @Inject constructor(repository: NoteRepository, savedStateHandle: SavedStateHandle) :
-    AbstractBaseViewModel(), ILogger {
+    AbstractBaseViewModel() {
     private val _noteId = UUID.fromString(savedStateHandle.get<String>(Constants.NAV_ARG_NOTE_ID)!!)
     private val _startImageId = savedStateHandle.get<String>(NAV_ARG_IMAGE_CAROUSEL_CURRENT_ID)!!
     private val _images = MutableStateFlow<List<Image>>(emptyList())

@@ -56,15 +56,22 @@ fun TextNoteScreen(
         item {
             OutlinedAnnotatedTextField(
                 state = textState,
+                /*
                 onValueChange = {
                     Logger.log("TextNoteScreen", "onValueChange: note.annotatedText=${note.annotatedText}, it=$it")
                     note.annotatedText = it
                 },
+                 */
                 readOnly = note.isReadOnly,
                 placeholder = { Text(text = stringResource(R.string.note)) },
                 keyboardOptions = KeyboardOptions.Default.copy(
                     capitalization = KeyboardCapitalization.Sentences,
                 ),
+                onChange = { change ->
+                    Logger.log("TextNoteScreen", "onChange: note.annotatedText=${note.annotatedText}, change=$change")
+                    note.annotatedText = textState.getAnnotatedString()
+                    if (change.style || change.wholeWords) viewModel.saveUndoState()
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .focusRequester(focusRequester)

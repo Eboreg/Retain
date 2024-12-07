@@ -69,7 +69,7 @@ fun NoteScreenScaffold(
 
     LaunchedEffect(Unit) {
         while (true) {
-            if (viewModel.shouldSaveUndoState) viewModel.saveUndoState()
+            // if (viewModel.shouldSaveUndoState) viewModel.saveUndoState()
             viewModel.save()
             delay(5_000)
         }

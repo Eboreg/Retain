@@ -14,41 +14,35 @@ import androidx.compose.ui.text.AnnotatedString.Range
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.TextUnit
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.Channel.Factory.RENDEZVOUS
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import us.huseli.retain.Logger
-import us.huseli.retain.interfaces.ILogger
 import us.huseli.retain.limit
 
 @Stable
 class RetainAnnotatedStringState(
     initialValue: IRetainAnnotatedString,
-    // selection: TextRange? = null,
     textFieldValue: TextFieldValue? = null,
-) : ILogger {
-    // private var composition: TextRange? by mutableStateOf(composition)
-    // private var text: String by mutableStateOf(initialValue.text)
+) {
+    data class Change(val wholeWords: Boolean = false, val style: Boolean = false)
+
     private val mutex = Mutex()
-
     private var mutableString: RetainMutableAnnotatedString by mutableStateOf(initialValue.toMutable())
-
-    // var selection: TextRange by mutableStateOf(selection ?: TextRange(initialValue.text.length))
+    val changeChan = Channel<Change>(capacity = RENDEZVOUS, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
     val selectionStartStyle: RetainSpanStyle by derivedStateOf {
-        // if (this.selection.length == 0) mutableString.getFutureCharStyle(this.selection.start)
-        // else mutableString.getCharStyle(this.selection.start)
-        if (textFieldValue2.selection.length == 0) mutableString.getFutureCharStyle(textFieldValue2.selection.start)
-        else mutableString.getCharStyle(textFieldValue2.selection.start)
+        if (this.textFieldValue.selection.length == 0)
+            mutableString.getFutureCharStyle(this.textFieldValue.selection.start)
+        else mutableString.getCharStyle(this.textFieldValue.selection.start)
     }
 
     var spanStyles: List<Range<RetainSpanStyle>> by mutableStateOf(initialValue.toImmutable().spanStyles)
         private set
 
-    // val textFieldValue: TextFieldValue by derivedStateOf {
-    //     TextFieldValue(text = text, selection = this.selection, composition = this.composition)
-    // }
-
-    var textFieldValue2: TextFieldValue by mutableStateOf(
+    var textFieldValue: TextFieldValue by mutableStateOf(
         textFieldValue ?: TextFieldValue(
             text = initialValue.text,
             selection = TextRange(initialValue.text.length),
@@ -60,64 +54,72 @@ class RetainAnnotatedStringState(
 
     val nativeAnnotatedString: AnnotatedString by derivedStateOf {
         AnnotatedString(
-            text = textFieldValue2.text,
-            spanStyles = spanStyles.limit(textFieldValue2.text.length).map { range ->
+            text = this.textFieldValue.text,
+            spanStyles = spanStyles.limit(this.textFieldValue.text.length).map { range ->
                 Range(item = range.item.toNative(baseFontSize), start = range.start, end = range.end)
             },
         )
     }
 
+    fun getAnnotatedString(): RetainAnnotatedString = mutableString.toImmutable()
+
     fun jumpToLast() {
-        // selection = TextRange(text.length)
-        textFieldValue2 = textFieldValue2.copy(selection = TextRange(textFieldValue2.text.length))
+        textFieldValue = textFieldValue.copy(selection = TextRange(textFieldValue.text.length))
     }
 
     suspend fun onTextFieldValueChange(value: TextFieldValue) {
-        textFieldValue2 = value
+        textFieldValue = value
         mutex.withLock {
             if (value.text != mutableString.text) {
-                mutableString.applyDiff(value.text)
+                val wordsChanged = mutableString.applyDiff(value.text)
+
                 updateSpanStyles()
+                changeChan.send(Change(wholeWords = wordsChanged))
             }
-            // if (value.selection != selection) selection = value.selection
-            // if (value.composition != composition) composition = value.composition
         }
     }
 
-    suspend fun setStyle(value: NullableRetainSpanStyle) {
+    suspend fun setAnnotatedString(annotatedString: IRetainAnnotatedString) {
         mutex.withLock {
-            // mutableString.setStyle(selection.start, selection.end, value)
-            mutableString.setStyle(textFieldValue2.selection.start, textFieldValue2.selection.end, value)
-            updateSpanStyles()
+            val wordsChanged = annotatedString.text != mutableString.text
+
+            mutableString = annotatedString.toMutable()
+            textFieldValue = TextFieldValue(text = mutableString.text)
+
+            val stylesChanged = updateSpanStyles()
+
+            changeChan.send(Change(wholeWords = wordsChanged, style = stylesChanged))
+        }
+    }
+
+    suspend fun setCurrentSelectionStyle(value: NullableRetainSpanStyle) {
+        mutex.withLock {
+            mutableString.setStyle(textFieldValue.selection.start, textFieldValue.selection.end, value)
+            if (updateSpanStyles()) changeChan.send(Change(style = true))
         }
     }
 
     suspend fun splitAtSelectionStart(): Pair<RetainMutableAnnotatedString, RetainMutableAnnotatedString> {
-        // return toAnnotatedString().split(selection.start).also { (head, _) ->
-        return mutableString.split(textFieldValue2.selection.start).also { (head, _) ->
+        return mutableString.split(textFieldValue.selection.start).also { (head, _) ->
             mutex.withLock {
-                mutableString = head
-                textFieldValue2 = textFieldValue2.copy(text = mutableString.text)
+                val wordsChanged = mutableString.applyDiff(head.text)
+
+                textFieldValue = textFieldValue.copy(text = mutableString.text)
                 updateSpanStyles()
+                changeChan.send(Change(wholeWords = wordsChanged))
             }
         }
     }
 
-    fun toAnnotatedString(): RetainAnnotatedString = mutableString.toImmutable()
+    private fun updateSpanStyles(): Boolean {
+        /** Returns true if styles changed. */
+        val newSpanStyles = mutableString.collapseSpanStyles()
 
-    suspend fun update(annotatedString: IRetainAnnotatedString) {
-        mutex.withLock {
-            mutableString = annotatedString.toMutable()
-            textFieldValue2 = TextFieldValue(text = mutableString.text)
-            updateSpanStyles()
+        if (newSpanStyles != spanStyles) {
+            spanStyles = newSpanStyles
+            return true
         }
-    }
-
-    private fun updateSpanStyles() {
-        // val annotatedString = mutableString.toImmutable()
-
-        // text = mutableString.text
-        spanStyles = mutableString.collapseSpanStyles()
+        return false
     }
 
     private fun serialize() = mutableString.toImmutable().serialize()
@@ -127,18 +129,10 @@ class RetainAnnotatedStringState(
             save = { value ->
                 mapOf(
                     "serializedValue" to value.serialize(),
-                    "textFieldValue" to with(TextFieldValue.Saver) { this@mapSaver.save(value.textFieldValue2) },
+                    "textFieldValue" to with(TextFieldValue.Saver) { this@mapSaver.save(value.textFieldValue) },
                 )
             },
             restore = { value ->
-                /*
-                val selectionStart = value["selectionStart"] as? Int
-                val selectionEnd = value["selectionEnd"] as? Int
-
-                val selection = if (selectionStart != null && selectionEnd != null)
-                    TextRange(selectionStart, selectionEnd)
-                else null
-                 */
                 val textFieldValue = value["textFieldValue"]?.let { with(TextFieldValue.Saver) { restore(it) } }
 
                 RetainAnnotatedStringState(
@@ -152,7 +146,7 @@ class RetainAnnotatedStringState(
 
 @Composable
 fun rememberRetainAnnotatedStringState(json: String): RetainAnnotatedStringState {
-    return rememberSaveable(saver = RetainAnnotatedStringState.Saver) {
+    return rememberSaveable(json, saver = RetainAnnotatedStringState.Saver) {
         Logger.log("AnnotatedString", "rememberRetainAnnotatedStringState: json=$json")
 
         RetainAnnotatedStringState(initialValue = RetainAnnotatedString.deserialize(json))
